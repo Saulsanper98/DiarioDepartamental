@@ -1,11 +1,16 @@
-# Entornos virtuales
-venv/
-.venv/
-env/
+# Dependencias Node (evita commits de árboles enormes)
+node_modules/
 
-# Python bytecode
-__pycache__/
-*.py[cod]
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Salidas de build / bundlers
+dist/
+build/
+.cache/
 
 # Variables de entorno (seguridad)
 .env
