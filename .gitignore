@@ -14,6 +14,8 @@ build/
 
 # Variables de entorno (seguridad)
 .env
+.env.local
+.env.*.local
 
 # Archivos del sistema
 .DS_Store
