@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="es" class="tema-claro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diario Departamental</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='1000' height='900' rx='18' fill='%230f0e0c'/><text y='72' x='12' font-size='72' font-family='serif' fill='%23e8c547' font-style='italic'>D</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Fraunces:ital,wght@0,300;0,500;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <!-- Selector de Temas Flotante -->
+  <div class="login-theme-selector">
+    <button class="theme-toggle-btn" onclick="toggleLoginThemePanel()" title="Cambiar tema">🎨</button>
+    <div class="theme-panel-mini hidden" id="login-theme-panel">
+      <div class="theme-panel-label">Selecciona tema</div>
+      <div class="theme-buttons-row" id="login-theme-buttons"></div>
+    </div>
+  </div>
+
+  <div class="login-box">
+    <div class="login-header">
+      <span class="logo-mark">D</span>
+      <h1>Diario Departamental</h1>
+      <p>Selecciona tu área de trabajo para continuar</p>
+    </div>
+
+    <!-- STEP 1: Grupo -->
+    <div id="login-step-1">
+      <div class="step-indicator">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <span class="step-label">— Paso 1: Grupo</span>
+      </div>
+      <div class="group-grid">
+        <button class="group-btn" onclick="selectGroup('Sistemas','💻')">
+          <span class="g-icon">💻</span>
+          Sistemas
+          <span class="g-count" id="g-count-Sistemas"></span>
+        </button>
+        <button class="group-btn" onclick="selectGroup('Redes','🌐')">
+          <span class="g-icon">🌐</span>
+          Redes
+          <span class="g-count" id="g-count-Redes"></span>
+        </button>
+        <button class="group-btn" onclick="selectGroup('Tecnicos de sala','🖥️')">
+          <span class="g-icon">🖥️</span>
+          Técnicos de Sala
+          <span class="g-count" id="g-count-Tecnicos de sala"></span>
+        </button>
+        <button class="group-btn" onclick="selectGroup('Operadores','⚙️')">
+          <span class="g-icon">⚙️</span>
+          Operadores
+          <span class="g-count" id="g-count-Operadores"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Usuario -->
+    <div id="login-step-2" class="hidden">
+      <div class="step-indicator">
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+        <span class="step-label" id="step2-label">— Paso 2: Usuario</span>
+      </div>
+      <button class="btn-back" onclick="backToGroups()">← Cambiar grupo</button>
+      <div class="profile-grid" id="profile-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div id="password-modal-overlay">
+  <div id="password-modal-box">
+    <h3 id="pwd-modal-title">🔐 Acceso al grupo</h3>
+    <p id="pwd-modal-desc">Introduce la contraseña del grupo para continuar.</p>
+    <div class="pwd-input-wrap">
+      <input type="password" id="pwd-modal-input" placeholder="Contraseña..." autocomplete="off"
+             onkeydown="if(event.key==='Enter') submitPassword()">
+      <button class="pwd-toggle-btn" id="pwd-toggle" onclick="togglePwdVisibility()" title="Mostrar/ocultar">👁</button>
+    </div>
+    <div class="pwd-error" id="pwd-error"></div>
+    <div class="pwd-attempts" id="pwd-attempts"></div>
+    <div class="pwd-modal-footer">
+      <button class="btn-cancel" onclick="cancelPasswordModal()">Cancelar</button>
+      <button class="btn-save" onclick="submitPassword()">Acceder</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand" style="display:flex !important; align-items:center !important; overflow:visible !important; gap:8px !important;">
+          <span class="brand-mark">D</span>
+          <span class="brand-text">Diario<br>Departamental</span>
+          <span class="brand-group" id="brand-group-badge" style="white-space:nowrap !important; overflow:visible !important; display:inline-flex !important; align-items:center !important; flex-shrink:0 !important; width:auto !important; max-width:none !important;">—</span>
+        </div>
+        <div class="current-user">
+          <div class="avatar-sm" id="sidebar-avatar"></div>
+          <div class="user-info">
+            <strong id="sidebar-name">—</strong>
+            <span id="sidebar-shift">—</span>
+          </div>
+          <button class="btn-logout" onclick="logout()" title="Cerrar sesión">✕</button>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Vistas</div>
+        <button class="nav-btn" onclick="showView('postit',this)">
+          <span class="nav-icon">🗂</span> Post-it Board
+        </button>
+        <button class="nav-btn" onclick="showView('projects',this)">
+          <span class="nav-icon">🎯</span> Proyectos &amp; Tareas
+        </button>
+        <button class="nav-btn" onclick="showView('docs',this)">
+          <span class="nav-icon">📚</span> Documentación
+        </button>
+        <button class="nav-btn" id="nav-chat" onclick="showView('chat',this)">
+          <span class="nav-icon">💬</span> Chat
+          <span class="nav-badge nav-badge-chat hidden" id="chat-nav-badge">0</span>
+        </button>
+        <button class="nav-btn" onclick="showView('shortcuts',this)">
+          <span class="nav-icon">🔗</span> Accesos Directos
+        </button>
+        <div class="nav-section-label">Notas</div>
+        <button class="nav-btn active" id="nav-all" onclick="setNoteView('all',this)">
+          <span class="nav-icon">📋</span> Todas
+        </button>
+        <button class="nav-btn" id="nav-mine" onclick="setNoteView('mine',this)">
+          <span class="nav-icon">👤</span> Mis Notas
+        </button>
+        <button class="nav-btn" id="nav-mentions" onclick="setNoteView('mentions',this)">
+          <span class="nav-icon">🔔</span> Menciones
+          <span class="nav-badge hidden" id="mention-badge">0</span>
+        </button>
+        <button class="nav-btn" id="nav-reminders" onclick="setNoteView('reminders',this)">
+          <span class="nav-icon">⏰</span> Recordatorios
+        </button>
+        <button class="nav-btn" onclick="showView('public-notes',this)">
+          <span class="nav-icon">🌐</span> Notas Públicas
+        </button>
+        <button class="nav-btn" onclick="showView('my-groups',this)">
+          <span class="nav-icon">👥</span> Mis Grupos
+          <span class="nav-badge hidden" id="wg-invites-nav-badge">0</span>
+        </button>
+        <button class="nav-btn" id="nav-settings" onclick="showView('settings',this)">
+          <span class="nav-icon">⚙️</span> Configuración
+        </button>
+        <div class="nav-section-label">Acciones</div>
+        <button class="nav-btn" onclick="openNewNoteModal()">
+          <span class="nav-icon">✏️</span> Nueva Nota
+        </button>
+      </nav>
+
+      <div class="shift-filters">
+        <span class="shift-filter-label">Filtrar por turno</span>
+        <div class="shift-pills">
+          <button class="shift-pill morning active" onclick="toggleShiftFilter('morning',this)">🌅 Mañana</button>
+          <button class="shift-pill afternoon active" onclick="toggleShiftFilter('afternoon',this)">🌤 Tarde</button>
+          <button class="shift-pill night active" onclick="toggleShiftFilter('night',this)">🌙 Noche</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main id="main-content" class="main" style="position:relative">
+  <!-- VIEWS -->
+  <div id="view-notes" style="display:none"></div>
+  <div id="view-public-notes" style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
+  <div id="view-my-groups" style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
+  <div id="view-postit" style="display:none"></div>
+  <div id="view-projects" style="display:none"></div>
+  <div id="view-docs" style="display:none"></div>
+  <div id="view-shortcuts" style="display:none"></div>
+  <div id="view-chat" style="display:none"></div>
+  <div id="view-settings" style="display:none"></div>
+</main>
+  </div>
+</div>
+
+<!-- MODALS (extraídos de diario_departamental_v2.html; doc-modal unifica nuevo/editar/carpeta) -->
+<!-- ===== MODALS ===== -->
+
+<!-- Chat: enlazar recurso -->
+<div class="modal-overlay" id="chat-link-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Enlazar recurso al mensaje</h3>
+      <button class="modal-close" onclick="closeModal('chat-link-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="gap:12px">
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" id="chat-link-kind" onchange="buildChatLinkTargetList()">
+          <option value="note">📋 Nota</option>
+          <option value="postit">🗂 Post-it</option>
+          <option value="project">🎯 Proyecto</option>
+          <option value="doc">📚 Documento</option>
+          <option value="task">✓ Tarea</option>
+        </select>
+      </div>
+      <div id="chat-link-target-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('chat-link-modal')">Cancelar</button>
+      <button class="btn-save" onclick="confirmChatLinkPick()">Añadir enlace</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nuevo Chat Modal -->
+<div class="modal-overlay" id="new-chat-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📩 Nuevo chat</h3>
+      <button class="modal-close" onclick="closeModal('new-chat-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="position:relative;margin-bottom:10px">
+        <input type="text" id="new-chat-search" class="form-input" placeholder="🔍 Buscar compañero..." oninput="filterNewChatUsers(this.value)" autocomplete="off" style="padding-left:14px">
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Selecciona el compañero con el que quieres iniciar conversación privada.</p>
+      <div id="new-chat-users-list" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('new-chat-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Note Modal -->
+<div class="modal-overlay" id="note-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Nueva Nota</h3>
+      <button class="modal-close" onclick="closeModal('note-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Título</label>
+        <input type="text" class="form-input" id="note-title-input" placeholder="Título de la nota...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contenido</label>
+        <div class="content-input-group">
+          <textarea class="form-textarea" id="note-body-input" placeholder="Escribe el contenido...&#10;Usa @nombre para mencionar compañeros" oninput="updateMarkdownPreview('note-body-input','note-content-preview',editingNoteImages)"></textarea>
+          <button class="btn-insert-image" onclick="insertImage()" title="Insertar imagen">🖼️</button>
+        </div>
+        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          <button class="btn-secondary" id="note-preview-toggle" onclick="togglePreview('note-content-preview','note-preview-toggle')">Ocultar preview</button>
+        </div>
+        <div class="markdown-preview" id="note-content-preview"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Turno destino</label>
+          <div class="shift-selector">
+            <div class="shift-option morning" data-shift="morning" onclick="selectShiftOpt(this)"><span class="shift-name">☀️ Mañana</span><span class="shift-hours">06:00–14:00</span></div>
+            <div class="shift-option afternoon" data-shift="afternoon" onclick="selectShiftOpt(this)"><span class="shift-name">🌤 Tarde</span><span class="shift-hours">14:00–22:00</span></div>
+            <div class="shift-option night" data-shift="night" onclick="selectShiftOpt(this)"><span class="shift-name">🌙 Noche</span><span class="shift-hours">22:00–06:00</span></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prioridad</label>
+          <div class="priority-select">
+            <div class="priority-opt normal selected" data-priority="normal" onclick="selectPriority(this)">Normal</div>
+            <div class="priority-opt media" data-priority="media" onclick="selectPriority(this)">Media</div>
+            <div class="priority-opt alta" data-priority="alta" onclick="selectPriority(this)">Alta</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mencionar compañeros</label>
+        <div class="mentions-area" id="mentions-area"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Visibilidad</label>
+        <div class="visibility-pills" id="note-visibility-pills">
+          <button type="button" class="visibility-opt selected" data-vis="private" onclick="selectVisibility(this)">Privada</button>
+          <button type="button" class="visibility-opt" data-vis="public" onclick="selectVisibility(this)">Pública</button>
+        </div>
+        <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.5">Las notas públicas solo son visibles para quienes indiques en colaboración (usuario, departamento explícito o grupo de trabajo). Los departamentos core no reciben acceso automático.</p>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Colaboración — grupo destino</label>
+          <select class="form-select" id="note-collab-target-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Permiso</label>
+          <select class="form-select" id="note-collab-permission-select">
+            <option value="read">Lectura</option>
+            <option value="write">Edición</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Recordatorio</label>
+        <div class="reminder-row">
+          <div class="reminder-toggle" id="reminder-toggle" onclick="toggleReminder()"></div>
+          <span class="reminder-label">Activar recordatorio</span>
+          <input type="time" class="form-input reminder-time-input hidden" id="reminder-time" value="07:00">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('note-modal')">Cancelar</button>
+      <button class="btn-save" onclick="saveNote()">Guardar Nota</button>
+    </div>
+  </div>
+</div>
+
+<!-- Note Detail Modal -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Detalle de Nota</h3>
+      <button class="modal-close" onclick="closeModal('detail-modal')">✕</button>
+    </div>
+    <div class="note-detail-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- Hilos de comentarios (modal único: nota, post-it, proyecto, tarea) -->
+<div class="modal-overlay comments-modal-layer" id="comments-thread-modal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h3 id="comments-thread-title">Comentarios</h3>
+      <button class="modal-close" onclick="closeModal('comments-thread-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding-top:12px">
+      <div id="comments-thread-body"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('comments-thread-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shortcut File Preview Modal -->
+<div class="modal-overlay" id="shortcut-preview-modal">
+  <div class="modal" style="max-width:980px;width:95vw">
+    <div class="modal-header">
+      <h3 id="shortcut-preview-title">Vista previa</h3>
+      <button class="modal-close" onclick="closeModal('shortcut-preview-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="shortcut-preview-body" style="min-height:300px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('shortcut-preview-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Shortcut Modal -->
+<div class="modal-overlay" id="edit-shortcut-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ Editar Acceso Directo</h3>
+      <button class="modal-close" onclick="closeModal('edit-shortcut-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Título</label>
+        <input class="form-input" id="edit-shortcut-label" type="text" placeholder="Título del acceso directo...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL</label>
+        <input class="form-input" id="edit-shortcut-url" type="text" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Icono (emoji)</label>
+        <input class="form-input" id="edit-shortcut-icon" type="text" placeholder="🔗" style="max-width:100px">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Color de fondo</label>
+        <input class="form-input" id="edit-shortcut-bg" type="color" value="#ffffff" style="height:42px;cursor:pointer">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('edit-shortcut-modal')">Cancelar</button>
+      <button class="btn-save" onclick="saveEditShortcut()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRMATION MODAL (REUTILIZABLE) -->
+<div id="confirm-modal" class="modal-overlay hidden">
+  <div class="confirm-modal-box">
+    <div class="confirm-modal-body">
+      <div class="confirm-modal-icon" id="confirm-icon">⚠️</div>
+      <h3 id="confirm-title">¿Estás seguro?</h3>
+      <div id="confirm-message"></div>
+    </div>
+    <div class="confirm-modal-footer">
+      <button class="btn-secondary" type="button" onclick="closeConfirmModal()">Cancelar</button>
+      <button class="btn-primary" type="button" id="confirm-btn" onclick="executeConfirm()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Post-it Modal -->
+<div class="modal-overlay" id="postit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="postit-modal-title">Nueva Tarjeta</h3>
+      <button class="modal-close" onclick="closeModal('postit-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Título</label>
+        <input type="text" class="form-input" id="postit-title-input" placeholder="Título de la tarjeta...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción</label>
+        <div class="content-input-group">
+          <textarea class="form-textarea" id="postit-body-input" placeholder="Descripción..." style="min-height:80px" oninput="updateMarkdownPreview('postit-body-input','postit-content-preview',editingPostitImages)"></textarea>
+          <button class="btn-insert-image" onclick="insertImagePostit()" title="Insertar imagen">🖼️</button>
+        </div>
+        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          <button class="btn-secondary" id="postit-preview-toggle" onclick="togglePreview('postit-content-preview','postit-preview-toggle')">Ocultar preview</button>
+        </div>
+        <div class="markdown-preview" id="postit-content-preview"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Columna</label>
+          <select class="form-select" id="postit-col-select">
+            <option value="pendiente">📋 Pendiente</option>
+            <option value="progreso">⚡ En Progreso</option>
+            <option value="revision">🔍 Revisión</option>
+            <option value="hecho">✅ Hecho</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color</label>
+          <select class="form-select" id="postit-color-select">
+            <option value="yellow">🟡 Amarillo</option>
+            <option value="blue">🔵 Azul</option>
+            <option value="purple">🟣 Morado</option>
+            <option value="green">🟢 Verde</option>
+            <option value="red">🔴 Rojo</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prioridad</label>
+        <div class="priority-select">
+          <div class="priority-opt normal selected" data-priority="normal" onclick="selectPostitPriority(this)">Normal</div>
+          <div class="priority-opt media" data-priority="media" onclick="selectPostitPriority(this)">Media</div>
+          <div class="priority-opt alta" data-priority="alta" onclick="selectPostitPriority(this)">Alta</div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:4px">
+        <button type="button" class="btn-secondary btn-full-width" id="postit-comments-launch-btn" onclick="openPostitCommentsFromModal()">💬 Comentarios (ventana)</button>
+        <p style="font-size:10px;color:var(--text-muted);margin-top:6px">Los comentarios se abren en un panel centrado. En tarjetas nuevas, guarda antes de comentar.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('postit-modal')">Cancelar</button>
+      <button class="btn-save" onclick="savePostit()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Project Modal -->
+<div class="modal-overlay" id="project-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="project-modal-title">Nuevo Proyecto</h3>
+      <button class="modal-close" onclick="closeModal('project-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Ubicación en el árbol — proyecto padre</label>
+        <select class="form-select" id="project-parent-select"></select>
+        <p style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.45">Raíz = sin padre. Al editar, no puedes elegir el propio proyecto ni sus descendientes (evita ciclos). El grupo del proyecto se alinea al del padre si cambias de rama.</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nombre del Proyecto</label>
+        <input type="text" class="form-input" id="project-name-input" placeholder="Nombre del proyecto...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción (Markdown, imágenes)</label>
+        <div class="content-input-group">
+          <textarea class="form-textarea" id="project-desc-input" placeholder="Detalle del proyecto…" style="min-height:100px" oninput="updateMarkdownPreview('project-desc-input','project-desc-preview',editingProjectImages)"></textarea>
+          <button type="button" class="btn-insert-image" onclick="insertImageProject()" title="Insertar imagen">🖼️</button>
+        </div>
+        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          <button type="button" class="btn-secondary" id="project-preview-toggle" onclick="togglePreview('project-desc-preview','project-preview-toggle')">Ocultar preview</button>
+        </div>
+        <div class="markdown-preview" id="project-desc-preview"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Colaboración — grupo destino</label>
+          <select class="form-select" id="project-collab-target-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Permiso</label>
+          <select class="form-select" id="project-collab-permission-select">
+            <option value="read">Lectura</option>
+            <option value="write">Edición</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Color</label>
+          <input type="color" class="form-input" id="project-color-input" value="#e8c547" style="height:42px;cursor:pointer">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select class="form-select" id="project-status-input">
+            <option value="activo">✅ Activo</option>
+            <option value="pausa">⏸ En Pausa</option>
+            <option value="completado">🏁 Completado</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('project-modal')">Cancelar</button>
+      <button class="btn-save" onclick="saveProject()">Guardar Proyecto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task Modal -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="task-modal-title">Nueva Tarea</h3>
+      <button class="modal-close" onclick="closeModal('task-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nombre de la Tarea</label>
+        <input type="text" class="form-input" id="task-name-input" placeholder="Título breve de la tarea...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Detalle (Markdown, imágenes)</label>
+        <div class="content-input-group">
+          <textarea class="form-textarea" id="task-desc-input" placeholder="Descripción detallada, enlaces, listas…" style="min-height:90px" oninput="updateMarkdownPreview('task-desc-input','task-desc-preview',editingTaskImages)"></textarea>
+          <button type="button" class="btn-insert-image" onclick="insertImageTask()" title="Insertar imagen">🖼️</button>
+        </div>
+        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          <button type="button" class="btn-secondary" id="task-preview-toggle" onclick="togglePreview('task-desc-preview','task-preview-toggle')">Ocultar preview</button>
+        </div>
+        <div class="markdown-preview" id="task-desc-preview"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Colaboración — grupo destino</label>
+          <select class="form-select" id="task-collab-target-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Permiso</label>
+          <select class="form-select" id="task-collab-permission-select">
+            <option value="read">Lectura</option>
+            <option value="write">Edición</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Asignado a</label>
+          <select class="form-select" id="task-assignee-input"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prioridad</label>
+          <select class="form-select" id="task-priority-input">
+            <option value="normal">Normal</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('task-modal')">Cancelar</button>
+      <button class="btn-save" onclick="saveTask()">Añadir Tarea</button>
+    </div>
+  </div>
+</div>
+
+<!-- Doc Modal -->
+<div class="modal-overlay" id="doc-modal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h3 id="doc-modal-title">Nuevo Documento</h3>
+      <button class="modal-close" onclick="closeDocModalWithCleanup()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Título</label>
+        <input type="text" class="form-input" id="doc-title-input" placeholder="Título del documento...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ubicación en el árbol — Carpeta Destino</label>
+        <select class="form-select" id="doc-parent-input">
+          <option value="null">📁 Raíz (Sin carpeta padre)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Icono</label>
+          <button type="button" class="form-input" id="doc-icon-btn" onclick="toggleIconPopover(event, 'doc')" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;cursor:pointer;font-size:20px;min-width:50px;text-align:center">📄</button>
+          <input type="hidden" id="doc-icon-input" value="📄">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contenido (Markdown básico soportado)</label>
+        <div class="content-input-group">
+          <textarea class="form-textarea" id="doc-content-input" placeholder="## Sección 1&#10;&#10;Contenido del documento..." style="min-height:200px;font-family:'DM Mono',monospace" oninput="updateMarkdownPreview('doc-content-input','doc-content-preview',editingDocImages)"></textarea>
+          <button class="btn-insert-image" onclick="insertImageDoc()" title="Insertar imagen">🖼️</button>
+        </div>
+        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          <button class="btn-secondary" id="doc-preview-toggle" onclick="togglePreview('doc-content-preview','doc-preview-toggle')">Ocultar preview</button>
+        </div>
+        <div class="markdown-preview" id="doc-content-preview"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeDocModalWithCleanup()">Cancelar</button>
+      <button class="btn-save" onclick="saveDocOrFolder()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Insert File Modal -->
+<div class="modal-overlay" id="insert-file-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📎 Insertar Archivo</h3>
+      <button class="modal-close" onclick="closeModal('insert-file-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Icono</label>
+        <button type="button" class="form-input" id="insert-file-icon-btn" onclick="toggleIconPopover(event, 'insert-file')" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;cursor:pointer;font-size:20px;min-width:50px;text-align:center">📎</button>
+        <input type="hidden" id="insert-file-icon-input" value="📎">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nombre del Archivo</label>
+        <input type="text" class="form-input" id="insert-file-display-name" placeholder="Nombre que aparecerá en el árbol...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ruta de Guardado (Carpeta)</label>
+        <select class="form-select" id="insert-file-folder-select">
+          <option value="null">📁 Raíz</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Archivo a Cargar</label>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('insert-file-input').click()" style="flex:1">📁 Explorar PC</button>
+          <input type="file" id="insert-file-input" style="display:none">
+        </div>
+      </div>
+      <div id="insert-file-preview"></div>
+      <div class="form-group">
+        <label class="form-label">Nombre Personalizado (Opcional)</label>
+        <input type="text" class="form-input" id="insert-file-name-input" placeholder="Dejar en blanco para usar nombre original...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('insert-file-modal')">Cancelar</button>
+      <button class="btn-save" onclick="confirmInsertFile()">Guardar Archivo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="add-user-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="add-user-modal-title">Añadir Usuario</h3>
+      <button class="modal-close" onclick="closeModal('add-user-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nombre</label>
+        <input type="text" class="form-input" id="new-user-name" placeholder="Nombre completo...">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Rol</label>
+          <input type="text" class="form-input" id="new-user-role" placeholder="Técnico, Operador...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Grupo</label>
+          <select class="form-select" id="new-user-group">
+            <option value="Sistemas">Sistemas</option>
+            <option value="Redes">Redes</option>
+            <option value="Tecnicos de sala">Técnicos de Sala</option>
+            <option value="Operadores">Operadores</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Color de Avatar</label>
+        <input type="color" class="form-input" id="new-user-color" value="#e8c547" style="height:42px;cursor:pointer">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('add-user-modal')">Cancelar</button>
+      <button class="btn-save" onclick="addUser()">Añadir Usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add group modal después de Add User Modal -->
+<div class="modal-overlay" id="group-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Editar Grupo</h3>
+      <button class="modal-close" onclick="closeModal('group-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nombre del grupo</label>
+        <input type="text" class="form-input" id="group-name-input" placeholder="Nombre del grupo...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel btn-cancel-danger hidden" id="group-delete-btn" onclick="deleteEditingGroup()">Borrar grupo</button>
+      <button class="btn-cancel" onclick="closeModal('group-modal')">Cancelar</button>
+      <button class="btn-save" onclick="saveGroup()">Guardar Grupo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Editar usuario (modal dedicado) -->
+<div class="modal-overlay" id="edit-user-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="edit-user-modal-title">Editar Usuario</h3>
+      <button class="modal-close" onclick="closeModal('edit-user-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nombre</label>
+        <input type="text" class="form-input" id="edit-user-name" placeholder="Nombre completo...">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Rol</label>
+          <input type="text" class="form-input" id="edit-user-role" placeholder="Técnico, Operador...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Grupo</label>
+          <select class="form-select" id="edit-user-group">
+            <option value="Sistemas">Sistemas</option>
+            <option value="Redes">Redes</option>
+            <option value="Tecnicos de sala">Técnicos de Sala</option>
+            <option value="Operadores">Operadores</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Color de Avatar</label>
+        <input type="color" class="form-input" id="edit-user-color" value="#e8c547" style="height:42px;cursor:pointer">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('edit-user-modal')">Cancelar</button>
+      <button class="btn-save" onclick="saveEditUserModal()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invitaciones a grupos de trabajo -->
+<div class="modal-overlay" id="workgroup-invites-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3>📩 Invitaciones a grupos</h3>
+      <button type="button" class="modal-close" onclick="closeModal('workgroup-invites-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="wg-invites-list-body"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" onclick="closeModal('workgroup-invites-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ficha de grupo (solo lectura); onWorkGroupCardClick en el monolito abre wg-info-modal -->
+<div class="modal-overlay" id="wg-info-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 id="wg-info-title">Grupo</h3>
+      <button type="button" class="modal-close" onclick="closeModal('wg-info-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="gap:16px">
+      <div class="wg-info-block">
+        <h4>Descripción</h4>
+        <div id="wg-info-desc-body" class="doc-body"></div>
+      </div>
+      <div class="wg-info-block">
+        <h4>Objetivos</h4>
+        <div id="wg-info-objectives-body" class="doc-body"></div>
+      </div>
+      <p style="font-size:10px;color:var(--text-muted);margin:0;line-height:1.45">Solo lectura. Los administradores pueden editar el grupo desde el botón «Editar grupo».</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" onclick="closeModal('wg-info-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edición de grupo (admin) -->
+<div class="modal-overlay" id="workgroup-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3>Editar grupo</h3>
+      <button type="button" class="modal-close" onclick="closeModal('workgroup-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="gap:14px">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Grupo</div>
+        <div id="wg-edit-name-display" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700"></div>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Descripción (Markdown, / para comandos)</label>
+        <div class="content-input-group">
+          <textarea class="form-textarea" id="wg-edit-desc" rows="3" placeholder="Contexto del equipo, convenciones… Escribe / para tablas, listas, imágenes…" style="resize:vertical;min-height:72px" oninput="updateMarkdownPreview('wg-edit-desc','wg-edit-desc-preview',editingWorkGroupImages)"></textarea>
+          <button type="button" class="btn-insert-image" onclick="insertImageWgDesc()" title="Insertar imagen">🖼️</button>
+        </div>
+        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          <button type="button" class="btn-secondary" id="wg-edit-desc-preview-toggle" onclick="togglePreview('wg-edit-desc-preview','wg-edit-desc-preview-toggle')">Ocultar preview</button>
+        </div>
+        <div class="markdown-preview" id="wg-edit-desc-preview"></div>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Objetivos (Markdown, / para comandos)</label>
+        <div class="content-input-group">
+          <textarea class="form-textarea" id="wg-edit-objectives" rows="3" placeholder="Metas medibles, hitos, KPIs… Escribe / para formato rápido" style="resize:vertical;min-height:72px" oninput="updateMarkdownPreview('wg-edit-objectives','wg-edit-objectives-preview',editingWorkGroupImages)"></textarea>
+          <button type="button" class="btn-insert-image" onclick="insertImageWgObjectives()" title="Insertar imagen">🖼️</button>
+        </div>
+        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          <button type="button" class="btn-secondary" id="wg-edit-obj-preview-toggle" onclick="togglePreview('wg-edit-objectives-preview','wg-edit-obj-preview-toggle')">Ocultar preview</button>
+        </div>
+        <div class="markdown-preview" id="wg-edit-objectives-preview"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Miembros</div>
+        <div id="wg-edit-members-list"></div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Invitar por nombre (autocompletado)</div>
+        <div style="position:relative">
+          <input class="form-input" id="wg-edit-invite-search" type="text" autocomplete="off" placeholder="Escribe nombre o departamento…" oninput="onWgEditInviteSearchInput(event)">
+          <div id="wg-edit-invite-suggestions" class="wg-invite-suggestions hidden"></div>
+        </div>
+        <button type="button" class="btn-secondary" style="margin-top:10px" onclick="sendWgInviteFromEditModal()">Enviar invitación</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" onclick="closeModal('workgroup-modal')">Cancelar</button>
+      <button type="button" class="btn-save" onclick="saveWorkGroupEdit()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Insertar imagen (comando /) -->
+<div class="modal-overlay" id="slash-image-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Insertar imagen</h3>
+      <button type="button" class="modal-close" onclick="closeSlashImageModal()">✕</button>
+    </div>
+    <div class="modal-body" style="gap:12px">
+      <p style="font-size:12px;color:var(--text-muted);margin:0">Elige un archivo en tu equipo o inserta la URL de una imagen (https…).</p>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Texto alternativo</label>
+        <input class="form-input" id="slash-image-alt-input" type="text" value="Imagen" placeholder="Descripción breve">
+      </div>
+      <button type="button" class="btn-primary btn-full-width" onclick="slashImagePickFile()">📁 Elegir archivo local…</button>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">URL de imagen</label>
+        <input class="form-input" id="slash-image-url-input" type="url" placeholder="https://ejemplo.com/imagen.png">
+      </div>
+      <button type="button" class="btn-secondary btn-full-width" onclick="slashImageApplyUrl()">Insertar desde URL</button>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" onclick="closeSlashImageModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TABLE EDITOR MODAL -->
+<div class="modal-overlay" id="table-editor-modal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h3>📊 Editor de Tabla</h3>
+      <button class="modal-close" onclick="closeTableEditor()">✕</button>
+    </div>
+    <div class="modal-body" style="gap:14px">
+      <div class="te-toolbar">
+        <button class="te-btn" onclick="teAddCol()">＋ Columna</button>
+        <button class="te-btn" onclick="teAddRow()">＋ Fila</button>
+        <button class="te-btn danger" onclick="teRemoveCol()">− Columna</button>
+        <button class="te-btn danger" onclick="teRemoveRow()">− Fila</button>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted)" id="te-size-label"></span>
+      </div>
+      <div class="te-wrapper">
+        <table class="te-table" id="te-table"></table>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted)">💡 Haz clic en una celda para editarla. La primera fila son los encabezados.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeTableEditor()">Cancelar</button>
+      <button class="btn-save" onclick="confirmTableEditor()">Insertar tabla</button>
+    </div>
+  </div>
+</div>
+<div id="icon-popover" class="icon-popover"></div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<div id="slash-menu" class="slash-menu" style="display:none;"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

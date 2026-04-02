@@ -1,0 +1,20 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd \"c:\\\\Users\\\\TecnicoSistemas\\\\OneDrive - Autoridad Única del Transporte de Gran Canaria\\\\Escritorio\\\\st\"; powershell -NoProfile -Command \"\\$lines=\\(Get-Content 'diario_departamental_v2\\.html'\\)\\[7548\\.\\.7664\\]; \\$lines\\.Count\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Users\\\\TecnicoSistemas\\\\OneDrive - Autoridad Única del Transporte de Gran Canaria\\\\Escritorio\\\\st\"; powershell -NoProfile -Command \"\\(\\(Get-Content 'diario_departamental_v2\\.html'\\)\\[7548\\.\\.7664\\]\\)\\.Count\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Users\\\\TecnicoSistemas\\\\OneDrive - Autoridad Única del Transporte de Gran Canaria\\\\Escritorio\\\\st\"; powershell -NoProfile -Command \"\\$orig=\\(Get-Content diario_departamental_v2\\.html\\)\\[7548\\.\\.7664\\]; \\$mod=\\(Get-Content js/components/export\\.js\\); \\$origCount=\\$orig\\.Count; \\$modCount=\\$mod\\.Count; \\[PSCustomObject\\]@\\{origCount=\\$origCount;modCount=\\$modCount\\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Users\\\\TecnicoSistemas\\\\OneDrive - Autoridad Única del Transporte de Gran Canaria\\\\Escritorio\\\\st\"; powershell -NoProfile -Command \"\\$orig=\\(Get-Content diario_departamental_v2\\.html\\)\\[7548\\.\\.7664\\]; \\$origCount=\\$orig\\.Count; \\$mod=\\(Get-Content js/components/export\\.js\\); \\$modCount=\\$mod\\.Count; Write-Output \\$origCount; Write-Output \\$modCount;\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
