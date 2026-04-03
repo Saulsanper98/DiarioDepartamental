@@ -318,20 +318,22 @@ function openDetail(id) {
   let body = note.body;
   body = renderMarkdown(body, note.images || {});
   document.getElementById('detail-body').innerHTML = `
-    <div class="note-detail-meta">
-      <div class="mention-chip"><div class="chip-avatar mention-avatar" style="background:${author.color}">${author.initials}</div>${author.name}</div>
-      <span class="note-tag note-tag-shift">${shift.emoji} ${shift.label}</span>
-      ${note.priority!=='normal'?`<span class="note-tag priority-${note.priority}">${note.priority==='alta'?'🔴 Alta':'Media'}</span>`:''}
-      ${note.visibility==='public'?'<span class="note-tag note-tag-public">🌐 Pública</span>':'<span class="note-tag note-tag-private">🔒 Privada</span>'}
-      <span class="note-tag note-tag-group" title="Departamento de origen">🏢 Origen: ${note.group || '—'}</span>
-      ${note.reminder?`<span class="note-reminder">⏰ ${note.reminderTime}</span>`:''}
+    <div class="note-detail-scroll">
+      <div class="note-detail-meta">
+        <div class="mention-chip"><div class="chip-avatar mention-avatar" style="background:${author.color}">${author.initials}</div>${author.name}</div>
+        <span class="note-tag note-tag-shift">${shift.emoji} ${shift.label}</span>
+        ${note.priority!=='normal'?`<span class="note-tag priority-${note.priority}">${note.priority==='alta'?'🔴 Alta':'Media'}</span>`:''}
+        ${note.visibility==='public'?'<span class="note-tag note-tag-public">🌐 Pública</span>':'<span class="note-tag note-tag-private">🔒 Privada</span>'}
+        <span class="note-tag note-tag-group" title="Departamento de origen">🏢 Origen: ${note.group || '—'}</span>
+        ${note.reminder?`<span class="note-reminder">⏰ ${note.reminderTime}</span>`:''}
+      </div>
+      <div class="note-detail-title">${note.title}</div>
+      <div class="note-detail-content">${body}</div>
+      ${mentionedUsers.length?`<div class="note-detail-divider"></div><div class="note-detail-section-label">Compañeros mencionados</div><div class="note-detail-mentions">${mentionedUsers.map(u=>`<div class="mention-chip"><div class="chip-avatar mention-avatar" style="background:${u.color}">${u.initials}</div>${u.name}</div>`).join('')}</div>`:''}
+      <div class="note-detail-divider"></div>
+      <div class="note-detail-created">Creado el ${new Date(note.createdAt).toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
     </div>
-    <div class="note-detail-title">${note.title}</div>
-    <div class="note-detail-content">${body}</div>
-    ${mentionedUsers.length?`<div class="note-detail-divider"></div><div class="note-detail-section-label">Compañeros mencionados</div><div class="note-detail-mentions">${mentionedUsers.map(u=>`<div class="mention-chip"><div class="chip-avatar mention-avatar" style="background:${u.color}">${u.initials}</div>${u.name}</div>`).join('')}</div>`:''}
-    <div class="note-detail-divider"></div>
-    <div style="font-size:11px;color:var(--text-muted)">Creado el ${new Date(note.createdAt).toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
-    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+    <div class="note-detail-footer">
       <button type="button" class="btn-primary btn-full-width" onclick="event.preventDefault();event.stopPropagation();openNoteCommentsModal(${note.id})">💬 Abrir comentarios${comments.filter(c=>c.kind==='note'&&sameId(c.targetId,note.id)).length ? ' ('+comments.filter(c=>c.kind==='note'&&sameId(c.targetId,note.id)).length+')' : ''}</button>
     </div>
   `;

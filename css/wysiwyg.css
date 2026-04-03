@@ -59,6 +59,34 @@
   word-break: break-word;
 }
 
+/* ── Checklist: checkbox y texto alineados en vertical (editor, preview, detalle, tarjetas) ── */
+#note-modal .note-wysiwyg-editor .md-checklist-item,
+#note-modal #note-content-preview.markdown-preview .md-checklist-item,
+#detail-modal .note-detail-content .md-checklist-item,
+#detail-modal .note-detail-scroll .md-checklist-item,
+#view-notes .note-card .md-checklist-item,
+#view-public-notes .note-card .md-checklist-item,
+#notes-area .note-card .md-checklist-item,
+#public-notes-area .note-card .md-checklist-item,
+.shift-notes .note-card .md-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#note-modal .note-wysiwyg-editor .md-checklist-item .md-checkbox,
+#note-modal #note-content-preview.markdown-preview .md-checklist-item .md-checkbox,
+#detail-modal .note-detail-content .md-checklist-item .md-checkbox,
+#detail-modal .note-detail-scroll .md-checklist-item .md-checkbox,
+#view-notes .note-card .md-checklist-item .md-checkbox,
+#view-public-notes .note-card .md-checklist-item .md-checkbox,
+#notes-area .note-card .md-checklist-item .md-checkbox,
+#public-notes-area .note-card .md-checklist-item .md-checkbox,
+.shift-notes .note-card .md-checklist-item .md-checkbox {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
 #note-modal .note-wysiwyg-editor .md-h1,
 #note-modal .note-wysiwyg-editor .md-h2,
 #note-modal .note-wysiwyg-editor .md-h3,
@@ -112,4 +140,863 @@
   max-width: 100%;
   overflow-x: auto;
   box-sizing: border-box;
+}
+
+/* ── Modal Detalle de Nota: área de contenido con scroll; pie fijo con comentarios ── */
+#detail-modal .modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+#detail-modal .modal-header {
+  flex-shrink: 0;
+}
+
+#detail-modal .note-detail-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#detail-modal .note-detail-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  max-height: calc(60vh - 120px);
+  padding-right: 12px;
+  box-sizing: border-box;
+}
+
+#detail-modal .note-detail-content {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+#detail-modal .note-detail-created {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+#detail-modal .note-detail-footer {
+  flex-shrink: 0;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  background: var(--modal-surface);
+}
+
+/* ── Modal Nueva Nota: editor con altura máxima y scroll interno ── */
+#note-modal #note-body-editor.note-wysiwyg-editor.form-textarea {
+  overflow-y: auto;
+  max-height: min(420px, 50vh);
+}
+
+/* Cabecera: avatar + meta a la izquierda; tags (turno, pública…) a la derecha */
+#view-notes .note-card .note-card-header,
+#view-public-notes .note-card .note-card-header,
+#notes-area .note-card .note-card-header,
+#public-notes-area .note-card .note-card-header,
+.shift-notes .note-card .note-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+
+/* Divisor entre cabecera y contenido (ancho completo) */
+#view-notes .note-card .note-card-header::after,
+#view-public-notes .note-card .note-card-header::after,
+#notes-area .note-card .note-card-header::after,
+#public-notes-area .note-card .note-card-header::after,
+.shift-notes .note-card .note-card-header::after {
+  content: '';
+  flex-basis: 100%;
+  width: 100%;
+  height: 0;
+  margin: 10px 0;
+  border: 0;
+  border-top: 0.5px solid var(--color-border-tertiary, var(--border));
+  order: 1;
+}
+
+#view-notes .note-card .note-card-header .note-meta,
+#view-public-notes .note-card .note-card-header .note-meta,
+#notes-area .note-card .note-card-header .note-meta,
+#public-notes-area .note-card .note-card-header .note-meta,
+.shift-notes .note-card .note-card-header .note-meta {
+  display: contents;
+}
+
+#view-notes .note-card .note-card-header .note-tags,
+#view-public-notes .note-card .note-card-header .note-tags,
+#notes-area .note-card .note-card-header .note-tags,
+#public-notes-area .note-card .note-card-header .note-tags,
+.shift-notes .note-card .note-card-header .note-tags {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+#view-notes .note-card .note-author-avatar,
+#view-public-notes .note-card .note-author-avatar,
+#notes-area .note-card .note-author-avatar,
+#public-notes-area .note-card .note-author-avatar,
+.shift-notes .note-card .note-author-avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0e7ff !important;
+  color: #4338ca !important;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  -webkit-text-fill-color: #4338ca !important;
+}
+
+#view-notes .note-card .note-title,
+#view-public-notes .note-card .note-title,
+#notes-area .note-card .note-title,
+#public-notes-area .note-card .note-title,
+.shift-notes .note-card .note-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary, var(--text-primary, var(--text)));
+  margin-bottom: 6px;
+  letter-spacing: normal;
+}
+
+#view-notes .note-card .note-body,
+#view-public-notes .note-card .note-body,
+#notes-area .note-card .note-body,
+#public-notes-area .note-card .note-body,
+.shift-notes .note-card .note-body {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  font-size: 13px;
+  color: var(--color-text-secondary, var(--text-muted));
+  line-height: 1.5;
+}
+
+/* Espacio entre bloques renderizados; sin div.md-spacer en el HTML */
+#view-notes .note-card .note-body > *,
+#view-public-notes .note-card .note-body > *,
+#notes-area .note-card .note-body > *,
+#public-notes-area .note-card .note-body > *,
+.shift-notes .note-card .note-body > * {
+  margin-bottom: 8px;
+}
+
+/* Notas guardadas antes: anular spacers vacíos */
+#view-notes .note-card .note-body .md-spacer,
+#view-public-notes .note-card .note-body .md-spacer,
+#notes-area .note-card .note-body .md-spacer,
+#public-notes-area .note-card .note-body .md-spacer,
+.shift-notes .note-card .note-body .md-spacer {
+  display: none;
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+#view-notes .note-card .note-body .note-body-preview,
+#view-public-notes .note-card .note-body .note-body-preview,
+#notes-area .note-card .note-body .note-body-preview,
+#public-notes-area .note-card .note-body .note-body-preview,
+.shift-notes .note-card .note-body .note-body-preview {
+  font-size: 13px;
+  line-height: 1.5;
+  color: inherit;
+}
+
+#view-notes .note-card .note-author-name,
+#view-public-notes .note-card .note-author-name,
+#notes-area .note-card .note-author-name,
+#public-notes-area .note-card .note-author-name,
+.shift-notes .note-card .note-author-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary, var(--text-primary, var(--text)));
+  min-width: 0;
+}
+
+#view-notes .note-card .note-timestamp,
+#view-public-notes .note-card .note-timestamp,
+#notes-area .note-card .note-timestamp,
+#public-notes-area .note-card .note-timestamp,
+.shift-notes .note-card .note-timestamp {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-secondary, var(--text-muted));
+  letter-spacing: 0.01em;
+  flex-shrink: 0;
+}
+
+/* Acciones: solo visibles al hover/focus-within; texto pequeño, sin borde */
+#view-notes .note-card .note-actions,
+#view-public-notes .note-card .note-actions,
+#notes-area .note-card .note-actions,
+#public-notes-area .note-card .note-actions,
+.shift-notes .note-card .note-actions {
+  display: flex;
+  gap: 0;
+  align-items: center;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+#view-notes .note-card:hover .note-actions,
+#view-public-notes .note-card:hover .note-actions,
+#notes-area .note-card:hover .note-actions,
+#public-notes-area .note-card:hover .note-actions,
+.shift-notes .note-card:hover .note-actions,
+#view-notes .note-card:focus-within .note-actions,
+#view-public-notes .note-card:focus-within .note-actions,
+#notes-area .note-card:focus-within .note-actions,
+#public-notes-area .note-card:focus-within .note-actions,
+.shift-notes .note-card:focus-within .note-actions {
+  opacity: 1;
+}
+
+#view-notes .note-card .note-action-btn,
+#view-public-notes .note-card .note-action-btn,
+#notes-area .note-card .note-action-btn,
+#public-notes-area .note-card .note-action-btn,
+.shift-notes .note-card .note-action-btn {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 2px;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--color-text-secondary, var(--text-muted));
+  opacity: 1;
+  cursor: pointer;
+}
+
+#view-notes .note-card .note-action-btn:hover,
+#view-public-notes .note-card .note-action-btn:hover,
+#notes-area .note-card .note-action-btn:hover,
+#public-notes-area .note-card .note-action-btn:hover,
+.shift-notes .note-card .note-action-btn:hover {
+  color: var(--color-text-primary, var(--text-primary, var(--text)));
+  background: none;
+}
+
+html[class*='tema-claro'] #view-notes .note-card .note-action-btn:hover,
+html[class*='tema-claro'] #view-public-notes .note-card .note-action-btn:hover,
+html[class*='tema-claro'] #notes-area .note-card .note-action-btn:hover,
+html[class*='tema-claro'] #public-notes-area .note-card .note-action-btn:hover,
+html[class*='tema-claro'] .shift-notes .note-card .note-action-btn:hover {
+  color: var(--color-text-primary, #374151) !important;
+  -webkit-text-fill-color: var(--color-text-primary, #374151) !important;
+  background: none !important;
+}
+
+#view-notes .note-card .note-action-btn.delete:hover,
+#view-public-notes .note-card .note-action-btn.delete:hover,
+#notes-area .note-card .note-action-btn.delete:hover,
+#public-notes-area .note-card .note-action-btn.delete:hover,
+.shift-notes .note-card .note-action-btn.delete:hover {
+  color: var(--danger);
+}
+
+html[class*='tema-claro'] #view-notes .note-card .note-action-btn.delete:hover,
+html[class*='tema-claro'] #view-public-notes .note-card .note-action-btn.delete:hover,
+html[class*='tema-claro'] #notes-area .note-card .note-action-btn.delete:hover,
+html[class*='tema-claro'] #public-notes-area .note-card .note-action-btn.delete:hover,
+html[class*='tema-claro'] .shift-notes .note-card .note-action-btn.delete:hover {
+  color: var(--danger) !important;
+  -webkit-text-fill-color: var(--danger) !important;
+}
+
+#view-notes .note-card .note-actions:has(.note-action-btn:nth-child(2)) .note-action-btn:first-child::after,
+#view-public-notes .note-card .note-actions:has(.note-action-btn:nth-child(2)) .note-action-btn:first-child::after,
+#notes-area .note-card .note-actions:has(.note-action-btn:nth-child(2)) .note-action-btn:first-child::after,
+#public-notes-area .note-card .note-actions:has(.note-action-btn:nth-child(2)) .note-action-btn:first-child::after,
+.shift-notes .note-card .note-actions:has(.note-action-btn:nth-child(2)) .note-action-btn:first-child::after {
+  content: '·';
+  margin: 0 5px 0 6px;
+  color: var(--color-text-secondary, var(--text-muted));
+  font-weight: 400;
+  pointer-events: none;
+}
+
+/* Listas con viñetas en tarjeta */
+#view-notes .note-card .md-list,
+#view-public-notes .note-card .md-list,
+#notes-area .note-card .md-list,
+#public-notes-area .note-card .md-list,
+.shift-notes .note-card .md-list {
+  gap: 4px;
+  margin: 8px 0;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+}
+
+/* Checklist en tarjeta: contenedor sin caja; ítems con fondo suave */
+#view-notes .note-card .md-checklist,
+#view-public-notes .note-card .md-checklist,
+#notes-area .note-card .md-checklist,
+#public-notes-area .note-card .md-checklist,
+.shift-notes .note-card .md-checklist {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#view-notes .note-card .md-checklist-item,
+#view-public-notes .note-card .md-checklist-item,
+#notes-area .note-card .md-checklist-item,
+#public-notes-area .note-card .md-checklist-item,
+.shift-notes .note-card .md-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: var(--color-background-secondary, var(--surface2));
+  border-radius: 6px;
+  border: none;
+  box-shadow: none;
+}
+
+#view-notes .note-card .md-checklist-item.checked,
+#view-public-notes .note-card .md-checklist-item.checked,
+#notes-area .note-card .md-checklist-item.checked,
+#public-notes-area .note-card .md-checklist-item.checked,
+.shift-notes .note-card .md-checklist-item.checked {
+  background: var(--color-background-secondary, var(--surface2));
+  border: none;
+}
+
+#view-notes .note-card .md-checkbox,
+#view-public-notes .note-card .md-checkbox,
+#notes-area .note-card .md-checkbox,
+#public-notes-area .note-card .md-checkbox,
+.shift-notes .note-card .md-checkbox {
+  box-sizing: border-box;
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  min-height: 15px;
+  border-radius: 3px;
+  border: 1.5px solid var(--color-border-secondary, var(--border));
+  margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: transparent;
+  background: transparent;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+#view-notes .note-card .md-checklist-item.checked .md-checkbox,
+#view-public-notes .note-card .md-checklist-item.checked .md-checkbox,
+#notes-area .note-card .md-checklist-item.checked .md-checkbox,
+#public-notes-area .note-card .md-checklist-item.checked .md-checkbox,
+.shift-notes .note-card .md-checklist-item.checked .md-checkbox {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+}
+
+#view-notes .note-card .md-checkbox-label,
+#view-public-notes .note-card .md-checkbox-label,
+#notes-area .note-card .md-checkbox-label,
+#public-notes-area .note-card .md-checkbox-label,
+.shift-notes .note-card .md-checkbox-label {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+#view-notes .note-card .md-list li,
+#view-public-notes .note-card .md-list li,
+#notes-area .note-card .md-list li,
+#public-notes-area .note-card .md-list li,
+.shift-notes .note-card .md-list li {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* Preview de checklist en listado (.nbp-* dentro de .note-body) */
+#view-notes .note-card .note-body .nbp-checklist,
+#view-public-notes .note-card .note-body .nbp-checklist,
+#notes-area .note-card .note-body .nbp-checklist,
+#public-notes-area .note-card .note-body .nbp-checklist,
+.shift-notes .note-card .note-body .nbp-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+#view-notes .note-card .note-body .nbp-check-item,
+#view-public-notes .note-card .note-body .nbp-check-item,
+#notes-area .note-card .note-body .nbp-check-item,
+#public-notes-area .note-card .note-body .nbp-check-item,
+.shift-notes .note-card .note-body .nbp-check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: var(--color-background-secondary, var(--surface2));
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, var(--text-dim));
+}
+
+#view-notes .note-card .note-body .nbp-checkbox,
+#view-public-notes .note-card .note-body .nbp-checkbox,
+#notes-area .note-card .note-body .nbp-checkbox,
+#public-notes-area .note-card .note-body .nbp-checkbox,
+.shift-notes .note-card .note-body .nbp-checkbox {
+  box-sizing: border-box;
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  min-height: 15px;
+  border-radius: 3px;
+  border: 1.5px solid var(--color-border-secondary, var(--border));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: transparent;
+  background: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+#view-notes .note-card .note-body .nbp-check-item.done .nbp-checkbox,
+#view-public-notes .note-card .note-body .nbp-check-item.done .nbp-checkbox,
+#notes-area .note-card .note-body .nbp-check-item.done .nbp-checkbox,
+#public-notes-area .note-card .note-body .nbp-check-item.done .nbp-checkbox,
+.shift-notes .note-card .note-body .nbp-check-item.done .nbp-checkbox {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+}
+
+#view-notes .note-card .note-body .nbp-check-item.done,
+#view-public-notes .note-card .note-body .nbp-check-item.done,
+#notes-area .note-card .note-body .nbp-check-item.done,
+#public-notes-area .note-card .note-body .nbp-check-item.done,
+.shift-notes .note-card .note-body .nbp-check-item.done {
+  color: var(--color-text-secondary, var(--text-muted));
+}
+
+#view-notes .note-card .note-footer,
+#view-public-notes .note-card .note-footer,
+#notes-area .note-card .note-footer,
+#public-notes-area .note-card .note-footer,
+.shift-notes .note-card .note-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.md-checklist-item.checked .md-checkbox {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.md-checklist-item.checked .md-checkbox::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(-45deg) translateY(-1px);
+  margin: 3px auto 0;
+}
+
+/* ── Listado de notas: shell de tarjeta y tipografía (una sola capa, doble ID) ──
+   .shift-section: sin override — conserva border-radius de style.css (var(--radius)).
+   Solo .shift-notes (interior) lleva esquinas rectas. */
+#view-notes #notes-area .shift-notes,
+#view-public-notes #public-notes-area .shift-notes {
+  background: linear-gradient(135deg, #e8e6f0 0%, #f0ede8 50%, #e6eef0 100%) !important;
+  padding: 12px !important;
+  border-radius: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+#view-notes #notes-area div.note-card,
+#view-public-notes #public-notes-area div.note-card {
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  border-left: 3px solid rgba(255, 255, 255, 0.4) !important;
+  border-radius: 12px !important;
+  padding: 14px 16px !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9) !important;
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  flex-shrink: 0 !important;
+  overflow: visible !important;
+  transition: all 0.2s ease !important;
+}
+
+#view-notes #notes-area div.note-card:hover,
+#view-public-notes #public-notes-area div.note-card:hover {
+  border-left-color: var(--accent) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.9) !important;
+  transform: translateY(-1px) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+}
+
+#view-notes #notes-area div.note-card .note-card-header,
+#view-public-notes #public-notes-area div.note-card .note-card-header {
+  padding-bottom: 10px !important;
+  margin-bottom: 10px !important;
+  border-bottom: 1px solid rgba(0,0,0,0.06) !important;
+}
+
+#view-notes #notes-area div.note-card .note-card-header::after,
+#view-public-notes #public-notes-area div.note-card .note-card-header::after {
+  content: none !important;
+  display: none !important;
+}
+
+#view-notes #notes-area div.note-card .note-title,
+#view-public-notes #public-notes-area div.note-card .note-title {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #111827 !important;
+  margin-bottom: 5px !important;
+}
+
+#view-notes #notes-area div.note-card .note-body,
+#view-public-notes #public-notes-area div.note-card .note-body {
+  font-size: 13px !important;
+  color: #4b5563 !important;
+  line-height: 1.5 !important;
+}
+
+#view-notes #notes-area div.note-card .note-author-avatar,
+#view-public-notes #public-notes-area div.note-card .note-author-avatar {
+  background: linear-gradient(135deg, #667eea, #764ba2) !important;
+  color: white !important;
+  -webkit-text-fill-color: white !important;
+}
+
+/* ── Modal Nueva Nota — Glassmorphism ── */
+#note-modal {
+  background: linear-gradient(135deg, rgba(219,220,240,0.85) 0%, rgba(240,237,232,0.85) 50%, rgba(220,232,233,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+#note-modal .modal {
+  background: rgba(255,255,255,0.72) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.95) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+
+#note-modal .modal-header {
+  border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+  padding: 18px 22px 16px !important;
+}
+
+#note-modal .modal-title,
+#note-modal h2,
+#note-modal h3 {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
+
+#note-modal .form-label,
+#note-modal label {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+#note-modal input[type="text"],
+#note-modal textarea {
+  background: rgba(255,255,255,0.55) !important;
+  border: 1px solid rgba(148,163,184,0.25) !important;
+  border-radius: 10px !important;
+  color: #334155 !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.03) !important;
+}
+
+#note-modal input[type="text"]:focus,
+#note-modal textarea:focus {
+  border-color: rgba(99,102,241,0.4) !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.08) !important;
+  background: rgba(255,255,255,0.8) !important;
+  outline: none !important;
+}
+
+#note-modal input::placeholder,
+#note-modal textarea::placeholder {
+  color: #cbd5e1 !important;
+}
+
+#note-modal .btn-shift,
+#note-modal .shift-option,
+#note-modal [class*="turno"] {
+  background: rgba(255,255,255,0.45) !important;
+  border: 1px solid rgba(148,163,184,0.2) !important;
+  border-radius: 10px !important;
+  color: #64748b !important;
+}
+
+#note-modal .btn-shift.active,
+#note-modal .shift-option.active,
+#note-modal .shift-option.selected,
+#note-modal [class*="turno"].active {
+  background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+  color: white !important;
+  border-color: transparent !important;
+  box-shadow: 0 3px 10px rgba(99,102,241,0.3) !important;
+}
+
+#note-modal .btn-shift.active span,
+#note-modal .shift-option.active span,
+#note-modal .shift-option.selected span,
+#note-modal [class*="turno"].active span,
+#note-modal .shift-option.selected .shift-name,
+#note-modal .shift-option.selected .shift-hours,
+#note-modal .shift-option.active .shift-hours {
+  color: rgba(255,255,255,0.85) !important;
+  -webkit-text-fill-color: rgba(255,255,255,0.85) !important;
+}
+
+#note-modal .modal-footer {
+  border-top: 1px solid rgba(0,0,0,0.04) !important;
+  background: rgba(255,255,255,0.3) !important;
+  padding: 14px 22px 18px !important;
+}
+
+#note-modal .btn-primary,
+#note-modal [class*="btn-save"],
+#note-modal .btn-new-note {
+  background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  box-shadow: 0 3px 12px rgba(99,102,241,0.35) !important;
+  color: white !important;
+}
+
+#note-modal .btn-cancel,
+#note-modal [class*="btn-cancel"] {
+  background: rgba(255,255,255,0.5) !important;
+  border: 1px solid rgba(148,163,184,0.25) !important;
+  border-radius: 10px !important;
+  color: #94a3b8 !important;
+}
+
+#note-modal .note-wysiwyg-editor,
+#note-modal #note-body-editor {
+  background: rgba(255,255,255,0.55) !important;
+  border: 1px solid rgba(148,163,184,0.25) !important;
+  border-radius: 10px !important;
+  color: #334155 !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.03) !important;
+}
+
+#note-modal .note-wysiwyg-editor:focus,
+#note-modal #note-body-editor:focus {
+  border-color: rgba(99,102,241,0.4) !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.08) !important;
+  background: rgba(255,255,255,0.8) !important;
+  outline: none !important;
+}
+
+#note-modal select {
+  background: rgba(255,255,255,0.55) !important;
+  border: 1px solid rgba(148,163,184,0.25) !important;
+  border-radius: 10px !important;
+  color: #334155 !important;
+  padding: 9px 12px !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.03) !important;
+}
+
+#note-modal .priority-opt,
+#note-modal .visibility-opt,
+#note-modal .btn-priority,
+#note-modal .btn-visibility {
+  background: rgba(255,255,255,0.45) !important;
+  border: 1px solid rgba(148,163,184,0.2) !important;
+  border-radius: 10px !important;
+  color: #64748b !important;
+}
+
+/* Prioridad: color por tipo (clases .normal | .media | .alta; activo = .selected o .active) */
+#note-modal .priority-opt.normal {
+  background: rgba(34,197,94,0.12) !important;
+  color: #16a34a !important;
+  border-color: rgba(34,197,94,0.3) !important;
+}
+#note-modal .priority-opt.normal.selected,
+#note-modal .priority-opt.normal.active {
+  background: rgba(34,197,94,0.2) !important;
+  color: #15803d !important;
+  border-color: rgba(34,197,94,0.5) !important;
+  font-weight: 600 !important;
+  -webkit-text-fill-color: #15803d !important;
+}
+
+#note-modal .priority-opt.media {
+  background: rgba(234,179,8,0.12) !important;
+  color: #ca8a04 !important;
+  border-color: rgba(234,179,8,0.3) !important;
+}
+#note-modal .priority-opt.media.selected,
+#note-modal .priority-opt.media.active {
+  background: rgba(234,179,8,0.2) !important;
+  color: #a16207 !important;
+  border-color: rgba(234,179,8,0.5) !important;
+  font-weight: 600 !important;
+  -webkit-text-fill-color: #a16207 !important;
+}
+
+#note-modal .priority-opt.alta {
+  background: rgba(239,68,68,0.12) !important;
+  color: #dc2626 !important;
+  border-color: rgba(239,68,68,0.3) !important;
+}
+#note-modal .priority-opt.alta.selected,
+#note-modal .priority-opt.alta.active {
+  background: rgba(239,68,68,0.2) !important;
+  color: #b91c1c !important;
+  border-color: rgba(239,68,68,0.5) !important;
+  font-weight: 600 !important;
+  -webkit-text-fill-color: #b91c1c !important;
+}
+
+#note-modal .visibility-opt.active,
+#note-modal .visibility-opt.selected,
+#note-modal .btn-visibility.active {
+  background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+  color: white !important;
+  border-color: transparent !important;
+}
+
+#note-modal select {
+  background: rgba(255,255,255,0.55) !important;
+  background-color: rgba(255,255,255,0.55) !important;
+  border: 1px solid rgba(148,163,184,0.25) !important;
+  border-radius: 10px !important;
+  color: #334155 !important;
+  padding: 9px 12px !important;
+  appearance: auto !important;
+  -webkit-appearance: auto !important;
+}
+
+/* ── Modal Insertar Archivo — Glassmorphism ── */
+#insert-file-modal {
+  background: linear-gradient(135deg, rgba(219,220,240,0.85) 0%, rgba(240,237,232,0.85) 50%, rgba(220,232,233,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+#insert-file-modal .modal {
+  background: rgba(255,255,255,0.72) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.95) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+
+#insert-file-modal .modal-header,
+#insert-file-modal .modal-body > .modal-header {
+  border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+}
+
+#insert-file-modal label {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+#insert-file-modal input[type="text"],
+#insert-file-modal input[type="file"] {
+  background: rgba(255,255,255,0.55) !important;
+  border: 1px solid rgba(148,163,184,0.25) !important;
+  border-radius: 10px !important;
+  color: #334155 !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.03) !important;
+}
+
+#insert-file-modal select {
+  background: rgba(255,255,255,0.55) !important;
+  border: 1px solid rgba(148,163,184,0.25) !important;
+  border-radius: 10px !important;
+  color: #334155 !important;
+  padding: 9px 12px !important;
+}
+
+#insert-file-modal .modal-footer {
+  border-top: 1px solid rgba(0,0,0,0.04) !important;
+  background: rgba(255,255,255,0.3) !important;
+}
+
+#insert-file-modal .btn-primary,
+#insert-file-modal .btn-save {
+  background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  box-shadow: 0 3px 12px rgba(99,102,241,0.35) !important;
+  color: white !important;
+}
+
+#insert-file-modal .btn-cancel {
+  background: rgba(255,255,255,0.5) !important;
+  border: 1px solid rgba(148,163,184,0.25) !important;
+  border-radius: 10px !important;
+  color: #94a3b8 !important;
 }

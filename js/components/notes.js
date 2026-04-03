@@ -209,48 +209,136 @@ export function renderNotes() {
  * @param {Object} cardOpts - Card options
  * @returns {string} HTML string
  */
+/** Texto seguro dentro de nodos HTML (evita que &lt;div&gt; en título/cuerpo rompa el árbol y anide tarjetas). */
+function escapeHtml(text) {
+  if (text == null) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function escapeHtmlAttr(text) {
+  if (text == null) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function escapeRegExp(string) {
+  return String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Alinea la clase `checked` del li con el estado del input; opcionalmente persiste el atributo checked en el HTML. */
+function syncMdChecklistDom(root, persistCheckboxAttribute = false) {
+  if (!root) return;
+  root.querySelectorAll('li.md-checklist-item').forEach((li) => {
+    const cb = li.querySelector('input.md-checkbox-input, input[type="checkbox"]');
+    if (!(cb instanceof HTMLInputElement) || cb.type !== 'checkbox') return;
+    li.classList.toggle('checked', cb.checked);
+    if (persistCheckboxAttribute) {
+      if (cb.checked) cb.setAttribute('checked', '');
+      else cb.removeAttribute('checked');
+    }
+  });
+}
+
+/** HTML guardado: restaura `checked` en el li según el input (p. ej. tras cargar desde disco). */
+function syncMdChecklistHtml(html) {
+  if (!html || typeof html !== 'string' || !html.includes('md-checklist-item')) return html;
+  try {
+    const doc = new DOMParser().parseFromString(`<div class="md-sync-checklist-root">${html}</div>`, 'text/html');
+    const wrap = doc.body.querySelector('.md-sync-checklist-root');
+    if (!wrap) return html;
+    syncMdChecklistDom(wrap, false);
+    return wrap.innerHTML;
+  } catch {
+    return html;
+  }
+}
+
 export function renderNoteCard(note, cardOpts = {}) {
   const author = USERS.find(u => sameId(u.id, note.authorId));
   const canEdit = userCanEditNote(note);
-  const date = new Date(note.createdAt).toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
-  const priorityLabel = {normal:'',media:'Media',alta:'🔴 Alta'}[note.priority || 'normal'];
-  const priorityTag = note.priority && note.priority !== 'normal' ? `<span class="note-tag priority-${note.priority}">${priorityLabel}</span>` : '';
+  const date = new Date(note.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  const prRaw = note.priority || 'normal';
+  const prSafe = ['normal', 'media', 'alta'].includes(prRaw) ? prRaw : 'normal';
+  const priorityLabel = { normal: '', media: 'Media', alta: '🔴 Alta' }[prSafe];
+  const priorityTag =
+    note.priority && prSafe !== 'normal'
+      ? `<span class="note-tag priority-${prSafe}">${priorityLabel}</span>`
+      : '';
   const publicTag = note.visibility === 'public' ? `<span class="note-tag note-tag-public">🌐 Pública</span>` : '';
 
-  let html = `<div class="note-card" data-id="${note.id}" onclick="openDetail(${note.id})">
-    <div class="note-card-header">
-      <div class="note-author-avatar" style="background:${author?.color || '#888'}">${author?.initials || '?'}</div>
-      <div class="note-meta">
-        <span class="note-author-name">${author ? author.name : 'Usuario desconocido'}</span>
-        <span class="note-timestamp">${date}</span>
-      </div>
-      <div class="note-tags">${priorityTag}${publicTag}</div>
-    </div>
-    <div class="note-title">${note.title || 'Sin título'}</div>
-    <div class="note-body">${noteBodyPreview(note.body || '', cardOpts.query || '')}</div>
-    <div class="note-footer">
-      ${note.reminder ? `<span class="note-reminder">⏰ ${note.reminder}</span>` : ''}
-      <div class="note-actions">
-        ${canEdit ? `<button class="note-action-btn" onclick="editNote(event, ${note.id})">✏️ Editar</button>` : ''}
-        ${sameId(note.authorId, currentUser.id) ? `<button class="note-action-btn delete" onclick="deleteNote(event, ${note.id})">🗑 Borrar</button>` : ''}
-      </div>
-    </div>`;
+  const bg = escapeHtmlAttr(author?.color || '#888');
+  const initials = escapeHtml(author?.initials || '?');
+  const authorName = escapeHtml(author ? author.name : 'Usuario desconocido');
+  const safeDate = escapeHtml(date);
 
+  const headerHtml = [
+    '<div class="note-card-header">',
+    `<div class="note-author-avatar" style="background:${bg}">${initials}</div>`,
+    '<div class="note-meta">',
+    `<span class="note-author-name">${authorName}</span>`,
+    `<span class="note-timestamp">${safeDate}</span>`,
+    '</div>',
+    `<div class="note-tags">${priorityTag}${publicTag}</div>`,
+    '</div>',
+  ].join('');
+
+  const rawBody = note.body || '';
+  const bodyInner =
+    rawBody && /<[^>]+>/.test(rawBody) ? syncMdChecklistHtml(rawBody) : noteBodyPreview(rawBody, cardOpts.query || '');
+  const bodyHtml = `<div class="note-body">${bodyInner}</div>`;
+
+  let mentionsHtml = '';
   if (note.mentions && note.mentions.length > 0) {
-    const mentionUsers = note.mentions.map(id => USERS.find(u => u.id === id)).filter(u => u);
+    const mentionUsers = note.mentions.map(id => USERS.find(u => u.id === id)).filter(Boolean);
     if (mentionUsers.length > 0) {
-      html += `<div class="note-mentions">@ ${mentionUsers.map(u => u.name).join(', ')}</div>`;
+      mentionsHtml = `<div class="note-mentions">@ ${mentionUsers.map(u => escapeHtml(u.name)).join(', ')}</div>`;
     }
   }
 
+  let imagesHtml = '';
   if (note.images && note.images.length > 0) {
-    html += `<div class="note-images">${note.images.slice(0, 3).map(img =>
-      `<img src="${img}" alt="Nota imagen" onclick="openImageModal('${img}')" loading="lazy">`
-    ).join('')}${note.images.length > 3 ? `<span class="more-images">+${note.images.length - 3}</span>` : ''}</div>`;
+    const imgs = note.images
+      .slice(0, 3)
+      .map(
+        img =>
+          `<img src="${escapeHtmlAttr(img)}" alt="Nota imagen" onclick="openImageModal(${JSON.stringify(img)})" loading="lazy">`
+      )
+      .join('');
+    const more =
+      note.images.length > 3 ? `<span class="more-images">+${note.images.length - 3}</span>` : '';
+    imagesHtml = `<div class="note-images">${imgs}${more}</div>`;
   }
 
-  html += `</div>`;
-  return html;
+  let footerHtml = '<div class="note-footer">';
+  if (note.reminder) {
+    footerHtml += `<span class="note-reminder">⏰ ${escapeHtml(note.reminder)}</span>`;
+  }
+  footerHtml += '<div class="note-actions">';
+  if (canEdit) {
+    footerHtml += `<button type="button" class="note-action-btn" onclick="editNote(event, ${note.id})">✏️ Editar</button>`;
+  }
+  if (sameId(note.authorId, currentUser.id)) {
+    footerHtml += `<button type="button" class="note-action-btn delete" onclick="deleteNote(event, ${note.id})">🗑 Borrar</button>`;
+  }
+  footerHtml += '</div></div>';
+
+  const innerHtml = [
+    headerHtml,
+    `<div class="note-title">${escapeHtml(note.title || 'Sin título')}</div>`,
+    bodyHtml,
+    mentionsHtml,
+    imagesHtml,
+    footerHtml,
+  ].join('');
+
+  return `<div class="note-card" data-id="${note.id}" onclick="openDetail(${note.id})">${innerHtml}</div>`;
 }
 
 /**
@@ -263,11 +351,20 @@ export function noteBodyPreview(body, query) {
   if (!body) return '<em>Sin contenido</em>';
 
   let preview = body.length > 200 ? body.substring(0, 200) + '...' : body;
+  preview = escapeHtml(preview);
   preview = preview.replace(/\n/g, '<br>');
 
-  if (query) {
-    const regex = new RegExp(`(${query})`, 'gi');
-    preview = preview.replace(regex, '<mark>$1</mark>');
+  const q = query != null ? String(query).trim() : '';
+  if (q) {
+    const escapedQ = escapeHtml(q);
+    if (escapedQ) {
+      try {
+        const re = new RegExp(`(${escapeRegExp(escapedQ)})`, 'gi');
+        preview = preview.replace(re, '<mark>$1</mark>');
+      } catch {
+        /* query inválida para RegExp */
+      }
+    }
   }
 
   return preview;
@@ -402,7 +499,12 @@ export function editNote(e, id) {
   const be = document.getElementById('note-body-editor');
   const bi = document.getElementById('note-body-input');
   if (ti) ti.value = note.title || '';
-  if (be) be.innerHTML = note.body && /<[^>]+>/.test(note.body) ? note.body : renderMarkdown(note.body || '', editingNoteImages);
+  if (be) {
+    be.innerHTML =
+      note.body && /<[^>]+>/.test(note.body)
+        ? syncMdChecklistHtml(note.body)
+        : renderMarkdown(note.body || '', editingNoteImages);
+  }
   if (bi) bi.value = note.body || '';
   const preview = document.getElementById('note-content-preview');
   if (preview) preview.innerHTML = renderMarkdown(note.body || '', editingNoteImages);
@@ -418,6 +520,8 @@ export function editNote(e, id) {
  */
 export function saveNote() {
   const title = document.getElementById('note-title-input')?.value.trim() || '';
+  const noteEditor = document.getElementById('note-body-editor');
+  if (noteEditor) syncMdChecklistDom(noteEditor, true);
   syncNoteEditorToTextarea('html');
   const body = document.getElementById('note-body-input')?.value.trim() || '';
   if (!title) {
@@ -527,6 +631,7 @@ function syncNoteTextareaToEditor() {
   if (!editor || !textarea) return;
   const source = textarea.value || '';
   editor.innerHTML = source && /<[^>]+>/.test(source) ? source : renderMarkdown(source, editingNoteImages);
+  if (source && /<[^>]+>/.test(source)) syncMdChecklistDom(editor, false);
   cleanupLeadingEmptyNodes(editor);
 }
 
@@ -597,6 +702,158 @@ function placeCaretAtEnd(editor) {
   if (!sel) return;
   sel.removeAllRanges();
   sel.addRange(range);
+}
+
+/** Caret al final del último hijo directo del editor (p. ej. tras insertar bloques vía slash). */
+function placeCaretAtEndOfLastChild(editor) {
+  if (!editor) return;
+  const sel = window.getSelection();
+  if (!sel) return;
+  let last = editor.lastChild;
+  while (
+    last &&
+    last.nodeType !== Node.ELEMENT_NODE &&
+    last.nodeType !== Node.TEXT_NODE
+  ) {
+    last = last.previousSibling;
+  }
+  const range = document.createRange();
+  if (!last) {
+    range.setStart(editor, 0);
+    range.collapse(true);
+  } else if (last.nodeType === Node.TEXT_NODE) {
+    range.setStart(last, (last.nodeValue || '').length);
+    range.collapse(true);
+  } else if (last.nodeName === 'BR') {
+    range.setStartAfter(last);
+    range.collapse(true);
+  } else {
+    range.selectNodeContents(last);
+    range.collapse(false);
+  }
+  sel.removeAllRanges();
+  sel.addRange(range);
+  if (typeof editor.focus === 'function') {
+    try {
+      editor.focus({ preventScroll: true });
+    } catch {
+      editor.focus();
+    }
+  }
+}
+
+/** Caret justo después del subárbol `root` (último bloque insertado), no al final del editor. */
+function placeCaretAtEndOfSubtree(root) {
+  if (!root) return;
+  const sel = window.getSelection();
+  if (!sel) return;
+  const range = document.createRange();
+  const voidTags = new Set(['HR', 'IMG', 'BR', 'INPUT']);
+  if (root.nodeType === Node.TEXT_NODE) {
+    range.setStart(root, (root.nodeValue || '').length);
+    range.collapse(true);
+  } else if (root.nodeType === Node.ELEMENT_NODE) {
+    if (voidTags.has(root.nodeName) || root.childNodes.length === 0) {
+      range.setStartAfter(root);
+      range.collapse(true);
+    } else {
+      range.selectNodeContents(root);
+      range.collapse(false);
+    }
+  } else {
+    range.setStartAfter(root);
+    range.collapse(true);
+  }
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+/**
+ * Primer rango colapsado en texto editable dentro de los nodos insertados (p. ej. "Tarea 1", título de heading).
+ */
+function findFirstEditableTextRangeInRoots(rootNodes) {
+  if (!rootNodes || !rootNodes.length) return null;
+  for (const root of rootNodes) {
+    if (!root) continue;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+      const parentEl =
+        textNode.parentElement && textNode.parentElement.closest
+          ? textNode.parentElement
+          : null;
+      if (!parentEl) continue;
+      const tag = parentEl.tagName;
+      if (tag === 'SCRIPT' || tag === 'STYLE') continue;
+      if (parentEl.closest && parentEl.closest('input, textarea, select')) continue;
+      const val = textNode.nodeValue || '';
+      let off = 0;
+      while (off < val.length && /[\s\u00a0]/.test(val[off])) off++;
+      if (off < val.length) {
+        const range = document.createRange();
+        range.setStart(textNode, off);
+        range.collapse(true);
+        return range;
+      }
+    }
+  }
+  const first = rootNodes[0];
+  if (!first) return null;
+  const range = document.createRange();
+  if (first.nodeType === Node.TEXT_NODE) {
+    range.setStart(first, 0);
+    range.collapse(true);
+    return range;
+  }
+  if (first.nodeType === Node.ELEMENT_NODE) {
+    range.setStart(first, 0);
+    range.collapse(true);
+    return range;
+  }
+  return null;
+}
+
+function placeCaretAtFirstEditableTextInInsertedBlocks(editor, insertedRoots) {
+  const sel = window.getSelection();
+  if (!sel || !editor) return;
+  const stillThere = (insertedRoots || []).filter(n => n && editor.contains(n));
+  if (!stillThere.length) {
+    placeCaretAtEndOfLastChild(editor);
+  } else {
+    const r = findFirstEditableTextRangeInRoots(stillThere);
+    if (r) {
+      sel.removeAllRanges();
+      sel.addRange(r);
+    } else {
+      placeCaretAtEndOfSubtree(stillThere[stillThere.length - 1]);
+    }
+  }
+  if (typeof editor.focus === 'function') {
+    try {
+      editor.focus({ preventScroll: true });
+    } catch {
+      editor.focus();
+    }
+  }
+}
+
+/**
+ * Tras insertar HTML desde el menú /: coloca el caret al inicio del texto del bloque nuevo y ajusta scroll.
+ * Si `insertedRoots` es null (p. ej. imagen), conserva scroll al fondo y caret al final.
+ */
+function scrollNoteEditorAfterSlashInsertLayout(editor, insertedRoots) {
+  if (!editor) return;
+  setTimeout(() => {
+    const ed = document.getElementById('note-body-editor');
+    if (!ed) return;
+    if (insertedRoots && insertedRoots.length) {
+      placeCaretAtFirstEditableTextInInsertedBlocks(ed, insertedRoots);
+    } else {
+      ed.scrollTop = ed.scrollHeight;
+      placeCaretAtEndOfLastChild(ed);
+    }
+    scrollNoteEditorCaretIntoView(ed);
+  }, 0);
 }
 
 /**
@@ -890,8 +1147,8 @@ export function renderMarkdown(md, imageMap = {}) {
       i++; continue;
     }
 
-    // ── Línea en blanco ────────────────────────────────────────────────────
-    if (line.trim() === '') { out.push('<div class="md-spacer"></div>'); i++; continue; }
+    // ── Línea en blanco (sin marcador HTML; el espaciado va por CSS en .note-body > *) ──
+    if (line.trim() === '') { i++; continue; }
 
     // ── Párrafo normal ─────────────────────────────────────────────────────
     // Agrupar líneas consecutivas de párrafo
@@ -1193,6 +1450,7 @@ export function executeSlashCommand(cmd) {
       updateMarkdownPreview('note-body-input', 'note-content-preview', imageMap);
       insertImageIntoTextarea(textarea.id);
       closeSlashMenu();
+      scrollNoteEditorAfterSlashInsertLayout(editor, null);
       return;
     }
 
@@ -1206,33 +1464,38 @@ export function executeSlashCommand(cmd) {
         closeSlashMenu();
         return;
       }
-      const header = `| ${Array.from({ length: cols }, (_, i) => `Col ${i + 1}`).join(' | ')} |`;
+      const z = '\u200b';
+      const header = `| ${Array.from({ length: cols }, () => z).join(' | ')} |`;
       const separator = `| ${Array.from({ length: cols }, () => '---').join(' | ')} |`;
-      const bodyRows = Array.from({ length: rows }, (_, r) => `| ${Array.from({ length: cols }, (_, c) => `Dato ${r + 1}.${c + 1}`).join(' | ')} |`);
+      const bodyRows = Array.from(
+        { length: rows },
+        () => `| ${Array.from({ length: cols }, () => z).join(' | ')} |`
+      );
       insertTextHtml = renderMarkdown(`${header}\n${separator}\n${bodyRows.join('\n')}\n`, editingNoteImages);
     } else {
       let insertText = '';
       switch (cmd) {
-        case 'lista': insertText = '- Elemento 1\n- Elemento 2\n- Elemento 3\n'; break;
-        case 'check': insertText = '- [ ] Tarea 1\n- [ ] Tarea 2\n- [ ] Tarea 3\n'; break;
+        case 'lista': insertText = '- \u200b\n'; break;
+        case 'check': insertText = '- [ ] \u200b\n'; break;
         case 'divisor': insertText = '---\n'; break;
-        case 'estilo-parrafo': insertText = 'Texto de párrafo (cuerpo).\n'; break;
-        case 'estilo-h1': insertText = '# Encabezado 1\n\n'; break;
-        case 'estilo-h2': insertText = '## Encabezado 2\n\n'; break;
-        case 'estilo-h3': insertText = '### Encabezado 3\n\n'; break;
-        case 'estilo-h4': insertText = '#### Título 4\n\n'; break;
-        case 'estilo-tc1': insertText = '<details class="md-details md-tc1"><summary>Título contraíble</summary><div class="md-details-body">Contenido del bloque.</div></details>\n'; break;
-        case 'estilo-tc2': insertText = '<details class="md-details md-tc2"><summary>Título contraíble</summary><div class="md-details-body">Contenido del bloque.</div></details>\n'; break;
-        case 'estilo-tc3': insertText = '<details class="md-details md-tc3"><summary>Título contraíble</summary><div class="md-details-body">Contenido del bloque.</div></details>\n'; break;
-        case 'estilo-tc4': insertText = '<details class="md-details md-tc4"><summary>Título contraíble</summary><div class="md-details-body">Contenido del bloque.</div></details>\n'; break;
-        case 'estilo-cita': insertText = '> Cita de ejemplo\n'; break;
-        case 'estilo-codigo': insertText = '```\ncódigo aquí\n```\n'; break;
+        case 'estilo-parrafo': insertText = '\u200b\n'; break;
+        case 'estilo-h1': insertText = '# \u200b\n\n'; break;
+        case 'estilo-h2': insertText = '## \u200b\n\n'; break;
+        case 'estilo-h3': insertText = '### \u200b\n\n'; break;
+        case 'estilo-h4': insertText = '#### \u200b\n\n'; break;
+        case 'estilo-tc1': insertText = '<details class="md-details md-tc1"><summary>\u200b</summary><div class="md-details-body">\u200b</div></details>\n'; break;
+        case 'estilo-tc2': insertText = '<details class="md-details md-tc2"><summary>\u200b</summary><div class="md-details-body">\u200b</div></details>\n'; break;
+        case 'estilo-tc3': insertText = '<details class="md-details md-tc3"><summary>\u200b</summary><div class="md-details-body">\u200b</div></details>\n'; break;
+        case 'estilo-tc4': insertText = '<details class="md-details md-tc4"><summary>\u200b</summary><div class="md-details-body">\u200b</div></details>\n'; break;
+        case 'estilo-cita': insertText = '> \u200b\n'; break;
+        case 'estilo-codigo': insertText = '```\n\u200b\n```\n'; break;
         default: insertText = '\n';
       }
       insertTextHtml = renderMarkdown(insertText, editingNoteImages);
     }
 
     const fragment = activeRange.createContextualFragment(insertTextHtml);
+    const insertedRoots = Array.from(fragment.childNodes);
     const tail = document.createElement('span');
     tail.textContent = '';
     fragment.appendChild(tail);
@@ -1250,6 +1513,7 @@ export function executeSlashCommand(cmd) {
     syncNoteEditorToTextarea('html');
     updateMarkdownPreview('note-body-input', 'note-content-preview', imageMap);
     closeSlashMenu();
+    scrollNoteEditorAfterSlashInsertLayout(editor, insertedRoots);
     return;
   }
 
@@ -1287,30 +1551,31 @@ export function executeSlashCommand(cmd) {
       closeSlashMenu();
       return;
     }
-    const header = `| ${Array.from({ length: cols }, (_, i) => `Col ${i + 1}`).join(' | ')} |`;
+    const z = '\u200b';
+    const header = `| ${Array.from({ length: cols }, () => z).join(' | ')} |`;
     const separator = `| ${Array.from({ length: cols }, () => '---').join(' | ')} |`;
     const bodyRows = Array.from(
       { length: rows },
-      (_, r) => `| ${Array.from({ length: cols }, (_, c) => `Dato ${r + 1}.${c + 1}`).join(' | ')} |`
+      () => `| ${Array.from({ length: cols }, () => z).join(' | ')} |`
     );
     insertText = `${header}\n${separator}\n${bodyRows.join('\n')}\n`;
   }
   if (!cmd.startsWith('tabla:')) switch (cmd) {
-    case 'lista': insertText = '- Elemento 1\n- Elemento 2\n- Elemento 3\n'; break;
-    case 'check': insertText = '- [ ] Tarea 1\n- [ ] Tarea 2\n- [ ] Tarea 3\n'; break;
+    case 'lista': insertText = '- \u200b\n'; break;
+    case 'check': insertText = '- [ ] \u200b\n'; break;
     case 'divisor': insertText = '---\n'; break;
     case 'tabla': return;
-    case 'estilo-parrafo': insertText = 'Texto de párrafo (cuerpo).\n'; break;
-    case 'estilo-h1': insertText = '# Encabezado 1\n\n'; break;
-    case 'estilo-h2': insertText = '## Encabezado 2\n\n'; break;
-    case 'estilo-h3': insertText = '### Encabezado 3\n\n'; break;
-    case 'estilo-h4': insertText = '#### Título 4\n\n'; break;
-    case 'estilo-tc1': insertText = '<details class="md-details md-tc1"><summary>Título contraíble</summary><div class="md-details-body">Contenido del bloque.</div></details>\n'; break;
-    case 'estilo-tc2': insertText = '<details class="md-details md-tc2"><summary>Título contraíble</summary><div class="md-details-body">Contenido del bloque.</div></details>\n'; break;
-    case 'estilo-tc3': insertText = '<details class="md-details md-tc3"><summary>Título contraíble</summary><div class="md-details-body">Contenido del bloque.</div></details>\n'; break;
-    case 'estilo-tc4': insertText = '<details class="md-details md-tc4"><summary>Título contraíble</summary><div class="md-details-body">Contenido del bloque.</div></details>\n'; break;
-    case 'estilo-cita': insertText = '> Cita de ejemplo\n'; break;
-    case 'estilo-codigo': insertText = '```\ncódigo aquí\n```\n'; break;
+    case 'estilo-parrafo': insertText = '\u200b\n'; break;
+    case 'estilo-h1': insertText = '# \u200b\n\n'; break;
+    case 'estilo-h2': insertText = '## \u200b\n\n'; break;
+    case 'estilo-h3': insertText = '### \u200b\n\n'; break;
+    case 'estilo-h4': insertText = '#### \u200b\n\n'; break;
+    case 'estilo-tc1': insertText = '<details class="md-details md-tc1"><summary>\u200b</summary><div class="md-details-body">\u200b</div></details>\n'; break;
+    case 'estilo-tc2': insertText = '<details class="md-details md-tc2"><summary>\u200b</summary><div class="md-details-body">\u200b</div></details>\n'; break;
+    case 'estilo-tc3': insertText = '<details class="md-details md-tc3"><summary>\u200b</summary><div class="md-details-body">\u200b</div></details>\n'; break;
+    case 'estilo-tc4': insertText = '<details class="md-details md-tc4"><summary>\u200b</summary><div class="md-details-body">\u200b</div></details>\n'; break;
+    case 'estilo-cita': insertText = '> \u200b\n'; break;
+    case 'estilo-codigo': insertText = '```\n\u200b\n```\n'; break;
     default: insertText = '\n';
   }
 
