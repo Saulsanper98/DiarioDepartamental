@@ -715,6 +715,21 @@ html[class*='tema-claro'] .shift-notes .note-card .note-action-btn.delete:hover 
   line-height: 1.5 !important;
 }
 
+html.tema-aurora #view-notes #notes-area div.note-card .note-body,
+html.tema-aurora #view-public-notes #public-notes-area div.note-card .note-body {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+html.tema-aurora #view-notes #notes-area div.note-card .note-title,
+html.tema-aurora #view-public-notes #public-notes-area div.note-card .note-title {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html.tema-aurora #view-notes #notes-area div.note-card .note-card-header,
+html.tema-aurora #view-public-notes #public-notes-area div.note-card .note-card-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
 #view-notes #notes-area div.note-card .note-author-avatar,
 #view-public-notes #public-notes-area div.note-card .note-author-avatar {
   background: linear-gradient(135deg, #667eea, #764ba2) !important;
@@ -999,4 +1014,185 @@ html[class*='tema-claro'] .shift-notes .note-card .note-action-btn.delete:hover 
   border: 1px solid rgba(148,163,184,0.25) !important;
   border-radius: 10px !important;
   color: #94a3b8 !important;
+}
+
+/* Aurora — misma estructura de selectores que tema-claro para acciones en tarjetas de nota (dark glass) */
+html.tema-aurora #view-notes .note-card .note-action-btn:hover,
+html.tema-aurora #view-public-notes .note-card .note-action-btn:hover,
+html.tema-aurora #notes-area .note-card .note-action-btn:hover,
+html.tema-aurora #public-notes-area .note-card .note-action-btn:hover,
+html.tema-aurora .shift-notes .note-card .note-action-btn:hover {
+  color: var(--color-text-primary, rgba(255, 255, 255, 0.95)) !important;
+  -webkit-text-fill-color: var(--color-text-primary, rgba(255, 255, 255, 0.95)) !important;
+  background: none !important;
+}
+
+html.tema-aurora #view-notes .note-card .note-action-btn.delete:hover,
+html.tema-aurora #view-public-notes .note-card .note-action-btn.delete:hover,
+html.tema-aurora #notes-area .note-card .note-action-btn.delete:hover,
+html.tema-aurora #public-notes-area .note-card .note-action-btn.delete:hover,
+html.tema-aurora .shift-notes .note-card .note-action-btn.delete:hover {
+  color: var(--danger) !important;
+  -webkit-text-fill-color: var(--danger) !important;
+}
+
+html.tema-aurora #view-notes #notes-area div.note-card,
+html.tema-aurora #view-public-notes #public-notes-area div.note-card {
+  background: rgba(255,255,255,0.06) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-left: 3px solid rgba(120,100,255,0.9) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-notes #notes-area div.note-card:hover,
+html.tema-aurora #view-public-notes #public-notes-area div.note-card:hover {
+  background: rgba(255,255,255,0.09) !important;
+  border-left-color: rgba(120,100,255,0.9) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+html.tema-aurora #view-notes #notes-area .shift-notes,
+html.tema-aurora #view-public-notes #public-notes-area .shift-notes {
+  background: transparent !important;
+}
+
+html.tema-aurora .note-title {
+  color: rgba(255,255,255,0.95) !important;
+}
+
+html.tema-aurora .note-body,
+html.tema-aurora .note-body * {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+html.tema-aurora .note-autor,
+html.tema-aurora .note-author-name,
+html.tema-aurora .note-meta {
+  color: rgba(255,255,255,0.45) !important;
+}
+
+html.tema-aurora .note-card-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+/* ── Aurora — Modal Nueva Nota ── */
+html.tema-aurora #note-modal {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora #note-modal .modal {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora #note-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #note-modal .modal-title,
+html.tema-aurora #note-modal h2,
+html.tema-aurora #note-modal h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #note-modal label {
+  color: rgba(255,255,255,0.45) !important;
+}
+
+html.tema-aurora #note-modal input[type="text"],
+html.tema-aurora #note-modal textarea,
+html.tema-aurora #note-modal .note-wysiwyg-editor,
+html.tema-aurora #note-modal #note-body-editor {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.9) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #note-modal input::placeholder,
+html.tema-aurora #note-modal textarea::placeholder {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+html.tema-aurora #note-modal .btn-shift,
+html.tema-aurora #note-modal .shift-option {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.6) !important;
+}
+
+html.tema-aurora #note-modal .btn-shift.active,
+html.tema-aurora #note-modal .shift-option.active {
+  background: rgba(120,100,255,0.4) !important;
+  border-color: rgba(120,100,255,0.6) !important;
+  color: white !important;
+}
+
+html.tema-aurora #note-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  background: rgba(0,0,0,0.1) !important;
+}
+
+html.tema-aurora #note-modal .btn-cancel {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.5) !important;
+}
+
+html.tema-aurora #note-modal .btn-primary,
+html.tema-aurora #note-modal .btn-save {
+  background: linear-gradient(135deg, rgba(120,100,255,0.8), rgba(80,60,200,0.8)) !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.4) !important;
+  color: white !important;
+}
+
+html.tema-aurora #note-modal select {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.8) !important;
+  padding: 9px 12px !important;
+}
+
+html.tema-aurora #note-modal input[type="time"] {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 8px !important;
+  color: rgba(255,255,255,0.8) !important;
+  padding: 4px 8px !important;
+}
+
+html.tema-aurora #note-modal .btn-priority,
+html.tema-aurora #note-modal [class*="priority"] {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.7) !important;
+}
+
+html.tema-aurora #note-modal .hint,
+html.tema-aurora #note-modal p {
+  color: rgba(255,255,255,0.4) !important;
+}
+
+html.tema-aurora #note-modal .priority-select,
+html.tema-aurora #note-modal .priority-group,
+html.tema-aurora #note-modal .priority-container,
+html.tema-aurora #note-modal .priority-options,
+html.tema-aurora #note-modal [class*="priority-wrap"],
+html.tema-aurora #note-modal [class*="priority-group"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }

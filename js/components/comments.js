@@ -325,7 +325,7 @@ function openDetail(id) {
         ${note.priority!=='normal'?`<span class="note-tag priority-${note.priority}">${note.priority==='alta'?'🔴 Alta':'Media'}</span>`:''}
         ${note.visibility==='public'?'<span class="note-tag note-tag-public">🌐 Pública</span>':'<span class="note-tag note-tag-private">🔒 Privada</span>'}
         <span class="note-tag note-tag-group" title="Departamento de origen">🏢 Origen: ${note.group || '—'}</span>
-        ${note.reminder?`<span class="note-reminder">⏰ ${note.reminderTime}</span>`:''}
+        ${note.reminder ? `<span class="note-reminder">⏰ ${typeof note.reminder === 'string' ? escapeChatHtml(note.reminder) : escapeChatHtml(note.reminderTime || 'Recordatorio activo')}</span>` : ''}
       </div>
       <div class="note-detail-title">${note.title}</div>
       <div class="note-detail-content">${body}</div>

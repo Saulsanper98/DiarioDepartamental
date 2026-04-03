@@ -54,7 +54,7 @@ import {
   applyAccentColor,
   applyAccent2Color,
   renderThemeGrid,
-} from './components/themes.js';
+} from './components/themes.js?v=2';
 import {
   openNewNoteModal,
   editNote,

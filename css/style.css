@@ -1748,7 +1748,8 @@
   html.tema-dusk .project-item,
   html.tema-violet .project-item,
   html.tema-steel .project-item,
-  html.tema-sakura .project-item {
+  html.tema-sakura .project-item,
+  html.tema-aurora .project-item {
     background:rgba(255, 255, 255, 0.03) !important;
     border:1px solid rgba(255, 255, 255, 0.08) !important;
     backdrop-filter:blur(10px) !important;
@@ -1761,7 +1762,8 @@
   html.tema-dusk .project-item:hover,
   html.tema-violet .project-item:hover,
   html.tema-steel .project-item:hover,
-  html.tema-sakura .project-item:hover {
+  html.tema-sakura .project-item:hover,
+  html.tema-aurora .project-item:hover {
     background:rgba(255, 255, 255, 0.08) !important;
     border-color:rgba(255, 255, 255, 0.12) !important;
     box-shadow:0 10px 28px -8px rgba(0, 0, 0, 0.5) !important;
@@ -1773,7 +1775,8 @@
   html.tema-dusk .project-item.active,
   html.tema-violet .project-item.active,
   html.tema-steel .project-item.active,
-  html.tema-sakura .project-item.active {
+  html.tema-sakura .project-item.active,
+  html.tema-aurora .project-item.active {
     background:rgba(255, 255, 255, 0.07) !important;
     border:1.5px solid var(--project-color, rgba(255, 255, 255, 0.25)) !important;
     box-shadow:
@@ -1789,7 +1792,8 @@
   html.tema-dusk .project-item .project-item-meta,
   html.tema-violet .project-item .project-item-meta,
   html.tema-steel .project-item .project-item-meta,
-  html.tema-sakura .project-item .project-item-meta{
+  html.tema-sakura .project-item .project-item-meta,
+  html.tema-aurora .project-item .project-item-meta{
     color:rgba(226, 230, 235, 0.85) !important;
   }
   .project-item.subproject {
@@ -1964,7 +1968,8 @@
   html.tema-dusk .project-item.active,
   html.tema-violet .project-item.active,
   html.tema-steel .project-item.active,
-  html.tema-sakura .project-item.active {
+  html.tema-sakura .project-item.active,
+  html.tema-aurora .project-item.active {
     background:rgba(255, 255, 255, 0.06) !important;
     border:1.2px solid var(--project-color, rgba(255, 255, 255, 0.22)) !important;
     box-shadow:
@@ -2009,6 +2014,7 @@
   html.tema-violet .project-item-name,
   html.tema-steel .project-item-name,
   html.tema-sakura .project-item-name,
+  html.tema-aurora .project-item-name,
   html:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .project-item-name {
     color: var(--project-color, rgba(248, 250, 252, 0.96)) !important;
     text-shadow:none !important;
@@ -2025,6 +2031,7 @@
   html.tema-violet .project-item:not(.subproject) .project-item-name,
   html.tema-steel .project-item:not(.subproject) .project-item-name,
   html.tema-sakura .project-item:not(.subproject) .project-item-name,
+  html.tema-aurora .project-item:not(.subproject) .project-item-name,
   html:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .project-item:not(.subproject) .project-item-name {
     color: rgba(248, 250, 252, 0.96) !important;
     text-shadow: none !important;
@@ -2038,6 +2045,7 @@
   html.tema-violet .project-item:not(.subproject):hover .project-item-name,
   html.tema-steel .project-item:not(.subproject):hover .project-item-name,
   html.tema-sakura .project-item:not(.subproject):hover .project-item-name,
+  html.tema-aurora .project-item:not(.subproject):hover .project-item-name,
   html:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .project-item:not(.subproject):hover .project-item-name,
   html.tema-default .project-item.active .project-item-name,
   html.tema-slate .project-item.active .project-item-name,
@@ -2046,6 +2054,7 @@
   html.tema-violet .project-item.active .project-item-name,
   html.tema-steel .project-item.active .project-item-name,
   html.tema-sakura .project-item.active .project-item-name,
+  html.tema-aurora .project-item.active .project-item-name,
   html:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .project-item.active .project-item-name {
     text-shadow: none !important;
     transform: none;
@@ -2059,6 +2068,7 @@
   html.tema-violet .project-item:not(.subproject) .project-item-name,
   html.tema-steel .project-item:not(.subproject) .project-item-name,
   html.tema-sakura .project-item:not(.subproject) .project-item-name,
+  html.tema-aurora .project-item:not(.subproject) .project-item-name,
   html:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .project-item:not(.subproject) .project-item-name,
   html.tema-default .project-item.active .project-item-name,
   html.tema-slate .project-item.active .project-item-name,
@@ -2067,6 +2077,7 @@
   html.tema-violet .project-item.active .project-item-name,
   html.tema-steel .project-item.active .project-item-name,
   html.tema-sakura .project-item.active .project-item-name,
+  html.tema-aurora .project-item.active .project-item-name,
   html:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .project-item.active .project-item-name {
     color: var(--project-color, #f8fafc) !important;
     text-shadow: none !important;
@@ -2080,6 +2091,7 @@
   html.tema-violet .project-item:not(.subproject) .project-item-meta,
   html.tema-steel .project-item:not(.subproject) .project-item-meta,
   html.tema-sakura .project-item:not(.subproject) .project-item-meta,
+  html.tema-aurora .project-item:not(.subproject) .project-item-meta,
   html:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .project-item:not(.subproject) .project-item-meta {
     color: rgba(230, 234, 241, 0.9) !important;
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.2) !important;
@@ -2092,6 +2104,7 @@
   html.tema-violet .project-item.subproject .project-item-name,
   html.tema-steel .project-item.subproject .project-item-name,
   html.tema-sakura .project-item.subproject .project-item-name,
+  html.tema-aurora .project-item.subproject .project-item-name,
   html:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .project-item.subproject .project-item-name {
     color: var(--project-color, rgba(224, 226, 230, 0.90)) !important;
     text-shadow: none !important;
@@ -2522,7 +2535,8 @@
   html.tema-forest .doc-card,
   html.tema-dusk .doc-card,
   html.tema-violet .doc-card,
-  html.tema-steel .doc-card {
+  html.tema-steel .doc-card,
+  html.tema-aurora .doc-card {
     background: rgba(255, 255, 255, 0.03) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     backdrop-filter: blur(10px) !important;
@@ -2535,7 +2549,8 @@
   html.tema-forest .doc-card .doc-card-title,
   html.tema-dusk .doc-card .doc-card-title,
   html.tema-violet .doc-card .doc-card-title,
-  html.tema-steel .doc-card .doc-card-title {
+  html.tema-steel .doc-card .doc-card-title,
+  html.tema-aurora .doc-card .doc-card-title {
     color: rgba(255, 255, 255, 0.95) !important;
   }
 
@@ -2544,7 +2559,8 @@
   html.tema-forest .doc-card .doc-card-meta,
   html.tema-dusk .doc-card .doc-card-meta,
   html.tema-violet .doc-card .doc-card-meta,
-  html.tema-steel .doc-card .doc-card-meta {
+  html.tema-steel .doc-card .doc-card-meta,
+  html.tema-aurora .doc-card .doc-card-meta {
     color: rgba(255, 255, 255, 0.85) !important;
   }
 
@@ -2553,7 +2569,8 @@
   html.tema-forest .doc-card .doc-icon,
   html.tema-dusk .doc-card .doc-icon,
   html.tema-violet .doc-card .doc-icon,
-  html.tema-steel .doc-card .doc-icon {
+  html.tema-steel .doc-card .doc-icon,
+  html.tema-aurora .doc-card .doc-icon {
     opacity: 0.9 !important;
   }
 
@@ -2562,7 +2579,8 @@
   html.tema-forest .doc-card .btn,
   html.tema-dusk .doc-card .btn,
   html.tema-violet .doc-card .btn,
-  html.tema-steel .doc-card .btn {
+  html.tema-steel .doc-card .btn,
+  html.tema-aurora .doc-card .btn {
     background: rgba(255, 255, 255, 0.05) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     color: rgba(255, 255, 255, 0.9) !important;
@@ -2575,7 +2593,8 @@
   html.tema-forest .doc-card .btn:hover,
   html.tema-dusk .doc-card .btn:hover,
   html.tema-violet .doc-card .btn:hover,
-  html.tema-steel .doc-card .btn:hover {
+  html.tema-steel .doc-card .btn:hover,
+  html.tema-aurora .doc-card .btn:hover {
     background: rgba(255, 255, 255, 0.08) !important;
     border-color: rgba(255, 255, 255, 0.2) !important;
   }
@@ -2592,7 +2611,8 @@
   html.tema-forest .doc-card,
   html.tema-dusk .doc-card,
   html.tema-violet .doc-card,
-  html.tema-steel .doc-card {
+  html.tema-steel .doc-card,
+  html.tema-aurora .doc-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(10px);
@@ -2605,7 +2625,8 @@
   html.tema-forest .doc-card:hover,
   html.tema-dusk .doc-card:hover,
   html.tema-violet .doc-card:hover,
-  html.tema-steel .doc-card:hover {
+  html.tema-steel .doc-card:hover,
+  html.tema-aurora .doc-card:hover {
     border-color: rgba(255, 255, 255, 0.15);
     transform: translateY(-3px);
     box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
@@ -2624,7 +2645,9 @@
   html.tema-violet .doc-card .doc-card-title,
   html.tema-violet .doc-card .doc-card-meta,
   html.tema-steel .doc-card .doc-card-title,
-  html.tema-steel .doc-card .doc-card-meta {
+  html.tema-steel .doc-card .doc-card-meta,
+  html.tema-aurora .doc-card .doc-card-title,
+  html.tema-aurora .doc-card .doc-card-meta {
     color: rgba(255, 255, 255, 0.9);
   }
 
@@ -2634,7 +2657,8 @@
   html.tema-forest .doc-card .doc-icon,
   html.tema-dusk .doc-card .doc-icon,
   html.tema-violet .doc-card .doc-icon,
-  html.tema-steel .doc-card .doc-icon {
+  html.tema-steel .doc-card .doc-icon,
+  html.tema-aurora .doc-card .doc-icon {
     opacity: 0.9;
   }
 
@@ -2644,7 +2668,8 @@
   html.tema-forest .doc-card .btn,
   html.tema-dusk .doc-card .btn,
   html.tema-violet .doc-card .btn,
-  html.tema-steel .doc-card .btn {
+  html.tema-steel .doc-card .btn,
+  html.tema-aurora .doc-card .btn {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.9);
@@ -2657,7 +2682,8 @@
   html.tema-forest .doc-card .btn:hover,
   html.tema-dusk .doc-card .btn:hover,
   html.tema-violet .doc-card .btn:hover,
-  html.tema-steel .doc-card .btn:hover {
+  html.tema-steel .doc-card .btn:hover,
+  html.tema-aurora .doc-card .btn:hover {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
   }
@@ -3296,3 +3322,60 @@
   .tree-item:hover .tree-item-actions { opacity: 1; }
   .tree-item { position: relative !important; display: flex; align-items: center; }
 
+html.tema-aurora body {
+  background: linear-gradient(135deg, #1a1040 0%, #0d2a4a 40%, #0a3d2e 100%) !important;
+  min-height: 100vh;
+}
+
+html.tema-aurora .sidebar {
+  background: rgba(255,255,255,0.05) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-right: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora .main,
+html.tema-aurora #main-content {
+  background: transparent !important;
+}
+
+html.tema-aurora .topbar {
+  background: rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .shift-section {
+  background: rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 14px !important;
+}
+
+html.tema-aurora .shift-header {
+  background: rgba(255,255,255,0.04) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .note-card {
+  background: rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-left: 3px solid rgba(120,100,255,0.6) !important;
+  border-radius: 12px !important;
+}
+
+html.tema-aurora .note-card:hover {
+  background: rgba(255,255,255,0.09) !important;
+  border-left-color: rgba(120,100,255,0.9) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+}
+
+html.tema-aurora .layout,
+html.tema-aurora #app {
+  position: relative;
+  z-index: 1;
+}

@@ -56,6 +56,23 @@ export const USER_THEMES = [
     }
   },
   {
+    id: 'aurora',
+    name: 'Aurora',
+    emoji: '🌌',
+    vars: {
+      '--bg': '#0d1117',
+      '--surface': 'rgba(255,255,255,0.06)',
+      '--surface2': 'rgba(255,255,255,0.04)',
+      '--surface3': 'rgba(255,255,255,0.02)',
+      '--border': 'rgba(255,255,255,0.1)',
+      '--text': 'rgba(255,255,255,0.9)',
+      '--text-dim': 'rgba(255,255,255,0.6)',
+      '--text-muted': 'rgba(255,255,255,0.35)',
+      '--accent': '#7864ff',
+      '--accent2': '#4de8a0',
+    },
+  },
+  {
     id: 'claro', name: 'Claro', emoji: '☀️',
     vars: {
       '--bg':'#ffffff','--surface':'#ffffff','--surface2':'#f5f5f4','--surface3':'#e5e5e0',
@@ -144,6 +161,24 @@ export function saveUserTheme(themeId) {
 }
 
 /**
+ * Orbes de fondo para tema Aurora (nodos fijos en body; evita overflow:hidden en #app/.layout)
+ */
+export function createAuroraOrbs() {
+  document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
+  const orbs = [
+    { top: '-80px', left: '-60px', size: '380px', color: 'rgba(120,80,255,0.35)' },
+    { bottom: '-50px', right: '80px', size: '300px', color: 'rgba(0,200,150,0.25)' },
+    { top: '200px', right: '20px', size: '250px', color: 'rgba(255,150,50,0.15)' },
+  ];
+  orbs.forEach(orb => {
+    const el = document.createElement('div');
+    el.className = 'aurora-orb';
+    el.style.cssText = `position:fixed;width:${orb.size};height:${orb.size};background:radial-gradient(circle,${orb.color} 0%,transparent 70%);border-radius:50%;pointer-events:none;z-index:0;${orb.top ? 'top:' + orb.top + ';' : ''}${orb.bottom ? 'bottom:' + orb.bottom + ';' : ''}${orb.left ? 'left:' + orb.left + ';' : ''}${orb.right ? 'right:' + orb.right + ';' : ''}`;
+    document.body.appendChild(el);
+  });
+}
+
+/**
  * Apply a theme to the document
  * @param {string} themeId - Theme ID to apply
  */
@@ -184,6 +219,12 @@ export function applyUserTheme(themeId) {
     root.style.setProperty('--modal-surface', 'color-mix(in srgb, var(--surface) 78%, transparent 22%)');
     root.style.setProperty('--modal-input-bg', 'color-mix(in srgb, var(--surface2) 85%, transparent 15%)');
     root.style.setProperty('--modal-input-border', 'color-mix(in srgb, var(--border) 35%, transparent)');
+  }
+
+  if (themeId === 'aurora') {
+    createAuroraOrbs();
+  } else {
+    document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
   }
 
   // Sync accent color pickers if on settings
@@ -233,6 +274,8 @@ export function applyStoredTheme() {
     root.style.setProperty('--modal-input-bg', 'color-mix(in srgb, var(--surface2) 85%, transparent 15%)');
     root.style.setProperty('--modal-input-border', 'color-mix(in srgb, var(--border) 35%, transparent)');
   }
+
+  document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
 }
 
 /**
@@ -500,4 +543,6 @@ export function applyUserThemeLogin(themeId) {
   buttons.forEach(btn => btn.classList.remove('active'));
   const activeBtn = document.querySelector(`.theme-btn-mini[onclick="applyUserThemeLogin('${themeId}')"]`);
   if (activeBtn) activeBtn.classList.add('active');
+
+  document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
 }

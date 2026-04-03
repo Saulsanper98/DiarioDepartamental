@@ -209,6 +209,13 @@ export function renderNotes() {
  * @param {Object} cardOpts - Card options
  * @returns {string} HTML string
  */
+/** Título/cuerpo de nota como texto: evita que booleanos u otros tipos se muestren como "true"/"false". */
+function noteTextForDisplay(value) {
+  if (value == null || typeof value === 'boolean') return '';
+  if (typeof value === 'string') return value;
+  return String(value);
+}
+
 /** Texto seguro dentro de nodos HTML (evita que &lt;div&gt; en título/cuerpo rompa el árbol y anide tarjetas). */
 function escapeHtml(text) {
   if (text == null) return '';
@@ -289,7 +296,7 @@ export function renderNoteCard(note, cardOpts = {}) {
     '</div>',
   ].join('');
 
-  const rawBody = note.body || '';
+  const rawBody = noteTextForDisplay(note.body);
   const bodyInner =
     rawBody && /<[^>]+>/.test(rawBody) ? syncMdChecklistHtml(rawBody) : noteBodyPreview(rawBody, cardOpts.query || '');
   const bodyHtml = `<div class="note-body">${bodyInner}</div>`;
@@ -316,10 +323,12 @@ export function renderNoteCard(note, cardOpts = {}) {
     imagesHtml = `<div class="note-images">${imgs}${more}</div>`;
   }
 
+  const reminderHtml = note.reminder
+    ? `<div class="note-reminder">🔔 ${typeof note.reminder === 'string' ? escapeHtml(note.reminder) : 'Recordatorio activo'}</div>`
+    : '';
+
   let footerHtml = '<div class="note-footer">';
-  if (note.reminder) {
-    footerHtml += `<span class="note-reminder">⏰ ${escapeHtml(note.reminder)}</span>`;
-  }
+  footerHtml += reminderHtml;
   footerHtml += '<div class="note-actions">';
   if (canEdit) {
     footerHtml += `<button type="button" class="note-action-btn" onclick="editNote(event, ${note.id})">✏️ Editar</button>`;
@@ -331,7 +340,7 @@ export function renderNoteCard(note, cardOpts = {}) {
 
   const innerHtml = [
     headerHtml,
-    `<div class="note-title">${escapeHtml(note.title || 'Sin título')}</div>`,
+    `<div class="note-title">${escapeHtml(noteTextForDisplay(note.title) || 'Sin título')}</div>`,
     bodyHtml,
     mentionsHtml,
     imagesHtml,
@@ -348,9 +357,10 @@ export function renderNoteCard(note, cardOpts = {}) {
  * @returns {string} HTML preview
  */
 export function noteBodyPreview(body, query) {
-  if (!body) return '<em>Sin contenido</em>';
+  if (body == null || body === '' || typeof body === 'boolean') return '<em>Sin contenido</em>';
+  const text = typeof body === 'string' ? body : String(body);
 
-  let preview = body.length > 200 ? body.substring(0, 200) + '...' : body;
+  let preview = text.length > 200 ? text.substring(0, 200) + '...' : text;
   preview = escapeHtml(preview);
   preview = preview.replace(/\n/g, '<br>');
 
@@ -476,7 +486,11 @@ export function editNote(e, id) {
   setSelectedPriority(note.priority || 'normal');
   setSelectedMentions(note.mentions || []);
   setEditingNoteImages(note.images || []);
-  setReminderOn(!!note.reminder);
+  const hasReminder =
+    (typeof note.reminder === 'string' && note.reminder.length > 0) ||
+    note.reminder === true ||
+    (note.reminderTime != null && String(note.reminderTime).length > 0);
+  setReminderOn(hasReminder);
   setSelectedNoteVisibility(note.visibility === 'public' ? 'public' : 'private');
 
   fillCollabTargetSelect('note-collab-target-select');
@@ -509,7 +523,10 @@ export function editNote(e, id) {
   const preview = document.getElementById('note-content-preview');
   if (preview) preview.innerHTML = renderMarkdown(note.body || '', editingNoteImages);
   const rtime = document.getElementById('reminder-time');
-  if (rtime) rtime.value = note.reminderTime || '07:00';
+  if (rtime) {
+    if (typeof note.reminder === 'string' && note.reminder) rtime.value = note.reminder;
+    else rtime.value = (note.reminderTime && String(note.reminderTime)) || '07:00';
+  }
   bindNoteEditorInteractions();
 
   updateNoteModalUI();
@@ -537,7 +554,8 @@ export function saveNote() {
     return;
   }
 
-  const reminderTime = reminderOn ? (document.getElementById('reminder-time')?.value || null) : null;
+  const reminderTimeVal = document.getElementById('reminder-time')?.value?.trim() || '';
+  const reminder = reminderOn ? (reminderTimeVal || null) : null;
   const existingImages = editingNoteId ? notes.find(n => sameId(n.id, editingNoteId))?.images || {} : {};
   const images = collectImageMap(body, { ...existingImages, ...editingNoteImages });
   const vis = selectedNoteVisibility === 'public' ? 'public' : 'private';
@@ -559,12 +577,12 @@ export function saveNote() {
       priority: selectedPriority,
       mentions: selectedMentions,
       mentionGroup: selectedMentionGroup,
-      reminder: reminderOn,
-      reminderTime,
+      reminder,
       images,
       visibility: vis,
       shares: [...rest, ...addSh],
     };
+    delete updated.reminderTime;
     setNotes(notes.map((n, i) => (i === idx ? updated : n)));
     showToast('Nota actualizada', 'success');
   } else {
@@ -581,8 +599,7 @@ export function saveNote() {
         priority: selectedPriority,
         mentions: selectedMentions,
         mentionGroup: selectedMentionGroup,
-        reminder: reminderOn,
-        reminderTime,
+        reminder,
         createdAt: new Date().toISOString(),
         images,
         visibility: vis,

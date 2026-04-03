@@ -56,7 +56,11 @@ export function exportNotes(period) {
         txt += `\n  [${(n.priority || 'normal').toUpperCase()}] ${n.title}\n`;
         txt += `  Autor: ${author ? author.name : 'Desconocido'}\n`;
         txt += `  ${n.body}\n`;
-        if (n.reminder) txt += `  ⏰ Recordatorio: ${n.reminderTime || 'No especificado'}\n`;
+        if (n.reminder) {
+          const rtxt =
+            typeof n.reminder === 'string' ? n.reminder : n.reminderTime || 'No especificado';
+          txt += `  ⏰ Recordatorio: ${rtxt}\n`;
+        }
       });
     });
     txt += '\n';

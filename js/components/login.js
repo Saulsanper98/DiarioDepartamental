@@ -25,7 +25,7 @@ import {
   setProjects,
   setDocs,
 } from './data.js';
-import { applyStoredTheme, loadUserTheme, USER_THEMES, isLightColor } from './themes.js';
+import { applyStoredTheme, loadUserTheme, USER_THEMES, isLightColor, createAuroraOrbs } from './themes.js';
 import { showToast, openModal, closeModal } from './modalControl.js';
 import { saveData } from './notes.js';
 import { savePostitData } from './postit.js';
@@ -268,6 +268,8 @@ export function logout() {
   // Restaurar variables
   Object.entries(defaultTheme.vars).forEach(([k,v]) => root.style.setProperty(k, v));
 
+  document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
+
   setCurrentUser(null);
   setCurrentGroup(null);
   document.getElementById('login-screen').style.display = 'flex';
@@ -323,6 +325,22 @@ export function initApp() {
   processNotificationInbox();
   window._inboxTimer = setInterval(processNotificationInbox, 12000);
 
+  if (typeof loadUserTheme === 'function' && loadUserTheme() === 'aurora') {
+    const app = document.getElementById('app');
+    if (app) {
+      const observer = new MutationObserver(() => {
+        if (app.style.display !== 'none') {
+          createAuroraOrbs();
+          observer.disconnect();
+        }
+      });
+      observer.observe(app, { attributes: true, attributeFilter: ['style'] });
+      // Fallback por si #app ya está visible
+      if (app.style.display !== 'none') {
+        createAuroraOrbs();
+      }
+    }
+  }
 }
 
 // ===== UTILITY FUNCTIONS =====
