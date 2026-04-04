@@ -582,6 +582,10 @@ export function renderCommentsPanel(kind, targetId, containerId, extraId = null)
   const container = document.getElementById(containerId);
   if (!container) return;
 
+  if (typeof window._onCommentsThreadModalClose === 'function') {
+    window._onCommentsThreadModalClose();
+  }
+
   if (targetId == null) {
     container.innerHTML = `
       <div class="comments-panel">

@@ -163,8 +163,24 @@ export function saveUserTheme(themeId) {
 /**
  * Orbes de fondo para tema Aurora (nodos fijos en body; evita overflow:hidden en #app/.layout)
  */
-export function createAuroraOrbs() {
+export function removeAuroraOrbsFromDom() {
+  document.querySelectorAll('.aurora-orbs').forEach(el => el.remove());
   document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
+}
+
+/** Quita nodos de orbes sin usar removeAuroraOrbsFromDom (reservada solo para logout). */
+function clearAuroraOrbNodes() {
+  document.querySelectorAll('.aurora-orbs').forEach(el => el.remove());
+  document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
+}
+
+export function createAuroraOrbs() {
+  clearAuroraOrbNodes();
+  const wrap = document.createElement('div');
+  wrap.className = 'aurora-orbs';
+  wrap.setAttribute('aria-hidden', 'true');
+  wrap.style.cssText =
+    'position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;isolation:isolate;';
   const orbs = [
     { top: '-80px', left: '-60px', size: '380px', color: 'rgba(120,80,255,0.35)' },
     { bottom: '-50px', right: '80px', size: '300px', color: 'rgba(0,200,150,0.25)' },
@@ -173,9 +189,10 @@ export function createAuroraOrbs() {
   orbs.forEach(orb => {
     const el = document.createElement('div');
     el.className = 'aurora-orb';
-    el.style.cssText = `position:fixed;width:${orb.size};height:${orb.size};background:radial-gradient(circle,${orb.color} 0%,transparent 70%);border-radius:50%;pointer-events:none;z-index:0;${orb.top ? 'top:' + orb.top + ';' : ''}${orb.bottom ? 'bottom:' + orb.bottom + ';' : ''}${orb.left ? 'left:' + orb.left + ';' : ''}${orb.right ? 'right:' + orb.right + ';' : ''}`;
-    document.body.appendChild(el);
+    el.style.cssText = `position:absolute;width:${orb.size};height:${orb.size};background:radial-gradient(circle,${orb.color} 0%,transparent 70%);border-radius:50%;pointer-events:none;${orb.top ? 'top:' + orb.top + ';' : ''}${orb.bottom ? 'bottom:' + orb.bottom + ';' : ''}${orb.left ? 'left:' + orb.left + ';' : ''}${orb.right ? 'right:' + orb.right + ';' : ''}`;
+    wrap.appendChild(el);
   });
+  document.body.appendChild(wrap);
 }
 
 /**
@@ -224,7 +241,7 @@ export function applyUserTheme(themeId) {
   if (themeId === 'aurora') {
     createAuroraOrbs();
   } else {
-    document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
+    clearAuroraOrbNodes();
   }
 
   // Sync accent color pickers if on settings
@@ -274,8 +291,6 @@ export function applyStoredTheme() {
     root.style.setProperty('--modal-input-bg', 'color-mix(in srgb, var(--surface2) 85%, transparent 15%)');
     root.style.setProperty('--modal-input-border', 'color-mix(in srgb, var(--border) 35%, transparent)');
   }
-
-  document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
 }
 
 /**
@@ -543,6 +558,4 @@ export function applyUserThemeLogin(themeId) {
   buttons.forEach(btn => btn.classList.remove('active'));
   const activeBtn = document.querySelector(`.theme-btn-mini[onclick="applyUserThemeLogin('${themeId}')"]`);
   if (activeBtn) activeBtn.classList.add('active');
-
-  document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
 }

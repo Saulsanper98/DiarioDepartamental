@@ -2,13 +2,39 @@
 
 // ===== MODAL MANAGEMENT =====
 
+const kModalOverlayDismiss = Symbol.for('st.modalOverlayDismiss');
+
+function detachModalOverlayDismiss(overlayEl) {
+  if (!overlayEl) return;
+  const fn = overlayEl[kModalOverlayDismiss];
+  if (typeof fn === 'function') {
+    overlayEl.removeEventListener('click', fn);
+    overlayEl[kModalOverlayDismiss] = null;
+  }
+}
+
+function shouldAttachOverlayDismiss(id, overlayEl) {
+  if (id === 'confirm-modal') return false;
+  if (overlayEl.classList.contains('modal-no-dismiss')) return false;
+  if (overlayEl.hasAttribute('data-no-dismiss')) return false;
+  return true;
+}
+
 /**
  * Close a modal by ID
  * @param {string} id - Modal element ID
  */
 export function closeModal(id) {
   const modal = document.getElementById(id);
-  if (modal) modal.classList.remove('open');
+  if (modal) {
+    detachModalOverlayDismiss(modal);
+    modal.classList.remove('open');
+  }
+  if (id === 'comments-thread-modal' && typeof window._onCommentsThreadModalClose === 'function') {
+    try {
+      window._onCommentsThreadModalClose();
+    } catch (_) { /* noop */ }
+  }
 }
 
 /**
@@ -17,17 +43,28 @@ export function closeModal(id) {
  */
 export function openModal(id) {
   const modal = document.getElementById(id);
-  if (modal) {
-    // CRÍTICO: Sincronizar tema antes de mostrar modal
-    const root = document.documentElement;
-    const themeClass = Array.from(root.classList).find(c => c.startsWith('tema-'));
-    if (!themeClass) {
-      // Si no hay tema, aplicar tema claro por defecto
-      root.classList.add('tema-claro');
-    }
-    // Agregar modal
-    modal.classList.add('open');
+  if (!modal) return;
+
+  detachModalOverlayDismiss(modal);
+
+  // CRÍTICO: Sincronizar tema antes de mostrar modal
+  const root = document.documentElement;
+  const themeClass = Array.from(root.classList).find(c => c.startsWith('tema-'));
+  if (!themeClass) {
+    // Si no hay tema, aplicar tema claro por defecto
+    root.classList.add('tema-claro');
   }
+  modal.classList.add('open');
+
+  if (!shouldAttachOverlayDismiss(id, modal)) return;
+
+  function onOverlayClick(e) {
+    if (e.target === modal) {
+      closeModal(id);
+    }
+  }
+  modal[kModalOverlayDismiss] = onOverlayClick;
+  modal.addEventListener('click', onOverlayClick);
 }
 
 // ===== CONFIRMATION MODAL =====

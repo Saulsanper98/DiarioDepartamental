@@ -11,10 +11,157 @@ import { renderDocsGrid, commentDraftImages } from './docs.js';
 // Importar funciones compartidas desde docs.js para evitar duplicación
 import { sameMaybeId, commentTargetKey, getCommentReadMap, saveCommentReadMap, getCommentMeta, hasUnreadComments, markCommentsAsRead, commentIndicators, getLatestCommentPreview, refreshCommentIndicators, insertImageIntoCommentTextarea, insertMentionIntoCommentTextarea, normalizeForSearch, getMentionQueryAtCaret, replaceMentionQueryAtCaret } from './docs.js';
 
-function toggleCommentMentionMenu(textareaId) {
-  const pop = document.getElementById(textareaId + '-mention-pop');
+// ── Aurora: portal .comment-mention-pop a document.body (evita stacking context del modal) ──
+const commentMentionPopPortalRestore = new WeakMap();
+
+function isAuroraTheme() {
+  return document.documentElement.classList.contains('tema-aurora');
+}
+
+function getMentionAnchorForTextarea(textareaId) {
+  const ta = document.getElementById(textareaId);
+  if (!ta) return null;
+  const next = ta.nextElementSibling;
+  const menu = next && next.classList.contains('comment-mention-menu')
+    ? next
+    : ta.parentElement?.querySelector('.comment-mention-menu');
+  return menu?.querySelector('button[title="Mencionar"]') || menu?.querySelector('button') || null;
+}
+
+function clearMentionPopPortalStyles(pop) {
+  pop.style.position = '';
+  pop.style.left = '';
+  pop.style.top = '';
+  pop.style.right = '';
+  pop.style.bottom = '';
+  pop.style.zIndex = '';
+  pop.style.isolation = '';
+  pop.style.maxHeight = '';
+  pop.style.margin = '';
+}
+
+function detachMentionPopOutsideClose(pop) {
   if (!pop) return;
-  pop.classList.toggle('hidden');
+  if (pop._mentionPopOutsideTimeout != null) {
+    clearTimeout(pop._mentionPopOutsideTimeout);
+    pop._mentionPopOutsideTimeout = null;
+  }
+  if (typeof pop._mentionPopClickOutside === 'function') {
+    document.removeEventListener('click', pop._mentionPopClickOutside);
+    pop._mentionPopClickOutside = null;
+  }
+}
+
+/** Aurora: cierra el pop al hacer clic fuera (listener en document). */
+function attachMentionPopOutsideClose(pop) {
+  if (!isAuroraTheme() || !pop) return;
+  detachMentionPopOutsideClose(pop);
+  function onClickOutside(e) {
+    if (!pop.contains(e.target)) {
+      document.removeEventListener('click', onClickOutside);
+      pop._mentionPopClickOutside = null;
+      if (isAuroraTheme()) {
+        restoreCommentMentionPopFromBody(pop);
+      }
+      pop.classList.add('hidden');
+    }
+  }
+  pop._mentionPopClickOutside = onClickOutside;
+  pop._mentionPopOutsideTimeout = setTimeout(() => {
+    pop._mentionPopOutsideTimeout = null;
+    document.addEventListener('click', onClickOutside);
+  }, 0);
+}
+
+function portalCommentMentionPopToBody(pop, textareaId) {
+  if (!isAuroraTheme() || !pop) return;
+  const ta = document.getElementById(textareaId);
+  const anchor = getMentionAnchorForTextarea(textareaId);
+  const rect = anchor
+    ? anchor.getBoundingClientRect()
+    : (ta ? ta.getBoundingClientRect() : { left: 16, top: 80, width: 220, bottom: 112, right: 236 });
+  if (pop.parentNode !== document.body) {
+    if (!commentMentionPopPortalRestore.has(pop)) {
+      commentMentionPopPortalRestore.set(pop, { parent: pop.parentNode, nextSibling: pop.nextSibling });
+    }
+    document.body.appendChild(pop);
+  }
+  const gap = 4;
+  const maxH = 180;
+  const w = Math.max(rect.width || 0, 220);
+  let left = rect.left;
+  let top = (rect.bottom != null ? rect.bottom : rect.top + 32) + gap;
+  pop.style.position = 'fixed';
+  pop.style.left = `${Math.max(8, Math.min(left, window.innerWidth - w - 8))}px`;
+  pop.style.top = `${top}px`;
+  pop.style.bottom = 'auto';
+  pop.style.right = 'auto';
+  pop.style.zIndex = '999999';
+  pop.style.isolation = 'isolate';
+  pop.style.maxHeight = `${maxH}px`;
+  pop.style.margin = '0';
+  const ph = pop.getBoundingClientRect().height;
+  if (top + ph > window.innerHeight - 8) {
+    const above = (rect.top != null ? rect.top : top) - gap - ph;
+    if (above >= 8) {
+      pop.style.top = `${above}px`;
+    } else {
+      pop.style.maxHeight = `${Math.max(100, window.innerHeight - top - 8)}px`;
+    }
+  }
+}
+
+function restoreCommentMentionPopFromBody(pop) {
+  if (!pop) return;
+  detachMentionPopOutsideClose(pop);
+  if (pop.parentNode !== document.body) {
+    clearMentionPopPortalStyles(pop);
+    return;
+  }
+  const info = commentMentionPopPortalRestore.get(pop);
+  if (info && info.parent && document.body.contains(info.parent)) {
+    try {
+      if (info.nextSibling && info.nextSibling.parentNode === info.parent) {
+        info.parent.insertBefore(pop, info.nextSibling);
+      } else {
+        info.parent.appendChild(pop);
+      }
+    } catch {
+      info.parent.appendChild(pop);
+    }
+  } else {
+    pop.remove();
+  }
+  commentMentionPopPortalRestore.delete(pop);
+  clearMentionPopPortalStyles(pop);
+}
+
+function cleanupCommentMentionPortalPops() {
+  document.querySelectorAll('body > .comment-mention-pop').forEach(pop => {
+    restoreCommentMentionPopFromBody(pop);
+    pop.classList.add('hidden');
+  });
+}
+
+window._onCommentsThreadModalClose = cleanupCommentMentionPortalPops;
+
+function toggleCommentMentionMenu(textareaId) {
+  const popId = textareaId + '-mention-pop';
+  const pop = document.getElementById(popId);
+  if (!pop) return;
+  const opening = pop.classList.contains('hidden');
+  if (opening) {
+    pop.classList.remove('hidden');
+    if (isAuroraTheme()) {
+      portalCommentMentionPopToBody(pop, textareaId);
+      attachMentionPopOutsideClose(pop);
+    }
+  } else {
+    if (isAuroraTheme()) {
+      restoreCommentMentionPopFromBody(pop);
+    }
+    pop.classList.add('hidden');
+  }
 }
 
 function toggleMentionPick(textareaId, userName, el) {
@@ -47,7 +194,10 @@ function insertSelectedMentions(textareaId) {
   textarea.setSelectionRange(next, next);
   set.clear();
   const pop = document.getElementById(textareaId + '-mention-pop');
-  if (pop) pop.classList.add('hidden');
+  if (pop) {
+    if (isAuroraTheme()) restoreCommentMentionPopFromBody(pop);
+    pop.classList.add('hidden');
+  }
 }
 
 function selectMentionAutocomplete(textareaId, userName) {
@@ -55,7 +205,10 @@ function selectMentionAutocomplete(textareaId, userName) {
   if (!textarea) return;
   replaceMentionQueryAtCaret(textarea, userName);
   const auto = document.getElementById(textareaId + '-mention-auto');
-  if (auto) auto.classList.add('hidden');
+  if (auto) {
+    if (isAuroraTheme()) restoreCommentMentionPopFromBody(auto);
+    auto.classList.add('hidden');
+  }
 }
 
 function updateCommentMentionAutocomplete(textareaId) {
@@ -63,13 +216,22 @@ function updateCommentMentionAutocomplete(textareaId) {
   const auto = document.getElementById(textareaId + '-mention-auto');
   if (!textarea || !auto || !currentUser) return;
   const q = getMentionQueryAtCaret(textarea);
-  if (!q) { auto.classList.add('hidden'); return; }
+  if (!q) {
+    if (isAuroraTheme()) restoreCommentMentionPopFromBody(auto);
+    auto.classList.add('hidden');
+    return;
+  }
   const nq = normalizeForSearch(q);
   const users = USERS
     .filter(u => u.group === currentUser.group)
     .filter(u => normalizeForSearch(u.name).includes(nq))
     .slice(0, 8);
-  if (!users.length) { auto.classList.add('hidden'); return; }
+  if (!users.length) {
+    if (isAuroraTheme()) restoreCommentMentionPopFromBody(auto);
+    auto.classList.add('hidden');
+    return;
+  }
+  const wasHidden = auto.classList.contains('hidden');
   auto.innerHTML = users.map(u => `
     <div class="comment-mention-item" data-mention-name="${escapeChatHtml(u.name)}" onclick="selectMentionAutocomplete('${textareaId}', this.getAttribute('data-mention-name'))">
       <div class="comment-mention-avatar" style="background:${u.color}">${u.initials}</div>
@@ -77,6 +239,12 @@ function updateCommentMentionAutocomplete(textareaId) {
     </div>
   `).join('');
   auto.classList.remove('hidden');
+  if (isAuroraTheme()) {
+    portalCommentMentionPopToBody(auto, textareaId);
+    if (wasHidden) {
+      attachMentionPopOutsideClose(auto);
+    }
+  }
 }
 
 function handleCommentInput(textareaId) {
@@ -136,6 +304,10 @@ function openPostitCommentsFromModal() {
 function renderCommentsPanel(kind, targetId, containerId, extraId = null) {
   const container = document.getElementById(containerId);
   if (!container) return;
+
+  if (typeof window._onCommentsThreadModalClose === 'function') {
+    window._onCommentsThreadModalClose();
+  }
 
   // Si el elemento no existe todavía (p.ej. Post-it nuevo sin id), no permitimos comentarios.
   if (targetId == null) {

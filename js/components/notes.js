@@ -1,9 +1,13 @@
 // ===== NOTES MODULE =====
 
 // Import required dependencies
-import { currentUser, notes, currentDate, activeShiftFilters, searchQuery, currentNoteView, SHIFTS, USERS, GROUPS, workGroups, sameId, toDateStr, editingNoteImages, editingPostitImages, editingDocImages, editingProjectImages, editingTaskImages, setNotes, editingNoteId, selectedShift, selectedPriority, selectedMentions, selectedMentionGroup, selectedNoteVisibility, reminderOn, setEditingNoteId, setSelectedShift, setSelectedPriority, setSelectedMentions, setEditingNoteImages, setReminderOn, setSelectedNoteVisibility, makeImageKey, registerTempImage, collectImageMap, setSlashMenuActive, setSlashMenuCurrentTextArea, setSlashMenuCurrentPreview, setSlashMenuCurrentImageMap, slashMenuCurrentTextArea, slashMenuCurrentPreview, slashMenuCurrentImageMap } from './data.js';
+import { currentUser, notes, currentDate, activeShiftFilters, searchQuery, currentNoteView, SHIFTS, USERS, GROUPS, workGroups, sameId, toDateStr, editingNoteImages, editingPostitImages, editingDocImages, editingProjectImages, editingTaskImages, setNotes, editingNoteId, selectedShift, selectedPriority, selectedMentions, selectedMentionGroup, selectedNoteVisibility, reminderOn, setEditingNoteId, setSelectedShift, setSelectedPriority, setSelectedMentions, setEditingNoteImages, setReminderOn, setSelectedNoteVisibility, setSelectedMentionGroup, makeImageKey, registerTempImage, collectImageMap, setSlashMenuActive, setSlashMenuCurrentTextArea, setSlashMenuCurrentPreview, setSlashMenuCurrentImageMap, slashMenuCurrentTextArea, slashMenuCurrentPreview, slashMenuCurrentImageMap } from './data.js';
+import { renderMentionChips } from './comments.js';
 import { showToast, openModal, closeModal, showConfirmModal } from './modalControl.js';
 import { updateMarkdownPreview } from './docs.js';
+import { createCustomSelect } from './auroraCustomSelect.js';
+
+export { createCustomSelect };
 
 // Slash commands configuration
 export const SLASH_COMMANDS = [
@@ -454,6 +458,11 @@ export function openNewNoteModal() {
   const mentionsArea = document.getElementById('mentions-area');
   if (mentionsArea) mentionsArea.innerHTML = '';
 
+  setTimeout(() => {
+    if (typeof setSelectedMentionGroup === 'function') setSelectedMentionGroup(null);
+    if (typeof renderMentionChips === 'function') renderMentionChips();
+  }, 50);
+
   openModal('note-modal');
   const titleEl = document.getElementById('modal-title');
   if (titleEl) titleEl.textContent = 'Nueva Nota';
@@ -468,6 +477,8 @@ export function openNewNoteModal() {
   bindNoteEditorInteractions();
 
   updateNoteModalUI();
+  createCustomSelect('note-collab-target-select');
+  createCustomSelect('note-collab-permission-select');
 }
 
 /**
@@ -506,6 +517,11 @@ export function editNote(e, id) {
   }
   if (tps) tps.value = (firstSh && firstSh.permission) ? firstSh.permission : 'read';
 
+  setTimeout(() => {
+    if (typeof setSelectedMentionGroup === 'function') setSelectedMentionGroup(null);
+    if (typeof renderMentionChips === 'function') renderMentionChips();
+  }, 50);
+
   openModal('note-modal');
   const titleEl = document.getElementById('modal-title');
   if (titleEl) titleEl.textContent = 'Editar Nota';
@@ -530,6 +546,8 @@ export function editNote(e, id) {
   bindNoteEditorInteractions();
 
   updateNoteModalUI();
+  createCustomSelect('note-collab-target-select');
+  createCustomSelect('note-collab-permission-select');
 }
 
 /**

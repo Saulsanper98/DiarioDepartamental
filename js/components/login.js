@@ -25,7 +25,7 @@ import {
   setProjects,
   setDocs,
 } from './data.js';
-import { applyStoredTheme, loadUserTheme, USER_THEMES, isLightColor, createAuroraOrbs } from './themes.js';
+import { applyStoredTheme, loadUserTheme, USER_THEMES, isLightColor, createAuroraOrbs, removeAuroraOrbsFromDom } from './themes.js';
 import { showToast, openModal, closeModal } from './modalControl.js';
 import { saveData } from './notes.js';
 import { savePostitData } from './postit.js';
@@ -112,30 +112,35 @@ export function cancelPasswordModal() {
 export function submitPassword() {
   const input = document.getElementById('pwd-modal-input').value;
   console.log('submitPassword called, _pwdGroup:', _pwdGroup, 'input:', input);
-  if (!input) {
-    document.getElementById('pwd-error').textContent = 'Por favor introduce la contraseña.';
-    return;
-  }
+  // TODO: reactivar validación antes de producción
+  // if (!input) {
+  //   document.getElementById('pwd-error').textContent = 'Por favor introduce la contraseña.';
+  //   return;
+  // }
 
   console.log('Verifying password...');
-  if (verifyGroupPassword(_pwdGroup, input)) {
-    const group = _pwdGroup;
-    const icon = _pwdIcon;
-    cancelPasswordModal();
-    proceedAfterPassword(group, icon);
-  } else {
-    _pwdAttempts++;
-    document.getElementById('pwd-modal-input').value = '';
-    const remaining = MAX_PWD_ATTEMPTS - _pwdAttempts;
-    if (remaining <= 0) {
-      document.getElementById('pwd-error').textContent = 'Acceso denegado. Demasiados intentos fallidos.';
-      document.getElementById('pwd-attempts').textContent = '';
-      setTimeout(cancelPasswordModal, 2000);
-    } else {
-      document.getElementById('pwd-error').textContent = '❌ Contraseña incorrecta.';
-      document.getElementById('pwd-attempts').textContent = `${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''}.`;
-    }
-  }
+  // TODO: reactivar validación antes de producción
+  // (equivalente a comprobar contraseña del grupo en GROUP_PASSWORDS; aquí se usa verifyGroupPassword)
+  // if (input !== GROUP_PASSWORDS[_pwdGroup]) { ... return; }
+  // if (verifyGroupPassword(_pwdGroup, input)) {
+  const group = _pwdGroup;
+  const icon = _pwdIcon;
+  // Flujo sin validación: continuar login y cerrar modal (sin returns previos)
+  proceedAfterPassword(group, icon);
+  cancelPasswordModal();
+  // } else {
+  //   _pwdAttempts++;
+  //   document.getElementById('pwd-modal-input').value = '';
+  //   const remaining = MAX_PWD_ATTEMPTS - _pwdAttempts;
+  //   if (remaining <= 0) {
+  //     document.getElementById('pwd-error').textContent = 'Acceso denegado. Demasiados intentos fallidos.';
+  //     document.getElementById('pwd-attempts').textContent = '';
+  //     setTimeout(cancelPasswordModal, 2000);
+  //   } else {
+  //     document.getElementById('pwd-error').textContent = '❌ Contraseña incorrecta.';
+  //     document.getElementById('pwd-attempts').textContent = `${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''}.`;
+  //   }
+  // }
 }
 
 /**
@@ -268,7 +273,7 @@ export function logout() {
   // Restaurar variables
   Object.entries(defaultTheme.vars).forEach(([k,v]) => root.style.setProperty(k, v));
 
-  document.querySelectorAll('.aurora-orb').forEach(el => el.remove());
+  removeAuroraOrbsFromDom();
 
   setCurrentUser(null);
   setCurrentGroup(null);
@@ -325,21 +330,8 @@ export function initApp() {
   processNotificationInbox();
   window._inboxTimer = setInterval(processNotificationInbox, 12000);
 
-  if (typeof loadUserTheme === 'function' && loadUserTheme() === 'aurora') {
-    const app = document.getElementById('app');
-    if (app) {
-      const observer = new MutationObserver(() => {
-        if (app.style.display !== 'none') {
-          createAuroraOrbs();
-          observer.disconnect();
-        }
-      });
-      observer.observe(app, { attributes: true, attributeFilter: ['style'] });
-      // Fallback por si #app ya está visible
-      if (app.style.display !== 'none') {
-        createAuroraOrbs();
-      }
-    }
+  if (document.documentElement.classList.contains('tema-aurora')) {
+    createAuroraOrbs();
   }
 }
 

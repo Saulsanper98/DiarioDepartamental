@@ -3,6 +3,7 @@
 import { USERS, projects, currentUser, currentProjectId, projectUserFilter, editingProjectId, editingTaskId, editingProjectImages, editingTaskImages, comments, workGroups, GROUPS, collectImageMap, setProjects, setCurrentProjectId, setEditingProjectId, setEditingTaskId, setEditingProjectImages, setEditingTaskImages, setProjectUserFilter as setProjectUserFilterState } from './data.js';
 import { showToast, openModal, closeModal, showConfirmModal, escapeChatHtml } from './modalControl.js';
 import { renderMarkdown, fillCollabTargetSelect, buildSharesFromCollabSelect } from './notes.js';
+import { createCustomSelect } from './auroraCustomSelect.js';
 import { commentIndicators, getLatestCommentPreview } from './docs.js';
 import { sameId } from './data.js';
 
@@ -137,6 +138,47 @@ export function fillProjectParentSelect(opts) {
   const want = selectedParentId == null || selectedParentId === '' ? '_root' : String(selectedParentId);
   sel.value = want;
   if (sel.value !== want) sel.value = '_root';
+}
+
+/**
+ * Filas DFS del árbol de padres (mismos candidatos que fillProjectParentSelect), solo para UI Aurora.
+ * No modifica el DOM ni el <select>.
+ */
+export function getProjectParentSelectAuroraRows(opts) {
+  const editingId = opts.editingId;
+  const impliedGroup = opts.impliedGroup;
+  const ed = editingId != null ? projects.find(p => sameId(p.id, editingId)) : null;
+  const groupFilter = ed ? ed.group : (impliedGroup != null ? impliedGroup : currentUser.group);
+  const candidates = projects
+    .filter(p => userCanSeeProject(p) && p.group === groupFilter)
+    .filter(p => {
+      if (editingId == null) return true;
+      if (sameId(p.id, editingId)) return false;
+      if (isProjectDescendantOf(p.id, editingId)) return false;
+      return true;
+    });
+
+  const candidateIds = new Set(candidates.map(p => String(p.id)));
+
+  function parentInCandidates(p) {
+    if (p.parentProjectId == null) return false;
+    return candidateIds.has(String(p.parentProjectId));
+  }
+
+  const roots = candidates
+    .filter(p => !parentInCandidates(p))
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
+  const rows = [];
+  function dfs(node, depth) {
+    rows.push({ value: String(node.id), depth, label: node.name });
+    const children = candidates
+      .filter(c => sameId(c.parentProjectId, node.id))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    children.forEach(ch => dfs(ch, depth + 1));
+  }
+  roots.forEach(r => dfs(r, 0));
+  return rows;
 }
 
 export function renderProjectUserFilter() {
@@ -342,6 +384,18 @@ export function openNewProjectModal(parentProjectId) {
   if (pts) pts.value = '_none';
   if (pps) pps.value = 'read';
   openModal('project-modal');
+  if (document.documentElement.classList.contains('tema-aurora')) {
+    setTimeout(() => {
+      const parentRows = getProjectParentSelectAuroraRows({
+        editingId: null,
+        impliedGroup: parObj ? parObj.group : currentUser.group,
+      });
+      createCustomSelect('project-parent-select', '#project-modal', { projectParentAuroraRows: parentRows });
+      createCustomSelect('project-collab-target-select', '#project-modal');
+      createCustomSelect('project-collab-permission-select', '#project-modal');
+      createCustomSelect('project-status-input', '#project-modal');
+    }, 0);
+  }
 }
 
 export function openEditProjectModal(id) {
@@ -369,6 +423,15 @@ export function openEditProjectModal(id) {
   }
   if (pps) pps.value = (sh && sh.permission) ? sh.permission : 'read';
   openModal('project-modal');
+  if (document.documentElement.classList.contains('tema-aurora')) {
+    setTimeout(() => {
+      const parentRows = getProjectParentSelectAuroraRows({ editingId: id });
+      createCustomSelect('project-parent-select', '#project-modal', { projectParentAuroraRows: parentRows });
+      createCustomSelect('project-collab-target-select', '#project-modal');
+      createCustomSelect('project-collab-permission-select', '#project-modal');
+      createCustomSelect('project-status-input', '#project-modal');
+    }, 0);
+  }
 }
 
 export function userCanSeeProject(p, visited) {
@@ -525,6 +588,14 @@ export function openAddTaskModal(projectId) {
   sel.innerHTML = `<option value="">Sin asignar</option>` + USERS.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
   document.getElementById('task-modal-title').textContent = 'Nueva Tarea';
   openModal('task-modal');
+  if (document.documentElement.classList.contains('tema-aurora')) {
+    setTimeout(() => {
+      createCustomSelect('task-collab-target-select', '#task-modal');
+      createCustomSelect('task-collab-permission-select', '#task-modal');
+      createCustomSelect('task-assignee-input', '#task-modal');
+      createCustomSelect('task-priority-input', '#task-modal');
+    }, 0);
+  }
 }
 
 export function openEditTaskModal(projectId, taskId) {
@@ -555,6 +626,14 @@ export function openEditTaskModal(projectId, taskId) {
   const sel = document.getElementById('task-assignee-input');
   sel.innerHTML = `<option value="">Sin asignar</option>` + USERS.map(u => `<option value="${u.id}" ${t.assigneeId === u.id ? 'selected' : ''}>${u.name}</option>`).join('');
   openModal('task-modal');
+  if (document.documentElement.classList.contains('tema-aurora')) {
+    setTimeout(() => {
+      createCustomSelect('task-collab-target-select', '#task-modal');
+      createCustomSelect('task-collab-permission-select', '#task-modal');
+      createCustomSelect('task-assignee-input', '#task-modal');
+      createCustomSelect('task-priority-input', '#task-modal');
+    }, 0);
+  }
 }
 
 export function saveTask() {
