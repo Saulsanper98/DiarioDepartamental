@@ -1117,17 +1117,25 @@ html.tema-aurora #note-modal textarea::placeholder {
 }
 
 html.tema-aurora #note-modal .btn-shift,
-html.tema-aurora #note-modal .shift-option {
-  background: rgba(255,255,255,0.07) !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
-  color: rgba(255,255,255,0.6) !important;
+html.tema-aurora #note-modal .shift-option,
+html.tema-aurora #note-modal [class*="turno"] {
+  background: rgba(255,255,255,0.14) !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  color: rgba(255,255,255,0.88) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1 !important;
 }
 
 html.tema-aurora #note-modal .btn-shift.active,
-html.tema-aurora #note-modal .shift-option.active {
-  background: rgba(120,100,255,0.4) !important;
-  border-color: rgba(120,100,255,0.6) !important;
+html.tema-aurora #note-modal .shift-option.active,
+html.tema-aurora #note-modal .shift-option.selected,
+html.tema-aurora #note-modal [class*="turno"].active {
+  background: rgba(120,100,255,0.45) !important;
+  border-color: rgba(120,100,255,0.65) !important;
   color: white !important;
+  opacity: 1 !important;
 }
 
 html.tema-aurora #note-modal .modal-footer {
@@ -1170,11 +1178,23 @@ html.tema-aurora #note-modal input[type="time"] {
   padding: 4px 8px !important;
 }
 
+html.tema-aurora #note-modal .priority-opt,
+html.tema-aurora #note-modal .visibility-opt,
 html.tema-aurora #note-modal .btn-priority,
-html.tema-aurora #note-modal [class*="priority"] {
-  background: rgba(255,255,255,0.07) !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
-  color: rgba(255,255,255,0.7) !important;
+html.tema-aurora #note-modal .btn-visibility {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+html.tema-aurora #note-modal .btn-priority,
+html.tema-aurora #note-modal .priority-opt:not(.selected),
+html.tema-aurora #note-modal .visibility-opt:not(.selected),
+html.tema-aurora #note-modal .btn-visibility:not(.active) {
+  background: rgba(255,255,255,0.14) !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  color: rgba(255,255,255,0.88) !important;
 }
 
 html.tema-aurora #note-modal .hint,
@@ -1191,6 +1211,13 @@ html.tema-aurora #note-modal [class*="priority-group"] {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+}
+
+html.tema-aurora #note-modal .shift-selector,
+html.tema-aurora #note-modal .priority-select,
+html.tema-aurora #note-modal .visibility-pills {
+  position: relative !important;
+  z-index: 2 !important;
 }
 
 /* Aurora — contenedor de orbes de fondo (por debajo de portales a body, p. ej. menciones z-index 999999) */
