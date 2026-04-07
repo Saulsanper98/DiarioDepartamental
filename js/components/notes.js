@@ -309,7 +309,9 @@ export function renderNoteCard(note, cardOpts = {}) {
   if (note.mentions && note.mentions.length > 0) {
     const mentionUsers = note.mentions.map(id => USERS.find(u => u.id === id)).filter(Boolean);
     if (mentionUsers.length > 0) {
-      mentionsHtml = `<div class="note-mentions">@ ${mentionUsers.map(u => escapeHtml(u.name)).join(', ')}</div>`;
+      mentionsHtml = `<div class="note-mentions">${mentionUsers.map(u => 
+        `<span class="mention">@${escapeHtml(u.name)}</span>`
+      ).join(' ')}</div>`;
     }
   }
 
@@ -682,6 +684,11 @@ function bindNoteEditorInteractions() {
   const editor = document.getElementById('note-body-editor');
   if (!editor || editor.dataset.wysiwygBound === '1') return;
   editor.dataset.wysiwygBound = '1';
+  editor.addEventListener('paste', function(e) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+  });
   editor.addEventListener('mousedown', (ev) => {
     const target = ev.target;
     if (!(target instanceof Element)) return;

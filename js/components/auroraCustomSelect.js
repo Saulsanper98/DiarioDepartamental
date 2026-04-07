@@ -3,6 +3,13 @@
 
 const PROJECT_PARENT_SELECT_ID = 'project-parent-select';
 
+/** Misma UI de jerarquía (DFS, └─, --tree-indent) que project-parent-select. */
+const DOC_FOLDER_TREE_SELECT_IDS = ['doc-parent-input', 'insert-file-folder-select'];
+
+function isDocFolderTreeSelect(selectId) {
+  return DOC_FOLDER_TREE_SELECT_IDS.includes(selectId);
+}
+
 /** Fallback: texto del <option> con prefijo · (fillProjectParentSelect) si no hay filas DFS Aurora. */
 function parseProjectParentOptionLabel(text) {
   const t = (text || '').trim();
@@ -35,7 +42,7 @@ function bindAuroraCustomSelectOutsideOnce() {
 
 /** Sincroniza con <select> oculto vía CSS (html.tema-aurora). buildSharesFromCollabSelect no cambia. */
 export function createCustomSelect(selectId, modalRootSelector = '#note-modal', options = {}) {
-  const projectParentAuroraRows = options.projectParentAuroraRows;
+  const treeRows = options.projectParentAuroraRows ?? options.treeRows;
 
   const sel = document.getElementById(selectId);
   if (!sel) return;
@@ -83,11 +90,11 @@ export function createCustomSelect(selectId, modalRootSelector = '#note-modal', 
     const label = document.createElement('span');
     label.className = 'custom-select-trigger-label';
     if (opt && selectId === PROJECT_PARENT_SELECT_ID) {
-      if (Array.isArray(projectParentAuroraRows)) {
+      if (Array.isArray(treeRows)) {
         if (opt.value === '_root') {
           label.textContent = (opt.textContent || '').trim();
         } else {
-          const row = projectParentAuroraRows.find(r => String(r.value) === String(opt.value));
+          const row = treeRows.find(r => String(r.value) === String(opt.value));
           if (row) {
             if (row.depth >= 1) {
               const conn = document.createElement('span');
@@ -111,6 +118,25 @@ export function createCustomSelect(selectId, modalRootSelector = '#note-modal', 
           label.append(conn, document.createTextNode(plain));
         } else {
           label.textContent = plain;
+        }
+      }
+    } else if (opt && isDocFolderTreeSelect(selectId) && Array.isArray(treeRows)) {
+      const rootVal = 'null';
+      if (opt.value === rootVal) {
+        label.textContent = (opt.textContent || '').trim();
+      } else {
+        const row = treeRows.find(r => String(r.value) === String(opt.value));
+        if (row) {
+          if (row.depth >= 1) {
+            const conn = document.createElement('span');
+            conn.className = 'custom-select-tree-connector';
+            conn.textContent = '└─ ';
+            label.append(conn, document.createTextNode(row.label));
+          } else {
+            label.textContent = row.label;
+          }
+        } else {
+          label.textContent = (opt.textContent || '').trim();
         }
       }
     } else {
@@ -169,7 +195,7 @@ export function createCustomSelect(selectId, modalRootSelector = '#note-modal', 
 
   function buildDropdown() {
     dropdown.replaceChildren();
-    if (selectId === PROJECT_PARENT_SELECT_ID && Array.isArray(projectParentAuroraRows)) {
+    if (selectId === PROJECT_PARENT_SELECT_ID && Array.isArray(treeRows)) {
       const rootOpt = sel.querySelector('option[value="_root"]');
       if (rootOpt) {
         const div = document.createElement('div');
@@ -181,7 +207,22 @@ export function createCustomSelect(selectId, modalRootSelector = '#note-modal', 
         bindOptionClick(div);
         dropdown.appendChild(div);
       }
-      projectParentAuroraRows.forEach(appendProjectParentRowFromAurora);
+      treeRows.forEach(appendProjectParentRowFromAurora);
+      return;
+    }
+    if (isDocFolderTreeSelect(selectId) && Array.isArray(treeRows)) {
+      const rootOpt = sel.querySelector('option[value="null"]');
+      if (rootOpt) {
+        const div = document.createElement('div');
+        div.className = 'custom-select-option custom-select-option--tree';
+        div.dataset.value = 'null';
+        if (sel.value === 'null') div.classList.add('selected');
+        div.style.setProperty('--tree-indent', `${projectParentTreePaddingLeft(0)}px`);
+        div.textContent = (rootOpt.textContent || '').trim();
+        bindOptionClick(div);
+        dropdown.appendChild(div);
+      }
+      treeRows.forEach(appendProjectParentRowFromAurora);
       return;
     }
     for (const node of sel.children) {
@@ -212,4 +253,5 @@ export function createCustomSelect(selectId, modalRootSelector = '#note-modal', 
 
   wrapper.append(trigger, dropdown);
   sel.insertAdjacentElement('beforebegin', wrapper);
+  sel.style.setProperty('display', 'none', 'important');
 }

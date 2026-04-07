@@ -3,7 +3,7 @@
 import { notes, postitCards, projects, docs, USERS, currentUser, currentDate, SHIFTS, workGroups, sameId } from './data.js';
 import { chatMessages } from './chat.js';
 import { saveData, renderNotes } from './notes.js';
-import { showToast, escapeChatHtml } from './modalControl.js';
+import { showToast, escapeChatHtml, showConfirmModal } from './modalControl.js';
 
 export function exportNotes(period) {
   const now = new Date();
@@ -94,12 +94,19 @@ export function exportAllData() {
 }
 
 export function clearAllData() {
-  if (!confirm('¿Seguro que quieres eliminar TODAS las notas? Esta acción no se puede deshacer.')) return;
-  notes.length = 0;
-  saveData();
-  renderNotes();
-  if (typeof window !== 'undefined' && typeof window.updateBadges === 'function') window.updateBadges();
-  showToast('Todas las notas eliminadas', 'info');
+  showConfirmModal({
+    icon: '🗑',
+    title: '¿Limpiar todos los datos?',
+    message: 'Se eliminarán TODAS las notas, tareas y proyectos. Esta acción no se puede deshacer.',
+    destructive: true,
+    onConfirm: () => {
+      notes.length = 0;
+      saveData();
+      renderNotes();
+      if (typeof window !== 'undefined' && typeof window.updateBadges === 'function') window.updateBadges();
+      showToast('Todas las notas eliminadas', 'info');
+    }
+  });
 }
 
 export function getPublicNoteShareContextsHtml(note) {

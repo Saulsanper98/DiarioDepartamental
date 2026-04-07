@@ -1,18 +1,19 @@
 // ===== VIEWS MODULE =====
 
 // Import required dependencies
-import { currentUser, currentView, currentNoteView, currentDate, weekOffset, activeShiftFilters, searchQuery, notes, USERS, sameId, toDateStr, setCurrentView, setCurrentNoteView, setCurrentDate, workGroups, CORE_DEPARTMENT_GROUPS, setActiveShiftFilters, setSearchQuery, setProjectUserFilter, setWeekOffset } from './data.js';
+import { currentUser, currentView, currentNoteView, currentDate, weekOffset, activeShiftFilters, searchQuery, notes, USERS, sameId, toDateStr, setCurrentView, setCurrentNoteView, setCurrentDate, workGroups, wgInvites, setWorkGroups, setWgInvites, CORE_DEPARTMENT_GROUPS, setActiveShiftFilters, setSearchQuery, setProjectUserFilter, setWeekOffset } from './data.js';
 import { renderThemeGrid } from './themes.js';
-import { showToast, escapeChatHtml } from './modalControl.js';
+import { showToast, escapeChatHtml, openModal, closeModal, showConfirmModal } from './modalControl.js';
 import { renderNotes, renderPublicNotes } from './notes.js';
 import { renderProjects, userIsActiveWorkGroupMember } from './projects.js';
 import { renderPostitBoard } from './postit.js';
 import { renderDocs } from './docs.js';
 import { renderChat, updateChatNavBadge } from './chat.js';
 import { renderShortcuts, onShortcutIconModeChange } from './shortcuts.js';
+import { renderWhiteboard } from './whiteboard.js';
 import { renderSettingsEditor, updateWorkGroupInviteNavBadge } from './login.js';
 // ===== VIEW CONSTANTS =====
-const VIEWS = ['notes','public-notes','my-groups','postit','projects','docs','chat','shortcuts','settings'];
+const VIEWS = ['notes','public-notes','my-groups','postit','projects','docs','chat','shortcuts','settings','whiteboard'];
 
 // ===== VIEW HTML TEMPLATES =====
 // Contenido alineado con diario_departamental_v2.html (vistas dentro de <main>, ~líneas 3479–3846).
@@ -479,6 +480,7 @@ export function showView(view, btn) {
   if (view === 'projects') { setProjectUserFilter(null); renderProjects(); }
   if (view === 'docs') renderDocs();
   if (view === 'shortcuts') { renderShortcuts(); onShortcutIconModeChange(); }
+  if (view === 'whiteboard') renderWhiteboard();
   if (view === 'chat') renderChat();
   if (view === 'settings') { renderSettingsEditor(); renderThemeGrid(); }
   updateChatNavBadge();
@@ -743,21 +745,235 @@ export function updateBadges() {
 }
 
 export function createWorkGroup() {
-  showToast('Crear grupo de trabajo: pendiente de portar desde el monolito', 'info');
+  openModal('workgroup-new-modal');
+  const nameEl = document.getElementById('wg-new-name-input');
+  const descEl = document.getElementById('wg-new-desc-input');
+  if (nameEl) nameEl.value = '';
+  if (descEl) descEl.value = '';
 }
 
 export function openWorkGroupInvitesModal() {
-  showToast('Invitaciones a grupos: pendiente de portar', 'info');
+  const pending = wgInvites.filter(i =>
+    i.status === 'pending' && sameId(i.toUserId, currentUser.id)
+  );
+  const el = document.getElementById('wg-invites-list-body');
+  if (!el) return;
+  if (pending.length === 0) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:12px;text-align:center;padding:20px">Sin invitaciones pendientes</p>';
+  } else {
+    el.innerHTML = pending.map(inv => {
+      const wg = workGroups.find(w => sameId(w.id, inv.wgId));
+      const from = USERS.find(u => sameId(u.id, inv.fromUserId));
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-weight:600;font-size:13px">${wg ? escapeChatHtml(wg.name) : 'Grupo desconocido'}</div>
+          <div style="font-size:11px;color:var(--text-muted)">Invitado por ${from ? escapeChatHtml(from.name) : '?'}</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-primary" style="font-size:11px;padding:5px 12px"
+            onclick="acceptWgInvite(${inv.id})">Aceptar</button>
+          <button class="btn-secondary" style="font-size:11px;padding:5px 12px"
+            onclick="declineWgInvite(${inv.id})">Rechazar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  openModal('workgroup-invites-modal');
 }
 
-export function onWorkGroupCardClick(_ev, _wgId) {
-  showToast('Ficha de grupo: pendiente de portar', 'info');
+export function onWorkGroupCardClick(ev, wgId) {
+  const wg = workGroups.find(w => sameId(w.id, wgId));
+  if (!wg) return;
+  const el = document.getElementById('wg-info-title');
+  if (el) el.textContent = wg.name;
+  const descEl = document.getElementById('wg-info-desc-body');
+  if (descEl) descEl.innerHTML = wg.description
+    ? escapeChatHtml(wg.description).replace(/\n/g, '<br>')
+    : '<p style="color:var(--text-muted);font-style:italic">Sin descripción</p>';
+  const objEl = document.getElementById('wg-info-objectives-body');
+  if (objEl) objEl.innerHTML = wg.objectives
+    ? escapeChatHtml(wg.objectives).replace(/\n/g, '<br>')
+    : '<p style="color:var(--text-muted);font-style:italic">Sin objetivos definidos</p>';
+  openModal('wg-info-modal');
 }
 
-export function openEditWorkGroupModal(_wgId) {
-  showToast('Editar grupo de trabajo: pendiente de portar', 'info');
+export function openEditWorkGroupModal(wgId) {
+  const wg = workGroups.find(w => sameId(w.id, wgId));
+  if (!wg) return;
+  window._editingWgId = wgId;
+  const nameEl = document.getElementById('wg-edit-name-display');
+  const descEl = document.getElementById('wg-edit-desc');
+  const objectivesEl = document.getElementById('wg-edit-objectives');
+  if (nameEl) nameEl.textContent = wg.name;
+  if (descEl) descEl.value = wg.description || '';
+  if (objectivesEl) objectivesEl.value = wg.objectives || '';
+
+  const members = (wg.memberUserIds || []).map(id => USERS.find(u => sameId(u.id, id))).filter(Boolean);
+  const owner = USERS.find(u => sameId(u.id, wg.ownerId));
+  const allPeople = [owner, ...members].filter(Boolean);
+  const membersEl = document.getElementById('wg-edit-members-list');
+  if (membersEl) {
+    membersEl.innerHTML = allPeople.map(u => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="width:24px;height:24px;border-radius:50%;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0f0e0c">${u.initials}</div>
+        <span style="font-size:12px;flex:1">${escapeChatHtml(u.name)}</span>
+        <span style="font-size:10px;color:var(--text-muted)">${sameId(u.id, wg.ownerId) ? 'Propietario' : 'Miembro'}</span>
+        ${!sameId(u.id, wg.ownerId) ? `<button type="button" style="font-size:10px;color:var(--danger);background:none;border:none;cursor:pointer" onclick="removeWgMember(${wg.id},${u.id})">✕</button>` : ''}
+      </div>
+    `).join('');
+  }
+  openModal('workgroup-modal');
 }
 
-export function deleteWorkGroup(_wgId) {
-  showToast('Eliminar grupo de trabajo: pendiente de portar', 'info');
+export function deleteWorkGroup(wgId) {
+  const wg = workGroups.find(w => sameId(w.id, wgId));
+  if (!wg) return;
+  showConfirmModal({
+    icon: '👥',
+    title: '¿Eliminar este grupo?',
+    message: `Se eliminará "${wg.name}" y todos sus datos. Esta acción no se puede deshacer.`,
+    onConfirm: () => {
+      const idx = workGroups.findIndex(w => sameId(w.id, wgId));
+      if (idx !== -1) workGroups.splice(idx, 1);
+      saveWorkGroups();
+      renderMyGroupsView();
+      showToast('Grupo eliminado', 'info');
+    }
+  });
+}
+
+function saveWorkGroups() {
+  localStorage.setItem('diario_workgroups', JSON.stringify(workGroups));
+}
+
+function saveWgInvites() {
+  localStorage.setItem('diario_wginvites', JSON.stringify(wgInvites));
+}
+
+export function saveWorkGroupEdit() {
+  const wg = workGroups.find(w => sameId(w.id, window._editingWgId));
+  if (!wg) return;
+  const descEl = document.getElementById('wg-edit-desc');
+  const objectivesEl = document.getElementById('wg-edit-objectives');
+  wg.description = descEl ? descEl.value.trim() : '';
+  wg.objectives = objectivesEl ? objectivesEl.value.trim() : '';
+  saveWorkGroups();
+  closeModal('workgroup-modal');
+  renderMyGroupsView();
+  showToast('Grupo actualizado', 'success');
+}
+
+export function acceptWgInvite(inviteId) {
+  const inv = wgInvites.find(i => sameId(i.id, inviteId));
+  if (!inv) return;
+  inv.status = 'accepted';
+  const wg = workGroups.find(w => sameId(w.id, inv.wgId));
+  if (wg) {
+    if (!wg.memberUserIds) wg.memberUserIds = [];
+    if (!wg.memberUserIds.some(id => sameId(id, currentUser.id))) {
+      wg.memberUserIds.push(currentUser.id);
+    }
+  }
+  saveWgInvites();
+  saveWorkGroups();
+  closeModal('workgroup-invites-modal');
+  renderMyGroupsView();
+  updateWorkGroupInviteNavBadge();
+  showToast('Invitación aceptada', 'success');
+}
+
+export function declineWgInvite(inviteId) {
+  const inv = wgInvites.find(i => sameId(i.id, inviteId));
+  if (!inv) return;
+  inv.status = 'declined';
+  saveWgInvites();
+  openWorkGroupInvitesModal();
+  updateWorkGroupInviteNavBadge();
+  showToast('Invitación rechazada', 'info');
+}
+
+export function removeWgMember(wgId, userId) {
+  const wg = workGroups.find(w => sameId(w.id, wgId));
+  if (!wg) return;
+  wg.memberUserIds = (wg.memberUserIds || []).filter(id => !sameId(id, userId));
+  saveWorkGroups();
+  openEditWorkGroupModal(wgId);
+  showToast('Miembro eliminado', 'info');
+}
+
+export function saveNewWorkGroup() {
+  const nameInput = document.getElementById('wg-new-name-input') || document.getElementById('wg-new-name');
+  const descInput = document.getElementById('wg-new-desc-input');
+  const name = nameInput?.value.trim();
+  if (!name) { showToast('El nombre es requerido', 'error'); return; }
+  const desc = descInput?.value.trim() || '';
+  const newWg = {
+    id: Date.now(),
+    name,
+    description: desc,
+    objectives: '',
+    ownerId: currentUser.id,
+    adminUserIds: [currentUser.id],
+    memberUserIds: [],
+    createdAt: new Date().toISOString(),
+  };
+  workGroups.push(newWg);
+  saveWorkGroups();
+  closeModal('workgroup-new-modal');
+  renderMyGroupsView();
+  showToast('Grupo creado', 'success');
+}
+
+export function onWgEditInviteSearchInput(event) {
+  const q = (event.target.value || '').trim().toLowerCase();
+  const sugEl = document.getElementById('wg-edit-invite-suggestions');
+  if (!sugEl) return;
+  if (!q) { sugEl.classList.add('hidden'); return; }
+  const wg = workGroups.find(w => sameId(w.id, window._editingWgId));
+  const existing = wg ? [...(wg.memberUserIds || []), wg.ownerId] : [];
+  const matches = USERS.filter(u =>
+    u.name.toLowerCase().includes(q) &&
+    !existing.some(id => sameId(id, u.id))
+  ).slice(0, 6);
+  if (!matches.length) { sugEl.classList.add('hidden'); return; }
+  sugEl.innerHTML = matches.map(u => `
+    <div class="wg-invite-suggestion-item"
+      onclick="selectWgInviteSuggestion(${u.id}, '${escapeChatHtml(u.name)}')">
+      <strong>${escapeChatHtml(u.name)}</strong>
+      <span style="color:var(--text-muted);font-size:10px;margin-left:6px">${u.group}</span>
+    </div>
+  `).join('');
+  sugEl.classList.remove('hidden');
+}
+
+export function selectWgInviteSuggestion(userId, userName) {
+  const input = document.getElementById('wg-edit-invite-search');
+  if (input) input.value = userName;
+  const sugEl = document.getElementById('wg-edit-invite-suggestions');
+  if (sugEl) sugEl.classList.add('hidden');
+  window._selectedWgInviteUserId = userId;
+}
+
+export function sendWgInviteFromEditModal() {
+  const userId = window._selectedWgInviteUserId;
+  if (!userId) { showToast('Selecciona un usuario de la lista', 'error'); return; }
+  const wgId = window._editingWgId;
+  if (!wgId) return;
+  const already = wgInvites.some(i =>
+    sameId(i.wgId, wgId) && sameId(i.toUserId, userId) && i.status === 'pending'
+  );
+  if (already) { showToast('Ya hay una invitación pendiente para este usuario', 'info'); return; }
+  wgInvites.push({
+    id: Date.now(),
+    wgId,
+    fromUserId: currentUser.id,
+    toUserId: userId,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  });
+  saveWgInvites();
+  window._selectedWgInviteUserId = null;
+  const input = document.getElementById('wg-edit-invite-search');
+  if (input) input.value = '';
+  showToast('Invitación enviada', 'success');
 }

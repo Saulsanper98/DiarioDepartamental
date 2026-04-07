@@ -1,6 +1,6 @@
 // ===== MAIN APPLICATION MODULE =====
 
-import { setNotes, setProjects, setDocs, setUSERS, makeImageKey, registerTempImage, collectImageMap, editingNoteImages, setEditingNoteImages, editingPostitImages, setEditingPostitImages, editingDocImages, setEditingDocImages, editingProjectImages, setEditingProjectImages, editingTaskImages, setEditingTaskImages } from './components/data.js';
+import { setNotes, setProjects, setDocs, setUSERS, setWorkGroups, setWgInvites, wgInvites, makeImageKey, registerTempImage, collectImageMap, editingNoteImages, setEditingNoteImages, editingPostitImages, setEditingPostitImages, editingDocImages, setEditingDocImages, editingProjectImages, setEditingProjectImages, editingTaskImages, setEditingTaskImages } from './components/data.js';
 import {
   showView,
   renderDateNav,
@@ -13,6 +13,14 @@ import {
   onWorkGroupCardClick,
   openEditWorkGroupModal,
   deleteWorkGroup,
+  saveWorkGroupEdit,
+  acceptWgInvite,
+  declineWgInvite,
+  removeWgMember,
+  saveNewWorkGroup,
+  onWgEditInviteSearchInput,
+  selectWgInviteSuggestion,
+  sendWgInviteFromEditModal,
 } from './components/views.js';
 import {
   selectGroup,
@@ -83,6 +91,22 @@ import {
   savePostit,
   selectPostitPriority,
   renderPostitBoard,
+  addPostitSubtask,
+  confirmPostitSubtask,
+  cancelPostitInlineInput,
+  togglePostitSubtask,
+  deletePostitSubtask,
+  addPostitChecklistItem,
+  confirmPostitChecklist,
+  togglePostitChecklist,
+  deletePostitChecklist,
+  triggerPostitAttachment,
+  handlePostitAttachment,
+  deletePostitAttachment,
+  openPostitAttachmentPreview,
+  renderPostitSubtasks,
+  renderPostitChecklist,
+  renderPostitAttachments,
 } from './components/postit.js';
 import {
   renderDocs,
@@ -170,12 +194,20 @@ import {
   openNoteCommentsModal,
   openTaskCommentsModal,
   handleCommentInput,
+  submitComment,
   selectMentionAutocomplete,
   toggleMentionPick,
   toggleCommentMentionMenu,
   insertSelectedMentions,
   insertImageIntoCommentTextarea,
 } from './components/comments.js';
+import {
+  renderWhiteboard, wbSetTool, wbSetShape, wbSetColor, wbSetSize,
+  wbToggleFill,
+  wbUndo, wbClear, wbExport, wbZoomIn, wbZoomOut, wbResetView,
+  wbStickyDragStart, wbDeleteSticky, wbStickyTextChange,
+  wbAddPage, wbSwitchPage, wbRenamePage, wbDeletePage, wbMinimapClick
+} from './components/whiteboard.js';
 
 function loadData() {
   try {
@@ -210,6 +242,22 @@ function loadData() {
     }
   } catch (e) {
     console.error('Error loading users:', e);
+  }
+
+  // Cargar grupos de trabajo
+  try {
+    const rawWg = localStorage.getItem('diario_workgroups');
+    setWorkGroups(rawWg ? JSON.parse(rawWg) : []);
+  } catch {
+    setWorkGroups([]);
+  }
+
+  // Cargar invitaciones
+  try {
+    const rawWgi = localStorage.getItem('diario_wginvites');
+    setWgInvites(rawWgi ? JSON.parse(rawWgi) : []);
+  } catch {
+    setWgInvites([]);
   }
 }
 
@@ -317,11 +365,35 @@ async function initializeApp() {
       savePostit,
       selectPostitPriority,
       renderPostitBoard,
+      addPostitSubtask,
+      confirmPostitSubtask,
+      cancelPostitInlineInput,
+      togglePostitSubtask,
+      deletePostitSubtask,
+      addPostitChecklistItem,
+      confirmPostitChecklist,
+      togglePostitChecklist,
+      deletePostitChecklist,
+      triggerPostitAttachment,
+      handlePostitAttachment,
+      deletePostitAttachment,
+      openPostitAttachmentPreview,
+      renderPostitSubtasks,
+      renderPostitChecklist,
+      renderPostitAttachments,
       createWorkGroup,
       openWorkGroupInvitesModal,
       onWorkGroupCardClick,
       openEditWorkGroupModal,
       deleteWorkGroup,
+      saveWorkGroupEdit,
+      acceptWgInvite,
+      declineWgInvite,
+      removeWgMember,
+      saveNewWorkGroup,
+      onWgEditInviteSearchInput,
+      selectWgInviteSuggestion,
+      sendWgInviteFromEditModal,
       renderDocs,
       filterDocsBySearch,
       applyDocsFilters,
@@ -391,11 +463,18 @@ async function initializeApp() {
       openNoteCommentsModal,
       openTaskCommentsModal,
       handleCommentInput,
+      submitComment,
       selectMentionAutocomplete,
       toggleMentionPick,
       toggleCommentMentionMenu,
       insertSelectedMentions,
       insertImageIntoCommentTextarea,
+      renderWhiteboard, wbSetTool, wbSetShape, wbSetColor, wbSetSize,
+      wbToggleFill,
+      wbUndo, wbClear, wbExport, wbZoomIn, wbZoomOut, wbResetView,
+      wbStickyDragStart, wbDeleteSticky, wbStickyTextChange,
+      wbAddPage, wbSwitchPage, wbRenamePage, wbDeletePage,
+      wbMinimapClick,
       openAddUserModal,
       openEditUserModal,
       saveEditUserModal,

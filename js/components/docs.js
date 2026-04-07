@@ -4,6 +4,7 @@ import { docs, USERS, currentUser, comments, projects, collectImageMap, setDocs,
 import { renderMarkdown, renderNotes, handleSlashCommand } from './notes.js';
 import { sameId } from './data.js';
 import { showToast, openModal, closeModal, showConfirmModal, closeConfirmModal, escapeChatHtml } from './modalControl.js';
+import { createCustomSelect } from './auroraCustomSelect.js';
 
 export let currentDocCat = 'all';
 export let currentDocFolderId = null;
@@ -915,6 +916,11 @@ export function openEditDocModal(id) {
   document.getElementById('doc-icon-btn').textContent = d.icon || '📝';
   document.getElementById('doc-content-input').value = d.content || '';
   document.getElementById('doc-content-preview').innerHTML = renderMarkdown(d.content || '', editingDocImages);
+  populateDocParentSelect();
+  const parentSel = document.getElementById('doc-parent-input');
+  if (parentSel) {
+    parentSel.value = d.parentFolderId == null ? 'null' : String(d.parentFolderId);
+  }
   openModal('doc-modal');
 }
 
@@ -1249,7 +1255,13 @@ export function editDocFolder(folderId) {
   const folderIcon = folder.icon || '📁';
   document.getElementById('doc-icon-input').value = folderIcon;
   document.getElementById('doc-icon-btn').textContent = folderIcon;
-  
+
+  populateDocParentSelect(folderId);
+  const parentSel = document.getElementById('doc-parent-input');
+  if (parentSel) {
+    parentSel.value = folder.parentFolderId == null ? 'null' : String(folder.parentFolderId);
+  }
+
   const parentGroup = document.getElementById('doc-parent-group');
   const categoryGroup = document.getElementById('doc-category-group');
   const contentGroup = document.getElementById('doc-content-group');
@@ -1335,16 +1347,62 @@ export function buildFolderSelectHtml(excludeFolderId = null) {
   return html;
 }
 
+/**
+ * Filas DFS para el dropdown Aurora de carpeta destino (misma idea que getProjectParentSelectAuroraRows).
+ */
+export function getDocFolderSelectAuroraRows(excludeFolderId = null) {
+  const userFolders = docs.filter(d =>
+    d.group === currentUser.group &&
+    d.docType === 'folder' &&
+    (!excludeFolderId || !sameId(d.id, excludeFolderId))
+  );
+  const candidateIds = new Set(userFolders.map(f => String(f.id)));
+
+  function parentInCandidates(f) {
+    if (f.parentFolderId == null || f.parentFolderId === '') return false;
+    return candidateIds.has(String(f.parentFolderId));
+  }
+
+  const roots = userFolders
+    .filter(f => !parentInCandidates(f))
+    .sort((a, b) => a.title.localeCompare(b.title, 'es'));
+
+  const rows = [];
+  function dfs(node, depth) {
+    rows.push({
+      value: String(node.id),
+      depth,
+      label: `${node.icon || '📁'} ${node.title}`,
+    });
+    const children = userFolders
+      .filter(c => sameId(c.parentFolderId, node.id))
+      .sort((a, b) => a.title.localeCompare(b.title, 'es'));
+    children.forEach(ch => dfs(ch, depth + 1));
+  }
+  roots.forEach(r => dfs(r, 0));
+  return rows;
+}
+
+function scheduleDocFolderTreeCustomSelect(selectId, modalRootSelector, excludeFolderId) {
+  if (!document.documentElement.classList.contains('tema-aurora')) return;
+  setTimeout(() => {
+    const treeRows = getDocFolderSelectAuroraRows(excludeFolderId);
+    createCustomSelect(selectId, modalRootSelector, { treeRows });
+  }, 0);
+}
+
 export function populateInsertFileFolderSelect() {
   const select = document.getElementById('insert-file-folder-select');
   if (!select) return;
   select.innerHTML = buildFolderSelectHtml();
+  scheduleDocFolderTreeCustomSelect('insert-file-folder-select', '#insert-file-modal', null);
 }
 
 export function populateDocParentSelect(excludeFolderId = null) {
   const select = document.getElementById('doc-parent-input');
   if (!select) return;
   select.innerHTML = buildFolderSelectHtml(excludeFolderId);
+  scheduleDocFolderTreeCustomSelect('doc-parent-input', '#doc-modal', excludeFolderId);
 }
 
 export function setupInsertFileIconPicker() {
@@ -1527,7 +1585,9 @@ export function openCreateFolderModal() {
     iconInput.value = '📁';
     iconBtn.textContent = '📁';
     contentInput.value = '';
-    
+
+    populateDocParentSelect();
+
     const contentArea = contentInput.parentElement;
     const previewArea = contentPreview.parentElement;
     if (contentArea) contentArea.style.display = 'none';

@@ -128,6 +128,9 @@
           <span class="nav-icon">💬</span> Chat
           <span class="nav-badge nav-badge-chat hidden" id="chat-nav-badge">0</span>
         </button>
+        <button class="nav-btn" onclick="showView('whiteboard',this)">
+          <span class="nav-icon">🎨</span> Pizarra
+        </button>
         <button class="nav-btn" onclick="showView('shortcuts',this)">
           <span class="nav-icon">🔗</span> Accesos Directos
         </button>
@@ -181,6 +184,7 @@
   <div id="view-projects" style="display:none"></div>
   <div id="view-docs" style="display:none"></div>
   <div id="view-shortcuts" style="display:none"></div>
+  <div id="view-whiteboard" style="display:none"></div>
   <div id="view-chat" style="display:none"></div>
   <div id="view-settings" style="display:none"></div>
 </main>
@@ -424,54 +428,128 @@
       <button class="modal-close" onclick="closeModal('postit-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">Título</label>
-        <input type="text" class="form-input" id="postit-title-input" placeholder="Título de la tarjeta...">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descripción</label>
-        <div class="content-input-group">
-          <textarea class="form-textarea" id="postit-body-input" placeholder="Descripción..." style="min-height:80px" oninput="updateMarkdownPreview('postit-body-input','postit-content-preview',editingPostitImages)"></textarea>
-          <button class="btn-insert-image" onclick="insertImagePostit()" title="Insertar imagen">🖼️</button>
-        </div>
-        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
-          <button class="btn-secondary" id="postit-preview-toggle" onclick="togglePreview('postit-content-preview','postit-preview-toggle')">Ocultar preview</button>
-        </div>
-        <div class="markdown-preview" id="postit-content-preview"></div>
-      </div>
-      <div class="form-row">
+
+      <!-- COLUMNA IZQUIERDA: siempre visible -->
+      <div class="postit-form-col">
         <div class="form-group">
-          <label class="form-label">Columna</label>
-          <select class="form-select" id="postit-col-select">
-            <option value="pendiente">📋 Pendiente</option>
-            <option value="progreso">⚡ En Progreso</option>
-            <option value="revision">🔍 Revisión</option>
-            <option value="hecho">✅ Hecho</option>
-          </select>
+          <label class="form-label">Título</label>
+          <input type="text" class="form-input" id="postit-title-input" placeholder="Título de la tarjeta...">
         </div>
         <div class="form-group">
-          <label class="form-label">Color</label>
-          <select class="form-select" id="postit-color-select">
-            <option value="yellow">🟡 Amarillo</option>
-            <option value="blue">🔵 Azul</option>
-            <option value="purple">🟣 Morado</option>
-            <option value="green">🟢 Verde</option>
-            <option value="red">🔴 Rojo</option>
-          </select>
+          <label class="form-label">Descripción</label>
+          <div class="content-input-group">
+            <textarea class="form-textarea" id="postit-body-input" placeholder="Descripción..." style="min-height:80px" oninput="updateMarkdownPreview('postit-body-input','postit-content-preview',editingPostitImages)"></textarea>
+            <button class="btn-insert-image" onclick="insertImagePostit()" title="Insertar imagen">🖼️</button>
+          </div>
+          <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+            <button class="btn-secondary" id="postit-preview-toggle" onclick="togglePreview('postit-content-preview','postit-preview-toggle')">Ocultar preview</button>
+          </div>
+          <div class="markdown-preview" id="postit-content-preview"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Columna</label>
+            <select class="form-select" id="postit-col-select">
+              <option value="pendiente">📋 Pendiente</option>
+              <option value="progreso">⚡ En Progreso</option>
+              <option value="revision">🔍 Revisión</option>
+              <option value="hecho">✅ Hecho</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <select class="form-select" id="postit-color-select">
+              <option value="yellow">🟡 Amarillo</option>
+              <option value="blue">🔵 Azul</option>
+              <option value="purple">🟣 Morado</option>
+              <option value="green">🟢 Verde</option>
+              <option value="red">🔴 Rojo</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prioridad</label>
+          <div class="priority-select">
+            <div class="priority-opt normal selected" data-priority="normal" onclick="selectPostitPriority(this)">Normal</div>
+            <div class="priority-opt media" data-priority="media" onclick="selectPostitPriority(this)">Media</div>
+            <div class="priority-opt alta" data-priority="alta" onclick="selectPostitPriority(this)">Alta</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Asignado a</label>
+            <select class="form-select" id="postit-assignee-select">
+              <option value="">Sin asignar</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha límite</label>
+            <input type="date" class="form-input" id="postit-due-date-input">
+          </div>
+        </div>
+
+        <!-- SUBTAREAS -->
+        <div class="form-group postit-subtasks-section">
+          <div class="postit-section-header">
+            <label class="form-label" style="margin:0">Subtareas</label>
+            <button type="button" class="btn-postit-add" onclick="addPostitSubtask()">+ Añadir</button>
+          </div>
+          <div id="postit-subtasks-list" class="postit-items-list"></div>
+        </div>
+
+        <!-- CHECKLIST -->
+        <div class="form-group postit-checklist-section">
+          <div class="postit-section-header">
+            <label class="form-label" style="margin:0">Lista de control</label>
+            <button type="button" class="btn-postit-add" onclick="addPostitChecklistItem()">+ Añadir</button>
+          </div>
+          <div id="postit-checklist-list" class="postit-items-list"></div>
+        </div>
+
+        <!-- ADJUNTOS -->
+        <div class="form-group postit-attachments-section">
+          <div class="postit-section-header">
+            <label class="form-label" style="margin:0">Adjuntos</label>
+            <button type="button" class="btn-postit-add" onclick="triggerPostitAttachment()">+ Añadir</button>
+          </div>
+          <input type="file" id="postit-file-input" accept="image/*,.pdf,.doc,.docx,.txt" 
+            style="display:none" onchange="handlePostitAttachment(event)">
+          <div id="postit-attachments-list" class="postit-items-list"></div>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Prioridad</label>
-        <div class="priority-select">
-          <div class="priority-opt normal selected" data-priority="normal" onclick="selectPostitPriority(this)">Normal</div>
-          <div class="priority-opt media" data-priority="media" onclick="selectPostitPriority(this)">Media</div>
-          <div class="priority-opt alta" data-priority="alta" onclick="selectPostitPriority(this)">Alta</div>
+      <!-- FIN COLUMNA IZQUIERDA -->
+
+      <!-- COLUMNA DERECHA: solo visible en modo edición, oculta por defecto -->
+      <div class="postit-comments-col hidden" id="postit-comments-col">
+        <div class="postit-comments-col-header">
+          💬 Actividad
+          <span class="postit-comments-count-badge" id="postit-comments-count"></span>
+        </div>
+        <div class="postit-comments-list" id="postit-comments-list"></div>
+        <div class="postit-comments-compose">
+          <textarea
+            id="postit-comment-input"
+            placeholder="Escribe un comentario..."
+            oninput="handleCommentInput('postit-comment-input')"
+          ></textarea>
+          <div class="postit-compose-actions">
+            <div class="comment-mention-menu" style="position:relative">
+              <button type="button" class="btn-compose-icon" onclick="toggleCommentMentionMenu('postit-comment-input')" title="Mencionar">＠</button>
+              <div id="postit-comment-input-mention-pop" class="comment-mention-pop hidden"></div>
+            </div>
+            <div id="postit-comment-input-mention-auto" class="comment-mention-pop hidden"></div>
+            <button type="button" class="btn-compose-icon" onclick="insertImageIntoCommentTextarea('postit-comment-input')" title="Imagen">🖼</button>
+            <button type="button" class="btn-compose-send"
+              data-comment-submit
+              data-c-kind="postit"
+              data-c-tid=""
+              data-c-eid=""
+              data-c-cid="postit-comments-col-panel">Enviar</button>
+          </div>
         </div>
       </div>
-      <div class="form-group" style="margin-top:4px">
-        <button type="button" class="btn-secondary btn-full-width" id="postit-comments-launch-btn" onclick="openPostitCommentsFromModal()">💬 Comentarios (ventana)</button>
-        <p style="font-size:10px;color:var(--text-muted);margin-top:6px">Los comentarios se abren en un panel centrado. En tarjetas nuevas, guarda antes de comentar.</p>
-      </div>
+      <!-- FIN COLUMNA DERECHA -->
+
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal('postit-modal')">Cancelar</button>
@@ -783,6 +861,36 @@
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal('edit-user-modal')">Cancelar</button>
       <button class="btn-save" onclick="saveEditUserModal()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="workgroup-new-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>👥 Nuevo Grupo de Trabajo</h3>
+      <button class="modal-close" onclick="closeModal('workgroup-new-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="gap:14px">
+      <div class="form-group">
+        <label class="form-label">Nombre del grupo</label>
+        <input class="form-input" id="wg-new-name-input" type="text"
+          placeholder="Ej: Proyecto migración..."
+          onkeydown="if(event.key==='Enter') saveNewWorkGroup()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción (opcional)</label>
+        <textarea class="form-textarea" id="wg-new-desc-input"
+          placeholder="Objetivo del grupo, contexto..."
+          style="min-height:80px;resize:vertical"></textarea>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);line-height:1.5">
+        Serás el propietario del grupo. Podrás invitar miembros después desde la tarjeta del grupo.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('workgroup-new-modal')">Cancelar</button>
+      <button class="btn-save" onclick="saveNewWorkGroup()">Crear grupo</button>
     </div>
   </div>
 </div>

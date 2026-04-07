@@ -1794,21 +1794,7 @@ html.tema-aurora .project-item.subproject::before {
   opacity: 0.55 !important;
 }
 
-/* Vista Proyectos: solo .btn-action del topbar (sin id; onclick openNewProjectModal) */
-html.tema-aurora #view-projects .topbar .btn-action {
-  background: rgba(120, 100, 255, 0.2) !important;
-  border: 1px solid rgba(120, 100, 255, 0.35) !important;
-  color: rgba(255, 255, 255, 0.75) !important;
-  font-size: 13px !important;
-  padding: 7px 14px !important;
-  border-radius: 10px !important;
-  box-shadow: none !important;
-}
-
-html.tema-aurora #view-projects .topbar .btn-action:hover {
-  background: rgba(120, 100, 255, 0.32) !important;
-  color: white !important;
-}
+/* Vista Proyectos: botón Nuevo Proyecto controlado al final del archivo */
 
 /* ── Aurora — Modal Comentarios (#comments-thread-modal en index.html) ── */
 html.tema-aurora #comments-thread-modal {
@@ -2292,4 +2278,3043 @@ html.tema-aurora #view-docs .doc-preview-container a {
 html.tema-aurora #view-docs .doc-body a:hover,
 html.tema-aurora #view-docs .doc-preview-container a:hover {
   color: white !important;
+}
+
+/* ── Aurora — Modales Documentación ── */
+/* index.html: no hay #folder-modal; «Nueva carpeta» y «Nuevo documento» usan el mismo #doc-modal (comentario en HTML). */
+
+/* #doc-modal — Nuevo documento / Nueva carpeta / Editar */
+html.tema-aurora #doc-modal {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora #doc-modal .modal {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora #doc-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #doc-modal .modal-title,
+html.tema-aurora #doc-modal h2,
+html.tema-aurora #doc-modal h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #doc-modal label {
+  color: rgba(255,255,255,0.45) !important;
+}
+
+html.tema-aurora #doc-modal input[type="text"],
+html.tema-aurora #doc-modal textarea,
+html.tema-aurora #doc-modal [contenteditable="true"],
+html.tema-aurora #doc-modal #doc-content-input {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.9) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #doc-modal input::placeholder,
+html.tema-aurora #doc-modal textarea::placeholder {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+html.tema-aurora #doc-modal select {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.8) !important;
+  color-scheme: dark !important;
+  padding: 9px 12px !important;
+}
+
+html.tema-aurora #doc-modal select option {
+  background: #1a2035 !important;
+}
+
+html.tema-aurora #doc-modal .btn-secondary {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.7) !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora #doc-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  background: rgba(0,0,0,0.1) !important;
+}
+
+html.tema-aurora #doc-modal .btn-cancel {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.5) !important;
+}
+
+html.tema-aurora #doc-modal .btn-primary,
+html.tema-aurora #doc-modal .btn-save {
+  background: linear-gradient(135deg, rgba(120,100,255,0.8), rgba(80,60,200,0.8)) !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.4) !important;
+  color: white !important;
+}
+
+html.tema-aurora #doc-modal #doc-icon-btn {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+}
+
+/* #insert-file-modal — Insertar archivo */
+html.tema-aurora #insert-file-modal {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora #insert-file-modal .modal {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora #insert-file-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #insert-file-modal .modal-title,
+html.tema-aurora #insert-file-modal h2,
+html.tema-aurora #insert-file-modal h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #insert-file-modal label {
+  color: rgba(255,255,255,0.45) !important;
+}
+
+html.tema-aurora #insert-file-modal input[type="text"],
+html.tema-aurora #insert-file-modal textarea,
+html.tema-aurora #insert-file-modal [contenteditable="true"] {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.9) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #insert-file-modal input::placeholder,
+html.tema-aurora #insert-file-modal textarea::placeholder {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+html.tema-aurora #insert-file-modal select {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.8) !important;
+  color-scheme: dark !important;
+  padding: 9px 12px !important;
+}
+
+html.tema-aurora #insert-file-modal select option {
+  background: #1a2035 !important;
+}
+
+html.tema-aurora #insert-file-modal .btn-secondary {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.7) !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora #insert-file-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  background: rgba(0,0,0,0.1) !important;
+}
+
+html.tema-aurora #insert-file-modal .btn-cancel {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.5) !important;
+}
+
+html.tema-aurora #insert-file-modal .btn-primary,
+html.tema-aurora #insert-file-modal .btn-save {
+  background: linear-gradient(135deg, rgba(120,100,255,0.8), rgba(80,60,200,0.8)) !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.4) !important;
+  color: white !important;
+}
+
+html.tema-aurora #insert-file-modal #insert-file-icon-btn {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+}
+
+/* Picker de iconos (grid de emojis): index.html #icon-popover.icon-popover; rellenado por toggleIconPopover en docs.js */
+html.tema-aurora #icon-popover,
+html.tema-aurora .icon-popover {
+  background: rgba(18, 20, 48, 0.97) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+  z-index: 9999 !important;
+}
+
+html.tema-aurora .doc-actions-hover {
+  background: transparent !important;
+}
+
+/* ── Aurora — Post-it Board ── */
+html.tema-aurora #view-postit .postit-board .postit-col {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 14px !important;
+  padding: 12px !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-col .postit-col-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-col:nth-child(1) .postit-col-header {
+  border-bottom-color: rgba(255,200,100,0.35) !important;
+}
+html.tema-aurora #view-postit .postit-board .postit-col:nth-child(1) .postit-col-header h4 {
+  color: rgba(255,200,100,0.8) !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-col:nth-child(2) .postit-col-header {
+  border-bottom-color: rgba(80,140,255,0.35) !important;
+}
+html.tema-aurora #view-postit .postit-board .postit-col:nth-child(2) .postit-col-header h4 {
+  color: rgba(80,140,255,0.8) !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-col:nth-child(3) .postit-col-header {
+  border-bottom-color: rgba(160,100,255,0.35) !important;
+}
+html.tema-aurora #view-postit .postit-board .postit-col:nth-child(3) .postit-col-header h4 {
+  color: rgba(160,100,255,0.8) !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-col:nth-child(4) .postit-col-header {
+  border-bottom-color: rgba(100,220,150,0.35) !important;
+}
+html.tema-aurora #view-postit .postit-board .postit-col:nth-child(4) .postit-col-header h4 {
+  color: rgba(100,220,150,0.8) !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-card {
+  background: rgba(255,255,255,0.06) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 12px !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-card:hover {
+  background: rgba(255,255,255,0.09) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-card.dragging {
+  opacity: 0.8 !important;
+  transform: scale(0.98) !important;
+  background: rgba(120,100,255,0.18) !important;
+  border-color: rgba(140,120,255,0.75) !important;
+  box-shadow: 0 10px 28px rgba(120,100,255,0.35) !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-cards.drag-over {
+  outline: 1px dashed rgba(120,100,255,0.65) !important;
+  outline-offset: 4px !important;
+  border-radius: 10px !important;
+  background: rgba(120,100,255,0.08) !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-drop-placeholder {
+  height: 68px !important;
+  border: 1px dashed rgba(140,120,255,0.85) !important;
+  background: rgba(140,120,255,0.16) !important;
+  border-radius: 10px !important;
+  margin: 6px 0 !important;
+  pointer-events: none !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-card .postit-card-title {
+  color: rgba(255,255,255,0.92) !important;
+  font-weight: 500 !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-card .postit-card-body {
+  color: rgba(255,255,255,0.6) !important;
+}
+
+html.tema-aurora #view-postit .postit-toolbar .btn-primary {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.75) !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora #view-postit .postit-toolbar .btn-primary:hover {
+  background: rgba(120,100,255,0.25) !important;
+  color: white !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-col .btn-add-postit {
+  color: rgba(255,255,255,0.35) !important;
+  border-radius: 8px !important;
+}
+
+html.tema-aurora #view-postit .postit-board .postit-col .btn-add-postit:hover {
+  color: rgba(255,255,255,0.7) !important;
+  background: rgba(255,255,255,0.05) !important;
+}
+
+/* ── Aurora — Post-it Board (ajuste selectores reales) ── */
+html.tema-aurora .postit-card {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora .postit-card.yellow {
+  background: rgba(255,200,80,0.1) !important;
+  border-left: 3px solid rgba(255,200,80,0.5) !important;
+}
+html.tema-aurora .postit-card.blue {
+  background: rgba(80,140,255,0.1) !important;
+  border-left: 3px solid rgba(80,140,255,0.5) !important;
+}
+html.tema-aurora .postit-card.green {
+  background: rgba(80,200,120,0.1) !important;
+  border-left: 3px solid rgba(80,200,120,0.5) !important;
+}
+html.tema-aurora .postit-card.red {
+  background: rgba(255,100,100,0.1) !important;
+  border-left: 3px solid rgba(255,100,100,0.5) !important;
+}
+html.tema-aurora .postit-card.purple {
+  background: rgba(160,100,255,0.1) !important;
+  border-left: 3px solid rgba(160,100,255,0.5) !important;
+}
+
+html.tema-aurora .postit-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+}
+
+html.tema-aurora .postit-col-header h4 {
+  font-weight: 500 !important;
+  font-size: 13px !important;
+}
+
+html.tema-aurora .postit-col:has(#pcol-pendiente) .postit-col-header {
+  border-bottom: 2px solid rgba(255,200,80,0.5) !important;
+}
+html.tema-aurora .postit-col:has(#pcol-pendiente) .postit-col-header h4 {
+  color: rgba(255,200,80,0.9) !important;
+}
+
+html.tema-aurora .postit-col:has(#pcol-progreso) .postit-col-header {
+  border-bottom: 2px solid rgba(80,140,255,0.5) !important;
+}
+html.tema-aurora .postit-col:has(#pcol-progreso) .postit-col-header h4 {
+  color: rgba(80,140,255,0.9) !important;
+}
+
+html.tema-aurora .postit-col:has(#pcol-revision) .postit-col-header {
+  border-bottom: 2px solid rgba(160,100,255,0.5) !important;
+}
+html.tema-aurora .postit-col:has(#pcol-revision) .postit-col-header h4 {
+  color: rgba(160,100,255,0.9) !important;
+}
+
+html.tema-aurora .postit-col:has(#pcol-hecho) .postit-col-header {
+  border-bottom: 2px solid rgba(80,220,140,0.5) !important;
+}
+html.tema-aurora .postit-col:has(#pcol-hecho) .postit-col-header h4 {
+  color: rgba(80,220,140,0.9) !important;
+}
+
+html.tema-aurora #postit-board .postit-card {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #postit-board .postit-card.yellow {
+  background: rgba(255,200,80,0.05) !important;
+  border-left: 3px solid rgba(255,200,80,0.6) !important;
+}
+html.tema-aurora #postit-board .postit-card.blue {
+  background: rgba(80,140,255,0.05) !important;
+  border-left: 3px solid rgba(80,140,255,0.6) !important;
+}
+html.tema-aurora #postit-board .postit-card.green {
+  background: rgba(80,200,120,0.05) !important;
+  border-left: 3px solid rgba(80,200,120,0.6) !important;
+}
+html.tema-aurora #postit-board .postit-card.red {
+  background: rgba(255,100,100,0.05) !important;
+  border-left: 3px solid rgba(255,100,100,0.6) !important;
+}
+html.tema-aurora #postit-board .postit-card.purple {
+  background: rgba(160,100,255,0.05) !important;
+  border-left: 3px solid rgba(160,100,255,0.6) !important;
+}
+
+html.tema-aurora #postit-board .postit-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+}
+
+/* ── Aurora — Post-it Panel Lateral ── */
+html.tema-aurora #postit-modal.modal-overlay {
+  align-items: stretch !important;
+  justify-content: flex-end !important;
+  padding: 0 !important;
+  background: rgba(0,0,0,0.5) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+html.tema-aurora #postit-modal .modal {
+  width: 580px !important;
+  max-width: 90vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+  border-radius: 20px 0 0 20px !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: visible !important;
+  background: rgba(18,16,48,0.92) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  box-shadow: -8px 0 48px rgba(0,0,0,0.5) !important;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+html.tema-aurora #postit-modal .modal-header {
+  flex-shrink: 0 !important;
+  padding: 20px 24px 16px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #postit-modal .modal-title,
+html.tema-aurora #postit-modal h2,
+html.tema-aurora #postit-modal h3 {
+  font-size: 18px !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #postit-modal .modal-footer {
+  flex-shrink: 0 !important;
+  padding: 14px 24px !important;
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  background: rgba(0,0,0,0.15) !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+html.tema-aurora #postit-modal input[type="text"],
+html.tema-aurora #postit-modal textarea,
+html.tema-aurora #postit-modal .note-wysiwyg-editor {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #postit-modal input::placeholder,
+html.tema-aurora #postit-modal textarea::placeholder {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+html.tema-aurora #postit-modal label,
+html.tema-aurora #postit-modal .form-label {
+  color: rgba(255,255,255,0.45) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+
+html.tema-aurora #postit-modal select {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.8) !important;
+  padding: 9px 12px !important;
+  color-scheme: dark !important;
+}
+
+html.tema-aurora #postit-modal select option {
+  background: #1a2035 !important;
+  color: rgba(255,255,255,0.8) !important;
+}
+
+html.tema-aurora #postit-modal .btn-cancel {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.5) !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora #postit-modal .btn-primary,
+html.tema-aurora #postit-modal .btn-save {
+  background: linear-gradient(135deg, rgba(120,100,255,0.85), rgba(80,60,210,0.85)) !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.4) !important;
+  color: white !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora #postit-modal .priority-opt {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.7) !important;
+  border-radius: 8px !important;
+}
+
+html.tema-aurora #postit-modal [class*="priority-select"],
+html.tema-aurora #postit-modal [class*="priority-group"],
+html.tema-aurora #postit-modal .priority-select {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+html.tema-aurora #postit-modal .modal input[type="text"] {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.9) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #postit-modal .priority-opt.selected,
+html.tema-aurora #postit-modal [class*="priority"].selected,
+html.tema-aurora #postit-modal [class*="priority"].active {
+  background: linear-gradient(135deg, rgba(120,100,255,0.7), rgba(80,60,210,0.7)) !important;
+  border-color: rgba(120,100,255,0.6) !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(120,100,255,0.35) !important;
+}
+
+html.tema-aurora #postit-modal-title {
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  color: rgba(255,255,255,0.9) !important;
+  letter-spacing: normal !important;
+}
+
+html.tema-aurora #postit-modal select,
+html.tema-aurora #postit-modal input[type="date"] {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.8) !important;
+  padding: 9px 12px !important;
+  color-scheme: dark !important;
+}
+
+html.tema-aurora #postit-modal .comments-section {
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+  margin-top: 16px !important;
+  padding-top: 16px !important;
+}
+
+html.tema-aurora #postit-modal .comments-section .comment-item {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+  margin-bottom: 8px !important;
+}
+
+html.tema-aurora #postit-modal .comments-section textarea {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.9) !important;
+  resize: none !important;
+}
+
+html.tema-aurora #postit-modal #postit-comments-body {
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+  margin-top: 16px !important;
+  padding-top: 16px !important;
+}
+
+html.tema-aurora #postit-modal .comments-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 12px !important;
+}
+
+html.tema-aurora #postit-modal .comments-header h4 {
+  color: rgba(255,255,255,0.9) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+}
+
+html.tema-aurora #postit-modal .comments-count {
+  background: rgba(120,100,255,0.25) !important;
+  border: 1px solid rgba(120,100,255,0.4) !important;
+  color: rgba(180,160,255,0.9) !important;
+  border-radius: 20px !important;
+  padding: 1px 8px !important;
+  font-size: 11px !important;
+}
+
+html.tema-aurora #postit-modal .comments-empty {
+  color: rgba(255,255,255,0.3) !important;
+  font-size: 12px !important;
+  font-style: italic !important;
+  text-align: center !important;
+  padding: 16px 0 !important;
+}
+
+html.tema-aurora #postit-modal .comment-item,
+html.tema-aurora #postit-modal .comments-list > div:not(.comments-empty) {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+  margin-bottom: 8px !important;
+}
+
+html.tema-aurora #postit-modal .comments-form {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  margin-top: 12px !important;
+}
+
+html.tema-aurora #postit-modal .comments-form textarea {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.9) !important;
+  padding: 10px 12px !important;
+  resize: none !important;
+  min-height: 80px !important;
+  font-size: 13px !important;
+}
+
+html.tema-aurora #postit-modal .comments-form textarea::placeholder {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+html.tema-aurora #postit-modal .comments-form .comment-mention-menu {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+html.tema-aurora #postit-modal .comments-form .btn-comment-image {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.6) !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+}
+
+html.tema-aurora #postit-modal .comments-form .btn-comment-send {
+  background: linear-gradient(135deg, rgba(120,100,255,0.8),
+    rgba(80,60,210,0.8)) !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.4) !important;
+  color: white !important;
+  border-radius: 10px !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  align-self: flex-end !important;
+}
+
+html.tema-aurora #postit-modal .comment-autor,
+html.tema-aurora #postit-modal .comment-author-name {
+  color: rgba(180,160,255,0.9) !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+}
+
+html.tema-aurora #postit-modal .comment-meta span,
+html.tema-aurora #postit-modal .comment-date {
+  color: rgba(255,255,255,0.35) !important;
+  font-size: 11px !important;
+}
+
+html.tema-aurora #postit-modal .md-p {
+  color: rgba(255,255,255,0.8) !important;
+}
+
+/* Modal ancho para dos columnas */
+html.tema-aurora #postit-modal .postit-modal-wide {
+  max-width: 900px;
+  width: 92vw;
+}
+
+/* Columna izquierda: formulario */
+html.tema-aurora #postit-modal .postit-form-col {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+  border-right: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Columna derecha: chat ── */
+html.tema-aurora #postit-modal .postit-comments-col {
+  width: 300px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  border-left: 1px solid rgba(255,255,255,0.12) !important;
+  background: rgba(10,8,32,0.6) !important;
+  overflow: hidden !important;
+}
+
+html.tema-aurora #postit-modal .postit-comments-col.hidden {
+  display: none !important;
+}
+
+/* Header "ACTIVIDAD" */
+html.tema-aurora #postit-modal .postit-comments-col-header {
+  flex-shrink: 0 !important;
+  padding: 14px 16px 10px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: rgba(255,255,255,0.35) !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+html.tema-aurora #postit-modal .postit-comments-count-badge {
+  background: rgba(120,100,255,0.2) !important;
+  border: 1px solid rgba(120,100,255,0.3) !important;
+  color: rgba(180,160,255,0.8) !important;
+  border-radius: 20px !important;
+  padding: 1px 7px !important;
+  font-size: 10px !important;
+  font-family: 'DM Mono', monospace !important;
+}
+
+/* Lista de mensajes */
+html.tema-aurora #postit-modal .postit-comments-list {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+
+html.tema-aurora #postit-modal .postit-comments-list::-webkit-scrollbar { width: 3px !important; }
+html.tema-aurora #postit-modal .postit-comments-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08) !important;
+  border-radius: 2px !important;
+}
+
+/* Mensaje vacío */
+html.tema-aurora #postit-modal .postit-comments-empty-msg {
+  color: rgba(255,255,255,0.2) !important;
+  font-size: 12px !important;
+  text-align: center !important;
+  padding: 40px 16px !important;
+  line-height: 1.8 !important;
+  font-style: italic !important;
+  font-family: 'Syne', sans-serif !important;
+  font-style: normal !important;
+}
+
+/* Cada item de actividad — estilo ClickUp: bullet + texto en línea */
+html.tema-aurora #postit-modal .postit-comment-item {
+  display: flex !important;
+  gap: 10px !important;
+  align-items: flex-start !important;
+  padding: 8px 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+  flex-direction: row !important;
+}
+
+html.tema-aurora #postit-modal .postit-comment-item:last-child {
+  border-bottom: none !important;
+}
+
+/* Avatar pequeño */
+html.tema-aurora #postit-modal .postit-comment-av {
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  color: #0f0e0c !important;
+  flex-shrink: 0 !important;
+  margin-top: 1px !important;
+}
+
+/* Burbuja — en realidad es layout lineal estilo ClickUp */
+html.tema-aurora #postit-modal .postit-comment-bubble {
+  flex: 1 !important;
+  min-width: 0 !important;
+  background: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+/* Línea de meta: nombre + fecha */
+html.tema-aurora #postit-modal .postit-comment-meta {
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  margin-bottom: 3px !important;
+}
+
+html.tema-aurora #postit-modal .postit-comment-author {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: rgba(255,255,255,0.75) !important;
+  white-space: nowrap !important;
+}
+
+html.tema-aurora #postit-modal .postit-comment-time {
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.25) !important;
+  font-family: 'DM Mono', monospace !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+html.tema-aurora #postit-modal .postit-comment-text {
+  font-size: 12px !important;
+  color: rgba(255,255,255,0.55) !important;
+  line-height: 1.55 !important;
+  word-break: break-word !important;
+}
+
+html.tema-aurora #postit-modal .postit-comment-text .mention {
+  color: rgba(140,120,255,0.9) !important;
+  font-weight: 500 !important;
+}
+
+/* ── Zona de redacción ── */
+html.tema-aurora #postit-modal .postit-comments-compose {
+  flex-shrink: 0 !important;
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+  background: rgba(0,0,0,0.25) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  padding: 0 !important;
+}
+
+html.tema-aurora #postit-modal .postit-comments-compose textarea {
+  width: 100% !important;
+  min-height: 72px !important;
+  max-height: 120px !important;
+  resize: none !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 0 !important;
+  color: rgba(255,255,255,0.85) !important;
+  font-family: 'DM Mono', monospace !important;
+  font-size: 12px !important;
+  padding: 12px 14px !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+}
+
+html.tema-aurora #postit-modal .postit-comments-compose textarea::placeholder {
+  color: rgba(255,255,255,0.2) !important;
+}
+
+html.tema-aurora #postit-modal .postit-compose-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 8px 10px !important;
+}
+
+html.tema-aurora #postit-modal .btn-compose-icon {
+  background: none !important;
+  border: none !important;
+  color: rgba(255,255,255,0.3) !important;
+  border-radius: 6px !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  transition: color 0.15s, background 0.15s !important;
+  flex-shrink: 0 !important;
+}
+
+html.tema-aurora #postit-modal .btn-compose-icon:hover {
+  color: rgba(255,255,255,0.7) !important;
+  background: rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora #postit-modal .btn-compose-send {
+  margin-left: auto !important;
+  background: linear-gradient(135deg, rgba(120,100,255,0.85), rgba(80,60,210,0.85)) !important;
+  border: 1px solid rgba(120,100,255,0.45) !important;
+  box-shadow: 0 2px 8px rgba(120,100,255,0.3) !important;
+  color: white !important;
+  border-radius: 7px !important;
+  padding: 5px 18px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: filter 0.15s !important;
+  font-family: 'Syne', sans-serif !important;
+}
+
+html.tema-aurora #postit-modal .btn-compose-send:hover {
+  filter: brightness(1.2) !important;
+}
+
+html.tema-aurora #postit-modal .btn-compose-send:disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  filter: none !important;
+}
+
+html.tema-aurora #postit-modal .postit-section-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 8px !important;
+}
+
+html.tema-aurora #postit-modal .btn-postit-add {
+  background: none !important;
+  border: 1px solid rgba(120,100,255,0.35) !important;
+  color: rgba(120,100,255,0.8) !important;
+  border-radius: 6px !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+}
+html.tema-aurora #postit-modal .btn-postit-add:hover {
+  background: rgba(120,100,255,0.15) !important;
+  color: rgba(160,140,255,1) !important;
+}
+
+html.tema-aurora #postit-modal .postit-items-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+html.tema-aurora #postit-modal .postit-item-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px 8px !important;
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 8px !important;
+}
+
+html.tema-aurora #postit-modal .postit-item-check {
+  width: 15px !important;
+  height: 15px !important;
+  accent-color: rgba(120,100,255,0.9) !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+}
+
+html.tema-aurora #postit-modal .postit-item-text {
+  flex: 1 !important;
+  font-size: 12px !important;
+  color: rgba(255,255,255,0.75) !important;
+}
+html.tema-aurora #postit-modal .postit-item-text.done {
+  text-decoration: line-through !important;
+  color: rgba(255,255,255,0.3) !important;
+}
+
+html.tema-aurora #postit-modal .postit-item-delete {
+  background: none !important;
+  border: none !important;
+  color: rgba(255,255,255,0.2) !important;
+  cursor: pointer !important;
+  font-size: 11px !important;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+  flex-shrink: 0 !important;
+}
+html.tema-aurora #postit-modal .postit-item-delete:hover {
+  color: rgba(239,68,68,0.8) !important;
+  background: rgba(239,68,68,0.1) !important;
+}
+
+/* Barra de progreso checklist */
+html.tema-aurora #postit-modal .postit-checklist-progress {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 8px !important;
+}
+html.tema-aurora #postit-modal .postit-checklist-bar {
+  flex: 1 !important;
+  height: 4px !important;
+  background: rgba(255,255,255,0.08) !important;
+  border-radius: 2px !important;
+  overflow: hidden !important;
+}
+html.tema-aurora #postit-modal .postit-checklist-fill {
+  height: 100% !important;
+  background: linear-gradient(90deg, rgba(120,100,255,0.8), rgba(80,200,120,0.8)) !important;
+  border-radius: 2px !important;
+  transition: width 0.3s ease !important;
+}
+html.tema-aurora #postit-modal .postit-checklist-progress span {
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.35) !important;
+  font-family: 'DM Mono', monospace !important;
+  white-space: nowrap !important;
+}
+
+/* Adjuntos */
+html.tema-aurora #postit-modal .postit-attachment-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px 8px !important;
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 8px !important;
+  max-height: 48px !important;
+  overflow: hidden !important;
+}
+html.tema-aurora #postit-modal .postit-attachment-thumb {
+  width: 36px !important;
+  height: 36px !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+}
+html.tema-aurora #postit-modal .postit-attachment-icon {
+  font-size: 14px !important;
+  flex-shrink: 0 !important;
+}
+html.tema-aurora #postit-modal .postit-attachment-name {
+  flex: 1 !important;
+  font-size: 11px !important;
+  color: rgba(255,255,255,0.7) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+html.tema-aurora #postit-modal .postit-attachment-size {
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.3) !important;
+  font-family: 'DM Mono', monospace !important;
+  flex-shrink: 0 !important;
+}
+html.tema-aurora #postit-modal .postit-attachments-section .postit-items-list {
+  gap: 6px !important;
+}
+
+html.tema-aurora #postit-modal .postit-attachment-row img {
+  width: 36px !important;
+  height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+  object-fit: cover !important;
+}
+
+/* ── Subtareas: borde izquierdo azul ── */
+html.tema-aurora #postit-modal .postit-subtasks-section .postit-item-row {
+  border-left: 3px solid rgba(91,163,232,0.6) !important;
+  background: rgba(91,163,232,0.05) !important;
+}
+
+html.tema-aurora #postit-modal .postit-subtasks-section .postit-item-check {
+  accent-color: #5ba3e8 !important;
+  border-radius: 3px !important;
+}
+
+html.tema-aurora #postit-modal .postit-subtasks-section .postit-item-text {
+  color: rgba(200,225,255,0.8) !important;
+  font-family: 'DM Mono', monospace !important;
+  font-size: 12px !important;
+}
+
+/* ── Lista de control: borde izquierdo verde ── */
+html.tema-aurora #postit-modal .postit-checklist-section .postit-item-row {
+  border-left: 3px solid rgba(90,170,122,0.6) !important;
+  background: rgba(90,170,122,0.05) !important;
+}
+
+html.tema-aurora #postit-modal .postit-checklist-section .postit-item-check {
+  accent-color: #5aaa7a !important;
+  border-radius: 50% !important;
+}
+
+html.tema-aurora #postit-modal .postit-checklist-section .postit-item-text {
+  color: rgba(200,255,220,0.8) !important;
+  font-size: 12px !important;
+}
+
+html.tema-aurora #postit-modal .postit-checklist-section .postit-item-text.done {
+  color: rgba(90,170,122,0.4) !important;
+}
+
+/* Barra de progreso más destacada */
+html.tema-aurora #postit-modal .postit-checklist-bar {
+  height: 5px !important;
+  background: rgba(90,170,122,0.15) !important;
+}
+
+html.tema-aurora #postit-modal .postit-checklist-fill {
+  background: linear-gradient(90deg, rgba(90,170,122,0.9), rgba(80,200,140,0.9)) !important;
+}
+
+html.tema-aurora #postit-modal .postit-checklist-progress span {
+  color: rgba(90,170,122,0.7) !important;
+}
+
+/* Labels de sección con color propio */
+html.tema-aurora #postit-modal .postit-subtasks-section .form-label {
+  color: rgba(91,163,232,0.7) !important;
+}
+
+html.tema-aurora #postit-modal .postit-checklist-section .form-label {
+  color: rgba(90,170,122,0.7) !important;
+}
+
+html.tema-aurora #postit-modal .postit-attachments-section .form-label {
+  color: rgba(180,160,255,0.7) !important;
+}
+
+/* Botones + Añadir con color acorde a su sección */
+html.tema-aurora #postit-modal .postit-subtasks-section .btn-postit-add {
+  border-color: rgba(91,163,232,0.35) !important;
+  color: rgba(91,163,232,0.8) !important;
+}
+html.tema-aurora #postit-modal .postit-subtasks-section .btn-postit-add:hover {
+  background: rgba(91,163,232,0.12) !important;
+  color: rgba(91,163,232,1) !important;
+}
+
+html.tema-aurora #postit-modal .postit-checklist-section .btn-postit-add {
+  border-color: rgba(90,170,122,0.35) !important;
+  color: rgba(90,170,122,0.8) !important;
+}
+html.tema-aurora #postit-modal .postit-checklist-section .btn-postit-add:hover {
+  background: rgba(90,170,122,0.12) !important;
+  color: rgba(90,170,122,1) !important;
+}
+
+html.tema-aurora #postit-modal .postit-inline-input-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 6px !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(120,100,255,0.3) !important;
+  border-radius: 8px !important;
+}
+
+html.tema-aurora #postit-modal .postit-inline-input {
+  flex: 1 !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  color: rgba(255,255,255,0.9) !important;
+  font-size: 12px !important;
+  font-family: 'DM Mono', monospace !important;
+  padding: 2px 4px !important;
+}
+
+html.tema-aurora #postit-modal .postit-inline-input::placeholder {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+html.tema-aurora #postit-modal .btn-postit-confirm {
+  background: rgba(120,100,255,0.2) !important;
+  border: 1px solid rgba(120,100,255,0.4) !important;
+  color: rgba(180,160,255,0.9) !important;
+  border-radius: 6px !important;
+  padding: 2px 8px !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+}
+html.tema-aurora #postit-modal .btn-postit-confirm:hover {
+  background: rgba(120,100,255,0.35) !important;
+}
+
+/* ── Aurora: Modal detalle de nota ── */
+html.tema-aurora #detail-modal .modal {
+  background: rgba(18,16,48,0.95) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #detail-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  padding: 18px 24px 14px !important;
+}
+
+html.tema-aurora #detail-modal .modal-header h3 {
+  color: rgba(255,255,255,0.9) !important;
+  font-size: 16px !important;
+  font-family: 'Syne', sans-serif !important;
+}
+
+html.tema-aurora #detail-modal .modal-close {
+  color: rgba(255,255,255,0.4) !important;
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 8px !important;
+}
+html.tema-aurora #detail-modal .modal-close:hover {
+  color: rgba(255,255,255,0.8) !important;
+  background: rgba(255,255,255,0.1) !important;
+}
+
+/* Título de la nota */
+html.tema-aurora #detail-modal .note-detail-title {
+  font-family: 'Syne', sans-serif !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: rgba(255,255,255,0.92) !important;
+  margin-bottom: 16px !important;
+  line-height: 1.3 !important;
+}
+
+/* Contenido de la nota */
+html.tema-aurora #detail-modal .note-detail-content {
+  color: rgba(255,255,255,0.75) !important;
+  font-size: 13px !important;
+  line-height: 1.7 !important;
+}
+
+html.tema-aurora #detail-modal .note-detail-content p,
+html.tema-aurora #detail-modal .note-detail-content .md-p {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+html.tema-aurora #detail-modal .note-detail-content h1,
+html.tema-aurora #detail-modal .note-detail-content h2,
+html.tema-aurora #detail-modal .note-detail-content h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #detail-modal .note-detail-content code,
+html.tema-aurora #detail-modal .note-detail-content .md-code-inline {
+  background: rgba(120,100,255,0.15) !important;
+  color: rgba(180,160,255,0.9) !important;
+  border-radius: 4px !important;
+  padding: 1px 5px !important;
+}
+
+html.tema-aurora #detail-modal .note-detail-content pre,
+html.tema-aurora #detail-modal .note-detail-content .md-pre {
+  background: rgba(0,0,0,0.35) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 10px !important;
+  color: rgba(120,220,120,0.9) !important;
+}
+
+/* Meta: avatar, turno, prioridad, visibilidad */
+html.tema-aurora #detail-modal .note-detail-meta {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  align-items: center !important;
+  margin-bottom: 16px !important;
+  padding-bottom: 14px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora #detail-modal .note-tag {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.6) !important;
+  border-radius: 20px !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
+}
+
+html.tema-aurora #detail-modal .note-tag-shift {
+  background: rgba(120,100,255,0.15) !important;
+  border-color: rgba(120,100,255,0.3) !important;
+  color: rgba(180,160,255,0.85) !important;
+}
+
+html.tema-aurora #detail-modal .note-tag-public {
+  background: rgba(90,170,122,0.15) !important;
+  border-color: rgba(90,170,122,0.3) !important;
+  color: rgba(120,220,160,0.85) !important;
+}
+
+html.tema-aurora #detail-modal .note-tag-private {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.4) !important;
+}
+
+html.tema-aurora #detail-modal .note-tag-group {
+  background: rgba(91,163,232,0.12) !important;
+  border-color: rgba(91,163,232,0.25) !important;
+  color: rgba(140,190,240,0.85) !important;
+}
+
+html.tema-aurora #detail-modal .priority-alta {
+  background: rgba(239,68,68,0.15) !important;
+  border-color: rgba(239,68,68,0.3) !important;
+  color: rgba(255,140,140,0.85) !important;
+}
+
+/* Chip de autor */
+html.tema-aurora #detail-modal .mention-chip {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 20px !important;
+  padding: 3px 10px 3px 4px !important;
+  color: rgba(255,255,255,0.7) !important;
+  font-size: 12px !important;
+}
+
+html.tema-aurora #detail-modal .mention-avatar,
+html.tema-aurora #detail-modal .chip-avatar {
+  border-radius: 50% !important;
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 8px !important;
+}
+
+/* Sección de mencionados */
+html.tema-aurora #detail-modal .note-detail-section-label {
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  color: rgba(255,255,255,0.3) !important;
+  margin-bottom: 8px !important;
+}
+
+html.tema-aurora #detail-modal .note-detail-divider {
+  height: 1px !important;
+  background: rgba(255,255,255,0.06) !important;
+  margin: 14px 0 !important;
+}
+
+/* Fecha de creación */
+html.tema-aurora #detail-modal .note-detail-created {
+  color: rgba(255,255,255,0.25) !important;
+  font-size: 11px !important;
+  font-family: 'DM Mono', monospace !important;
+}
+
+/* Recordatorio */
+html.tema-aurora #detail-modal .note-reminder {
+  background: rgba(244,160,66,0.15) !important;
+  border: 1px solid rgba(244,160,66,0.3) !important;
+  color: rgba(255,190,100,0.85) !important;
+  border-radius: 20px !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
+}
+
+/* Footer con botón de comentarios */
+html.tema-aurora #detail-modal .note-detail-footer {
+  border-top: 1px solid rgba(255,255,255,0.07) !important;
+  background: rgba(0,0,0,0.15) !important;
+  padding: 14px 20px !important;
+}
+
+html.tema-aurora #detail-modal .note-detail-footer .btn-primary,
+html.tema-aurora #detail-modal .note-detail-footer .btn-full-width {
+  background: linear-gradient(135deg, rgba(120,100,255,0.8), rgba(80,60,210,0.8)) !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.35) !important;
+  color: white !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+}
+
+/* Scroll personalizado */
+html.tema-aurora #detail-modal .note-detail-scroll::-webkit-scrollbar {
+  width: 4px !important;
+}
+html.tema-aurora #detail-modal .note-detail-scroll::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+html.tema-aurora #detail-modal .note-detail-scroll::-webkit-scrollbar-thumb {
+  background: rgba(120,100,255,0.3) !important;
+  border-radius: 2px !important;
+}
+
+/* Eliminar el fondo/borde del contenedor de menciones */
+html.tema-aurora #detail-modal .note-detail-mentions {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+/* Chips de menciones más sutiles */
+html.tema-aurora #detail-modal .note-detail-mentions .mention-chip {
+  background: rgba(120,100,255,0.12) !important;
+  border: 1px solid rgba(120,100,255,0.25) !important;
+  color: rgba(180,160,255,0.85) !important;
+  border-radius: 20px !important;
+  padding: 4px 12px 4px 5px !important;
+  font-size: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+html.tema-aurora #detail-modal .note-detail-mentions .chip-avatar,
+html.tema-aurora #detail-modal .note-detail-mentions .mention-avatar {
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 8px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Aurora: span.mention global (tarjetas, detalle, comentarios) ── */
+html.tema-aurora .mention {
+  color: rgba(160,140,255,0.95) !important;
+  background: rgba(120,100,255,0.15) !important;
+  border-radius: 4px !important;
+  padding: 1px 5px !important;
+  font-weight: 500 !important;
+  font-size: 0.95em !important;
+}
+
+html.tema-aurora .note-card .mention {
+  color: rgba(160,140,255,0.9) !important;
+  background: rgba(120,100,255,0.12) !important;
+}
+
+html.tema-aurora #detail-modal .mention {
+  color: rgba(180,160,255,0.95) !important;
+  background: rgba(120,100,255,0.18) !important;
+}
+
+/* El modal-footer va solo con la col izquierda — ajustar si hace falta */
+html.tema-aurora #postit-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 12px 24px;
+}
+
+html.tema-aurora #postit-modal .modal {
+  max-width: 860px !important;
+  width: 90vw !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 90vh !important;
+  overflow: hidden !important;
+}
+
+html.tema-aurora #postit-modal .postit-form-col {
+  flex: 1 !important;
+  min-width: 0 !important;
+  overflow-y: auto !important;
+  padding: 20px 24px !important;
+  border-right: 1px solid rgba(255,255,255,0.08) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+html.tema-aurora #postit-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+  padding: 12px 20px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+}
+
+/* Modo nueva tarjeta: ancho normal */
+html.tema-aurora #postit-modal .modal {
+  width: 580px !important;
+  max-width: 96vw !important;
+}
+
+/* Modo edición con comentarios: más ancho */
+html.tema-aurora #postit-modal .modal.postit-modal-editing {
+  width: 900px !important;
+}
+
+html.tema-aurora #postit-modal .postit-form-col {
+  flex: 1 !important;
+  min-width: 0 !important;
+  overflow-y: auto !important;
+  padding: 20px 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+}
+
+html.tema-aurora #postit-modal .postit-form-col::-webkit-scrollbar { width: 3px !important; }
+html.tema-aurora #postit-modal .postit-form-col::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08) !important; border-radius: 2px !important;
+}
+
+
+html.tema-aurora #postit-modal .modal {
+  max-height: 100vh !important;
+  box-sizing: border-box !important;
+}
+
+html.tema-aurora #postit-modal .modal-body {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+/* ── Aurora: badge de recordatorio en tarjetas ── */
+html.tema-aurora .note-reminder {
+  background: rgba(244,160,66,0.12) !important;
+  border: 1px solid rgba(244,160,66,0.3) !important;
+  color: rgba(255,190,100,0.9) !important;
+  border-radius: 20px !important;
+  padding: 3px 10px !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+/* ── Aurora: toggle de recordatorio en modal nueva nota ── */
+html.tema-aurora .reminder-toggle {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+}
+
+html.tema-aurora .reminder-toggle::after {
+  background: rgba(255,255,255,0.3) !important;
+}
+
+html.tema-aurora .reminder-toggle.on {
+  background: rgba(244,160,66,0.2) !important;
+  border-color: rgba(244,160,66,0.5) !important;
+}
+
+html.tema-aurora .reminder-toggle.on::after {
+  background: rgba(244,160,66,0.9) !important;
+}
+
+html.tema-aurora .reminder-label {
+  color: rgba(255,255,255,0.55) !important;
+  font-size: 12px !important;
+}
+
+html.tema-aurora .reminder-time-input {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 8px !important;
+  color: rgba(255,255,255,0.85) !important;
+  padding: 6px 10px !important;
+  font-family: 'DM Mono', monospace !important;
+  font-size: 12px !important;
+}
+
+/* ── Aurora: vista recordatorios — topbar y estado vacío ── */
+html.tema-aurora #view-notes .reminders-empty,
+html.tema-aurora #view-notes .notes-empty {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+/* ── Aurora: Vista Mis Grupos ── */
+
+/* Tarjeta principal */
+html.tema-aurora .wg-card-v2 {
+  background: rgba(255,255,255,0.06) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s !important;
+}
+
+html.tema-aurora .wg-card-v2:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(120,100,255,0.3) !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(120,100,255,0.1) !important;
+}
+
+/* Header de la tarjeta */
+html.tema-aurora .wg-card-v2-head {
+  background: rgba(0,0,0,0.2) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+  padding: 16px 18px 12px !important;
+}
+
+html.tema-aurora .wg-card-v2-head h4 {
+  color: rgba(255,255,255,0.9) !important;
+  font-size: 15px !important;
+}
+
+html.tema-aurora .wg-card-v2-meta {
+  color: rgba(255,255,255,0.35) !important;
+}
+
+/* Descripción */
+html.tema-aurora .wg-card-v2-desc {
+  color: rgba(255,255,255,0.55) !important;
+  font-size: 12px !important;
+  line-height: 1.6 !important;
+}
+
+html.tema-aurora .wg-card-v2-desc.wg-card-v2-desc--empty {
+  color: rgba(255,255,255,0.2) !important;
+}
+
+/* Footer de acciones */
+html.tema-aurora .wg-card-v2-actions-foot {
+  background: rgba(0,0,0,0.15) !important;
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* Avatares de miembros */
+html.tema-aurora .wg-avatar-mini {
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
+}
+
+html.tema-aurora .wg-avatar-more {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px dashed rgba(255,255,255,0.15) !important;
+  color: rgba(255,255,255,0.3) !important;
+}
+
+/* Botones de acción en tarjeta */
+html.tema-aurora .wg-card-actions .btn-secondary,
+html.tema-aurora .wg-card-v2-actions-foot .btn-secondary {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.55) !important;
+  border-radius: 8px !important;
+}
+
+html.tema-aurora .wg-card-actions .btn-secondary:hover,
+html.tema-aurora .wg-card-v2-actions-foot .btn-secondary:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.8) !important;
+}
+
+html.tema-aurora .wg-card-actions .btn-primary,
+html.tema-aurora .wg-card-v2-actions-foot .btn-primary {
+  background: linear-gradient(135deg, rgba(120,100,255,0.8), rgba(80,60,210,0.8)) !important;
+  border: 1px solid rgba(120,100,255,0.4) !important;
+  color: white !important;
+  border-radius: 8px !important;
+}
+
+/* Badge de rol (admin/miembro) */
+html.tema-aurora .wg-role-badge,
+html.tema-aurora [class*="wg-badge"] {
+  background: rgba(120,100,255,0.15) !important;
+  border: 1px solid rgba(120,100,255,0.3) !important;
+  color: rgba(180,160,255,0.85) !important;
+  border-radius: 20px !important;
+  padding: 2px 8px !important;
+  font-size: 10px !important;
+}
+
+/* Invitaciones pendientes */
+html.tema-aurora .wg-invite-pending-row {
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* Sugerencias de invitación */
+html.tema-aurora .wg-invite-suggestions {
+  background: rgba(18,16,48,0.95) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  backdrop-filter: blur(16px) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+
+html.tema-aurora .wg-invite-suggestion-item {
+  color: rgba(255,255,255,0.7) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+  font-size: 12px !important;
+}
+
+html.tema-aurora .wg-invite-suggestion-item:hover {
+  background: rgba(120,100,255,0.15) !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+/* Topbar de la vista */
+html.tema-aurora #view-my-groups .topbar {
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+}
+
+/* ── Aurora: Modal editar grupo de trabajo ── */
+html.tema-aurora #workgroup-modal .modal,
+html.tema-aurora #workgroup-new-modal .modal {
+  background: rgba(18,16,48,0.95) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #workgroup-modal .modal-header,
+html.tema-aurora #workgroup-new-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #workgroup-modal .modal-header h3,
+html.tema-aurora #workgroup-new-modal .modal-header h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #workgroup-modal .modal-footer,
+html.tema-aurora #workgroup-new-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.07) !important;
+  background: rgba(0,0,0,0.15) !important;
+}
+
+/* Nombre del grupo */
+html.tema-aurora #wg-edit-name-display {
+  color: rgba(255,255,255,0.92) !important;
+  font-family: 'Syne', sans-serif !important;
+}
+
+/* Labels */
+html.tema-aurora #workgroup-modal .form-label,
+html.tema-aurora #workgroup-new-modal .form-label {
+  color: rgba(255,255,255,0.4) !important;
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+}
+
+/* Inputs y textareas */
+html.tema-aurora #workgroup-modal input,
+html.tema-aurora #workgroup-modal textarea,
+html.tema-aurora #workgroup-new-modal input,
+html.tema-aurora #workgroup-new-modal textarea {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.88) !important;
+}
+
+html.tema-aurora #workgroup-modal input::placeholder,
+html.tema-aurora #workgroup-modal textarea::placeholder,
+html.tema-aurora #workgroup-new-modal input::placeholder,
+html.tema-aurora #workgroup-new-modal textarea::placeholder {
+  color: rgba(255,255,255,0.2) !important;
+}
+
+html.tema-aurora #workgroup-modal input:focus,
+html.tema-aurora #workgroup-modal textarea:focus,
+html.tema-aurora #workgroup-new-modal input:focus,
+html.tema-aurora #workgroup-new-modal textarea:focus {
+  border-color: rgba(120,100,255,0.45) !important;
+  outline: none !important;
+}
+
+/* Lista de miembros */
+html.tema-aurora #wg-edit-members-list > div {
+  border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+  color: rgba(255,255,255,0.75) !important;
+  font-size: 12px !important;
+}
+
+html.tema-aurora #wg-edit-members-list span[style*="text-muted"],
+html.tema-aurora #wg-edit-members-list .wg-role {
+  color: rgba(255,255,255,0.3) !important;
+}
+
+/* Sugerencias de invitación */
+html.tema-aurora #wg-edit-invite-suggestions {
+  background: rgba(18,16,48,0.97) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+
+html.tema-aurora .wg-invite-suggestion-item {
+  color: rgba(255,255,255,0.7) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+  padding: 9px 12px !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  transition: background 0.15s !important;
+}
+
+html.tema-aurora .wg-invite-suggestion-item:hover {
+  background: rgba(120,100,255,0.15) !important;
+  color: rgba(255,255,255,0.95) !important;
+}
+
+/* Botones */
+html.tema-aurora #workgroup-modal .btn-save,
+html.tema-aurora #workgroup-new-modal .btn-save {
+  background: linear-gradient(135deg, rgba(120,100,255,0.85), rgba(80,60,210,0.85)) !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.35) !important;
+  color: white !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora #workgroup-modal .btn-cancel,
+html.tema-aurora #workgroup-new-modal .btn-cancel {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.5) !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora #workgroup-modal .btn-secondary {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.55) !important;
+  border-radius: 8px !important;
+}
+
+html.tema-aurora #workgroup-modal .btn-secondary:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.8) !important;
+}
+
+/* Botón eliminar miembro */
+html.tema-aurora #wg-edit-members-list button {
+  color: rgba(239,68,68,0.6) !important;
+  transition: color 0.15s !important;
+}
+
+html.tema-aurora #wg-edit-members-list button:hover {
+  color: rgba(239,68,68,0.9) !important;
+}
+
+/* Preview markdown */
+html.tema-aurora #workgroup-modal .markdown-preview,
+html.tema-aurora #workgroup-modal #wg-edit-desc-preview,
+html.tema-aurora #workgroup-modal #wg-edit-objectives-preview {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.65) !important;
+  padding: 10px 14px !important;
+  font-size: 12px !important;
+}
+
+/* Scrollbar */
+html.tema-aurora #workgroup-modal .modal-body::-webkit-scrollbar { width: 4px !important; }
+html.tema-aurora #workgroup-modal .modal-body::-webkit-scrollbar-thumb {
+  background: rgba(120,100,255,0.25) !important;
+  border-radius: 2px !important;
+}
+
+html.tema-aurora #workgroup-invites-modal .modal {
+  background: rgba(18,16,48,0.95) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #workgroup-invites-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #workgroup-invites-modal .modal-header h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #workgroup-invites-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.07) !important;
+  background: rgba(0,0,0,0.15) !important;
+}
+
+html.tema-aurora #workgroup-invites-modal .modal-body {
+  padding: 0 !important;
+}
+
+/* Estado vacío */
+html.tema-aurora #wg-invites-list-body p {
+  color: rgba(255,255,255,0.25) !important;
+  font-style: italic !important;
+  padding: 32px 20px !important;
+  text-align: center !important;
+}
+
+/* Cada fila de invitación */
+html.tema-aurora #wg-invites-list-body > div {
+  padding: 14px 20px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+
+html.tema-aurora #wg-invites-list-body > div:last-child {
+  border-bottom: none !important;
+}
+
+/* Nombre del grupo */
+html.tema-aurora #wg-invites-list-body div div:first-child {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: rgba(255,255,255,0.85) !important;
+  margin-bottom: 3px !important;
+}
+
+/* "Invitado por..." */
+html.tema-aurora #wg-invites-list-body div div:last-child {
+  font-size: 11px !important;
+  color: rgba(255,255,255,0.35) !important;
+}
+
+/* Botón Aceptar */
+html.tema-aurora #wg-invites-list-body .btn-primary {
+  background: linear-gradient(135deg, rgba(90,170,122,0.8), rgba(60,140,90,0.8)) !important;
+  border: 1px solid rgba(90,170,122,0.4) !important;
+  box-shadow: 0 2px 8px rgba(90,170,122,0.25) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-size: 11px !important;
+  padding: 5px 14px !important;
+}
+
+/* Botón Rechazar */
+html.tema-aurora #wg-invites-list-body .btn-secondary {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.45) !important;
+  border-radius: 8px !important;
+  font-size: 11px !important;
+  padding: 5px 14px !important;
+}
+
+/* Botón Cerrar del footer */
+html.tema-aurora #workgroup-invites-modal .btn-cancel {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.5) !important;
+  border-radius: 10px !important;
+}
+
+/* ── Aurora: Vista Settings ── */
+
+/* Contenedor principal */
+html.tema-aurora #view-settings {
+  padding: 32px !important;
+  gap: 20px !important;
+}
+
+/* Cada sección */
+html.tema-aurora .settings-section {
+  background: rgba(255,255,255,0.05) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2) !important;
+}
+
+/* Títulos de sección */
+html.tema-aurora .settings-section h3 {
+  color: rgba(255,255,255,0.88) !important;
+  font-size: 14px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+  padding-bottom: 12px !important;
+  margin-bottom: 20px !important;
+}
+
+/* Labels de campos */
+html.tema-aurora .setting-label {
+  color: rgba(255,255,255,0.4) !important;
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+  font-weight: 600 !important;
+}
+
+/* Inputs de texto */
+html.tema-aurora .settings-section .form-input {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora .settings-section .form-input:focus {
+  border-color: rgba(120,100,255,0.45) !important;
+  outline: none !important;
+}
+
+/* Inputs de color */
+html.tema-aurora .settings-section input[type="color"] {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+}
+
+/* Grids de tema */
+html.tema-aurora .theme-grid {
+  gap: 12px !important;
+}
+
+html.tema-aurora .theme-card {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  border-radius: 12px !important;
+  transition: all 0.2s !important;
+}
+
+html.tema-aurora .theme-card:hover {
+  border-color: rgba(120,100,255,0.4) !important;
+  background: rgba(120,100,255,0.08) !important;
+}
+
+html.tema-aurora .theme-card.active {
+  border-color: rgba(120,100,255,0.6) !important;
+  background: rgba(120,100,255,0.12) !important;
+  box-shadow: 0 0 0 1px rgba(120,100,255,0.3) !important;
+}
+
+/* Botones secundarios */
+html.tema-aurora .settings-section .btn-secondary {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.55) !important;
+  border-radius: 9px !important;
+}
+
+html.tema-aurora .settings-section .btn-secondary:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.8) !important;
+}
+
+/* Botón primario */
+html.tema-aurora .settings-section .btn-primary {
+  background: linear-gradient(135deg, rgba(120,100,255,0.85), rgba(80,60,210,0.85)) !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.35) !important;
+  color: white !important;
+  border-radius: 9px !important;
+}
+
+/* Botones de exportar */
+html.tema-aurora .export-btn {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.65) !important;
+  border-radius: 10px !important;
+  padding: 10px 16px !important;
+  font-size: 12px !important;
+  transition: all 0.15s !important;
+}
+
+html.tema-aurora .export-btn:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.9) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+}
+
+/* Botón de peligro */
+html.tema-aurora .export-btn-danger {
+  background: rgba(239,68,68,0.1) !important;
+  border-color: rgba(239,68,68,0.3) !important;
+  color: rgba(255,140,140,0.8) !important;
+}
+
+html.tema-aurora .export-btn-danger:hover {
+  background: rgba(239,68,68,0.2) !important;
+  border-color: rgba(239,68,68,0.5) !important;
+  color: rgba(255,140,140,1) !important;
+}
+
+/* Zona de peligro — borde rojo sutil */
+html.tema-aurora .settings-section:last-child {
+  border-color: rgba(239,68,68,0.2) !important;
+}
+
+html.tema-aurora .settings-section:last-child h3 {
+  color: rgba(255,140,140,0.8) !important;
+  border-bottom-color: rgba(239,68,68,0.15) !important;
+}
+
+/* Creador de tema personalizado */
+html.tema-aurora #custom-theme-panel {
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  padding-top: 16px !important;
+}
+
+html.tema-aurora #custom-theme-toggle-icon {
+  color: rgba(120,100,255,0.7) !important;
+}
+
+/* Lista de usuarios en settings */
+html.tema-aurora .users-editor-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+
+html.tema-aurora .users-editor-list > div {
+  background: transparent !important;
+  border: none !important;
+  border-top: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 0 !important;
+  padding: 16px 0 8px !important;
+  margin-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora .users-editor-list > div:first-child {
+  border-top: none !important;
+  padding-top: 0 !important;
+}
+
+/* Cabecera del grupo: nombre + botones */
+html.tema-aurora .users-editor-list > div > div:first-child {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 10px !important;
+}
+
+html.tema-aurora .users-editor-list strong {
+  color: rgba(255,255,255,0.5) !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-family: 'DM Mono', monospace !important;
+}
+
+html.tema-aurora .users-editor-list .settings-section {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Cada fila de usuario */
+html.tema-aurora .user-editor-row {
+  background: transparent !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 10px !important;
+  border-radius: 10px !important;
+  transition: background 0.15s !important;
+  border-bottom: none !important;
+}
+
+html.tema-aurora .user-editor-row:hover {
+  background: rgba(255,255,255,0.04) !important;
+}
+
+/* Avatar del usuario */
+html.tema-aurora .user-editor-avatar {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #0f0e0c !important;
+  flex-shrink: 0 !important;
+}
+
+/* Info del usuario */
+html.tema-aurora .user-editor-info {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1px !important;
+}
+
+html.tema-aurora .user-editor-info strong {
+  color: rgba(255,255,255,0.82) !important;
+  font-size: 13px !important;
+  font-family: 'Syne', sans-serif !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-weight: 600 !important;
+}
+
+html.tema-aurora .user-editor-info span {
+  color: rgba(255,255,255,0.3) !important;
+  font-size: 11px !important;
+}
+
+/* Botones ✏️ y ✕ — ocultos por defecto, visibles en hover */
+html.tema-aurora .user-editor-row .btn-secondary {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.35) !important;
+  border-radius: 7px !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+  flex-shrink: 0 !important;
+  opacity: 0 !important;
+  transition: opacity 0.15s, background 0.15s, color 0.15s !important;
+}
+
+html.tema-aurora .user-editor-row:hover .btn-secondary {
+  opacity: 1 !important;
+}
+
+html.tema-aurora .user-editor-row .btn-secondary:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.8) !important;
+}
+
+html.tema-aurora .user-editor-row .btn-secondary-danger:hover {
+  background: rgba(239,68,68,0.15) !important;
+  border-color: rgba(239,68,68,0.3) !important;
+  color: rgba(255,120,120,0.9) !important;
+}
+
+/* Botones Ver miembros y Editar grupo — más compactos */
+html.tema-aurora .users-editor-list > div > div:first-child .btn-secondary {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  color: rgba(255,255,255,0.4) !important;
+  border-radius: 7px !important;
+  font-size: 11px !important;
+  padding: 4px 12px !important;
+  opacity: 0 !important;
+  transition: opacity 0.15s, background 0.15s !important;
+}
+
+html.tema-aurora .users-editor-list > div:hover > div:first-child .btn-secondary {
+  opacity: 1 !important;
+}
+
+html.tema-aurora .users-editor-list > div > div:first-child .btn-secondary:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* Botón + Añadir Usuario */
+html.tema-aurora #view-settings .settings-section .btn-secondary[onclick="openAddUserModal()"] {
+  background: rgba(120,100,255,0.12) !important;
+  border: 1px solid rgba(120,100,255,0.3) !important;
+  color: rgba(180,160,255,0.85) !important;
+  border-radius: 9px !important;
+  padding: 7px 16px !important;
+  font-size: 12px !important;
+  margin-top: 8px !important;
+}
+
+/* Tarjetas de grupo */
+html.tema-aurora #groups-editor .settings-section,
+html.tema-aurora #groups-editor > div > div {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  border-radius: 12px !important;
+  padding: 14px !important;
+}
+
+/* Nombre del grupo */
+html.tema-aurora #groups-editor strong {
+  color: rgba(255,255,255,0.85) !important;
+  font-size: 13px !important;
+  font-family: 'Syne', sans-serif !important;
+}
+
+/* Contador de usuarios */
+html.tema-aurora #groups-editor span {
+  color: rgba(255,255,255,0.35) !important;
+  font-size: 11px !important;
+}
+
+/* Botones Ver y ✏️ dentro de los grupos */
+html.tema-aurora #groups-editor .btn-secondary {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.5) !important;
+  border-radius: 7px !important;
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+}
+
+html.tema-aurora #groups-editor .btn-secondary:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.8) !important;
+}
+
+/* Botón + Nuevo Grupo */
+html.tema-aurora #groups-editor .btn-primary {
+  background: linear-gradient(135deg, rgba(120,100,255,0.8), rgba(80,60,210,0.8)) !important;
+  border: 1px solid rgba(120,100,255,0.45) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-size: 11px !important;
+  margin-top: 10px !important;
+}
+
+/* Contenedor flex de las tarjetas */
+html.tema-aurora #groups-editor > div {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* Scrollbar de la vista */
+html.tema-aurora #view-settings::-webkit-scrollbar { width: 4px !important; }
+html.tema-aurora #view-settings::-webkit-scrollbar-thumb {
+  background: rgba(120,100,255,0.25) !important;
+  border-radius: 2px !important;
+}
+
+html.tema-aurora #group-modal .modal,
+html.tema-aurora #add-user-modal .modal,
+html.tema-aurora #edit-user-modal .modal {
+  background: rgba(18,16,48,0.95) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #group-modal .modal-header,
+html.tema-aurora #add-user-modal .modal-header,
+html.tema-aurora #edit-user-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #group-modal .modal-header h3,
+html.tema-aurora #add-user-modal .modal-header h3,
+html.tema-aurora #edit-user-modal .modal-header h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #group-modal .modal-footer,
+html.tema-aurora #add-user-modal .modal-footer,
+html.tema-aurora #edit-user-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.07) !important;
+  background: rgba(0,0,0,0.15) !important;
+}
+
+html.tema-aurora #group-modal .form-label,
+html.tema-aurora #add-user-modal .form-label,
+html.tema-aurora #edit-user-modal .form-label {
+  color: rgba(255,255,255,0.4) !important;
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+}
+
+html.tema-aurora #group-modal input,
+html.tema-aurora #add-user-modal input,
+html.tema-aurora #edit-user-modal input {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.88) !important;
+}
+
+html.tema-aurora #group-modal input::placeholder,
+html.tema-aurora #add-user-modal input::placeholder,
+html.tema-aurora #edit-user-modal input::placeholder {
+  color: rgba(255,255,255,0.2) !important;
+}
+
+html.tema-aurora #group-modal input:focus,
+html.tema-aurora #add-user-modal input:focus,
+html.tema-aurora #edit-user-modal input:focus {
+  border-color: rgba(120,100,255,0.45) !important;
+  outline: none !important;
+}
+
+html.tema-aurora #add-user-modal select,
+html.tema-aurora #edit-user-modal select {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.85) !important;
+  color-scheme: dark !important;
+}
+
+html.tema-aurora #group-modal .btn-save,
+html.tema-aurora #add-user-modal .btn-save,
+html.tema-aurora #edit-user-modal .btn-save {
+  background: linear-gradient(135deg, rgba(120,100,255,0.85), rgba(80,60,210,0.85)) !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.35) !important;
+  color: white !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora #group-modal .btn-cancel,
+html.tema-aurora #add-user-modal .btn-cancel,
+html.tema-aurora #edit-user-modal .btn-cancel {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.5) !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora #group-modal .btn-secondary-danger {
+  background: rgba(239,68,68,0.1) !important;
+  border: 1px solid rgba(239,68,68,0.3) !important;
+  color: rgba(255,140,140,0.85) !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora #group-modal .btn-secondary-danger:hover {
+  background: rgba(239,68,68,0.2) !important;
+  border-color: rgba(239,68,68,0.5) !important;
+}
+
+html.tema-aurora #add-user-modal input[type="color"],
+html.tema-aurora #edit-user-modal input[type="color"] {
+  height: 40px !important;
+  cursor: pointer !important;
+  border-radius: 10px !important;
+}
+
+/* Fix select desplegado — fondo oscuro */
+html.tema-aurora #add-user-modal select option,
+html.tema-aurora #edit-user-modal select option {
+  background: #1a1035 !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+/* Fix botón + Añadir Usuario — igualarlo al estilo Aurora */
+html.tema-aurora #view-settings .btn-secondary[onclick*="openAddUserModal"] {
+  background: rgba(120,100,255,0.12) !important;
+  border: 1px solid rgba(120,100,255,0.3) !important;
+  color: rgba(180,160,255,0.85) !important;
+  border-radius: 9px !important;
+  padding: 7px 16px !important;
+  font-size: 12px !important;
+}
+
+/* Fix botón + Nuevo Grupo — mismo estilo */
+html.tema-aurora #view-settings .btn-primary[onclick*="openNewGroupModal"],
+html.tema-aurora #groups-editor .btn-primary {
+  background: rgba(120,100,255,0.12) !important;
+  border: 1px solid rgba(120,100,255,0.3) !important;
+  color: rgba(180,160,255,0.85) !important;
+  box-shadow: none !important;
+  border-radius: 9px !important;
+  padding: 7px 16px !important;
+  font-size: 12px !important;
+}
+
+html.tema-aurora #view-settings .btn-secondary[onclick*="openAddUserModal"]:hover,
+html.tema-aurora #groups-editor .btn-primary:hover {
+  background: rgba(120,100,255,0.2) !important;
+  color: rgba(200,185,255,1) !important;
+}
+
+html.tema-aurora #confirm-modal .confirm-modal-box {
+  background: rgba(18,16,48,0.97) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6) !important;
+  overflow: hidden !important;
+}
+
+html.tema-aurora #confirm-modal.confirm-modal--destructive .confirm-modal-box {
+  border-color: rgba(239,68,68,0.3) !important;
+}
+
+html.tema-aurora #confirm-modal .confirm-modal-body {
+  text-align: center !important;
+  padding: 28px 28px 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+html.tema-aurora #confirm-modal .confirm-modal-icon {
+  font-size: 32px !important;
+  margin-bottom: 4px !important;
+}
+
+html.tema-aurora #confirm-modal #confirm-title {
+  color: rgba(255,255,255,0.92) !important;
+  font-size: 16px !important;
+  font-family: 'Syne', sans-serif !important;
+  text-align: center !important;
+  margin: 0 !important;
+}
+
+html.tema-aurora #confirm-modal #confirm-message {
+  color: rgba(255,255,255,0.45) !important;
+  font-size: 12px !important;
+  text-align: center !important;
+  line-height: 1.6 !important;
+  max-width: 280px !important;
+}
+
+html.tema-aurora #confirm-modal #confirm-message .confirm-modal-lead {
+  color: rgba(255,255,255,0.55) !important;
+  text-align: center !important;
+}
+
+html.tema-aurora #confirm-modal .confirm-modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.07) !important;
+  background: rgba(0,0,0,0.2) !important;
+  padding: 14px 24px !important;
+  display: flex !important;
+  justify-content: center !important;
+  gap: 10px !important;
+}
+
+html.tema-aurora #confirm-modal .btn-secondary {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.5) !important;
+  border-radius: 10px !important;
+  padding: 8px 24px !important;
+}
+
+html.tema-aurora #confirm-modal .btn-secondary:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.8) !important;
+}
+
+html.tema-aurora #confirm-modal #confirm-btn {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  color: rgba(255,255,255,0.75) !important;
+  border-radius: 10px !important;
+  padding: 8px 24px !important;
+}
+
+html.tema-aurora #confirm-modal.confirm-modal--destructive #confirm-btn {
+  background: rgba(239,68,68,0.15) !important;
+  border-color: rgba(239,68,68,0.4) !important;
+  color: rgba(255,140,140,0.9) !important;
+}
+
+html.tema-aurora #confirm-modal #confirm-btn:hover {
+  background: rgba(239,68,68,0.25) !important;
+  border-color: rgba(239,68,68,0.6) !important;
+  color: rgba(255,160,160,1) !important;
+}
+
+/* ── Postit card: avatar asignado ── */
+html.tema-aurora .postit-assignee-avatar {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 7px !important;
+  font-weight: 700 !important;
+  color: #0f0e0c !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Postit card: fecha límite ── */
+html.tema-aurora .postit-due-date {
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.4) !important;
+  font-family: 'DM Mono', monospace !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+}
+
+html.tema-aurora .postit-due-date.soon {
+  color: rgba(244,160,66,0.9) !important;
+}
+
+html.tema-aurora .postit-due-date.overdue {
+  color: rgba(239,68,68,0.9) !important;
+}
+
+/* ── Postit card: barra de progreso checklist ── */
+html.tema-aurora .postit-card-checklist {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 4px 0 !important;
+}
+
+html.tema-aurora .postit-card-checklist-bar {
+  flex: 1 !important;
+  height: 3px !important;
+  background: rgba(255,255,255,0.1) !important;
+  border-radius: 2px !important;
+  overflow: hidden !important;
+}
+
+html.tema-aurora .postit-card-checklist-fill {
+  height: 100% !important;
+  background: linear-gradient(90deg, rgba(90,170,122,0.8), rgba(80,200,140,0.8)) !important;
+  border-radius: 2px !important;
+  transition: width 0.3s !important;
+}
+
+html.tema-aurora .postit-card-checklist span {
+  font-size: 9px !important;
+  color: rgba(255,255,255,0.3) !important;
+  font-family: 'DM Mono', monospace !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Aurora: override definitivo de hovers azules ── */
+html.tema-aurora:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .btn-primary:hover {
+  background: rgba(120,100,255,0.25) !important;
+  color: rgba(210,200,255,0.95) !important;
+  border-color: rgba(120,100,255,0.55) !important;
+  box-shadow: 0 4px 15px rgba(120,100,255,0.45) !important;
+}
+
+html.tema-aurora:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .btn-save {
+  background: linear-gradient(135deg, rgba(120,100,255,0.85) 0%, rgba(80,60,210,0.85) 100%) !important;
+  color: white !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.4) !important;
+  filter: none !important;
+}
+
+html.tema-aurora:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .btn-save:hover {
+  background: linear-gradient(135deg, rgba(140,120,255,0.95) 0%, rgba(100,80,230,0.95) 100%) !important;
+  box-shadow: 0 6px 20px rgba(120,100,255,0.55) !important;
+  filter: brightness(1.1) !important;
+}
+
+html.tema-aurora:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) .btn-new-note:hover {
+  background: linear-gradient(135deg, rgba(140,120,255,0.95), rgba(100,80,230,0.95)) !important;
+  box-shadow: 0 6px 16px rgba(120,100,255,0.5) !important;
+}
+
+/* Override único: botón exacto Nuevo Proyecto */
+html.tema-aurora:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) #view-projects .topbar button[onclick*="openNewProjectModal"],
+html.tema-aurora #view-projects .topbar button[onclick*="openNewProjectModal"] {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.75) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-text-fill-color: rgba(255,255,255,0.75) !important;
+  filter: none !important;
+}
+
+html.tema-aurora:not(.tema-claro):not(.tema-papel):not(.tema-menta):not(.tema-cielo):not(.tema-lavanda):not(.tema-arena) #view-projects .topbar button[onclick*="openNewProjectModal"]:hover,
+html.tema-aurora #view-projects .topbar button[onclick*="openNewProjectModal"]:hover {
+  background: rgba(120,100,255,0.25) !important;
+  border-color: rgba(120,100,255,0.4) !important;
+  color: white !important;
+  -webkit-text-fill-color: white !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+/* Tareas completadas: tachado continuo (evita línea partida) */
+html.tema-aurora #project-detail .task-name.done {
+  text-decoration: none !important;
+  position: relative !important;
+}
+
+html.tema-aurora #project-detail .task-name.done::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 1.5px solid rgba(255,255,255,0.35);
+  pointer-events: none;
+}
+
+/* ── Aurora: Pizarra ── */
+html.tema-aurora #view-whiteboard {
+  flex-direction: column !important;
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+html.tema-aurora .wb-container {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Toolbar */
+html.tema-aurora .wb-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 16px !important;
+  background: rgba(18,16,48,0.85) !important;
+  backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  flex-shrink: 0 !important;
+  flex-wrap: wrap !important;
+  z-index: 10 !important;
+}
+
+html.tema-aurora .wb-tool-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 0 8px !important;
+  border-right: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .wb-tool-group:last-child {
+  border-right: none !important;
+}
+
+html.tema-aurora .wb-tool-btn {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.6) !important;
+  border-radius: 8px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  padding: 0 !important;
+}
+
+html.tema-aurora .wb-tool-btn:hover {
+  background: rgba(120,100,255,0.2) !important;
+  border-color: rgba(120,100,255,0.4) !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora .wb-tool-btn.active {
+  background: rgba(120,100,255,0.3) !important;
+  border-color: rgba(120,100,255,0.6) !important;
+  color: white !important;
+  box-shadow: 0 0 8px rgba(120,100,255,0.4) !important;
+}
+
+html.tema-aurora .wb-shape-btn {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  color: rgba(255,255,255,0.5) !important;
+  border-radius: 6px !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+}
+
+html.tema-aurora .wb-shape-btn.active {
+  background: rgba(120,100,255,0.25) !important;
+  border-color: rgba(120,100,255,0.5) !important;
+  color: white !important;
+}
+
+html.tema-aurora .wb-color-input {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  cursor: pointer !important;
+  padding: 2px !important;
+  background: transparent !important;
+}
+
+html.tema-aurora .wb-size-input {
+  width: 80px !important;
+  accent-color: rgba(120,100,255,0.9) !important;
+  cursor: pointer !important;
+}
+
+html.tema-aurora .wb-zoom-label {
+  color: rgba(255,255,255,0.4) !important;
+  font-family: 'DM Mono', monospace !important;
+  font-size: 11px !important;
+  min-width: 36px !important;
+  text-align: center !important;
+}
+
+/* Canvas wrapper */
+html.tema-aurora .wb-canvas-wrapper {
+  flex: 1 !important;
+  position: relative !important;
+  overflow: hidden !important;
+  background: radial-gradient(ellipse at 30% 40%, rgba(120,100,255,0.05) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 70%, rgba(80,200,140,0.04) 0%, transparent 50%),
+              rgba(10,8,30,0.95) !important;
+}
+
+html.tema-aurora #wb-canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  cursor: crosshair !important;
+}
+
+/* Stickies */
+html.tema-aurora .wb-stickies-layer {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none !important;
+}
+
+html.tema-aurora .wb-sticky {
+  position: absolute !important;
+  width: 160px !important;
+  min-height: 120px !important;
+  border-radius: 10px !important;
+  padding: 10px !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+  cursor: move !important;
+  pointer-events: all !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  user-select: none !important;
+}
+
+html.tema-aurora .wb-sticky-close {
+  background: none !important;
+  border: none !important;
+  color: rgba(255,255,255,0.3) !important;
+  font-size: 11px !important;
+  cursor: pointer !important;
+  align-self: flex-end !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+html.tema-aurora .wb-sticky-close:hover {
+  color: rgba(239,68,68,0.8) !important;
+}
+
+html.tema-aurora .wb-sticky-text {
+  color: rgba(255,255,255,0.85) !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+  outline: none !important;
+  min-height: 60px !important;
+  cursor: text !important;
+  word-break: break-word !important;
+}
+
+html.tema-aurora .wb-minimap {
+  position: absolute !important;
+  bottom: 16px !important;
+  right: 16px !important;
+  width: 160px !important;
+  height: 100px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+}
+
+html.tema-aurora .wb-pages-bar {
+  display: flex !important;
+  align-items: center !important;
+  background: rgba(10,8,30,0.7) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  padding: 0 8px !important;
+  flex-shrink: 0 !important;
+  overflow-x: auto !important;
+  height: 34px !important;
+}
+
+html.tema-aurora .wb-page-tabs {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+}
+
+html.tema-aurora .wb-page-tab {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 12px !important;
+  border-radius: 6px 6px 0 0 !important;
+  font-size: 11px !important;
+  color: rgba(255,255,255,0.4) !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  white-space: nowrap !important;
+  border: 1px solid transparent !important;
+  border-bottom: none !important;
+}
+
+html.tema-aurora .wb-page-tab:hover {
+  color: rgba(255,255,255,0.7) !important;
+  background: rgba(255,255,255,0.05) !important;
+}
+
+html.tema-aurora .wb-page-tab.active {
+  color: rgba(255,255,255,0.9) !important;
+  background: rgba(120,100,255,0.15) !important;
+  border-color: rgba(120,100,255,0.3) !important;
+}
+
+html.tema-aurora .wb-page-tab-close {
+  background: none !important;
+  border: none !important;
+  color: rgba(255,255,255,0.25) !important;
+  font-size: 10px !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+html.tema-aurora .wb-page-tab-close:hover {
+  color: rgba(239,68,68,0.8) !important;
+}
+
+html.tema-aurora .wb-page-add {
+  background: none !important;
+  border: none !important;
+  color: rgba(255,255,255,0.3) !important;
+  font-size: 16px !important;
+  cursor: pointer !important;
+  padding: 0 8px !important;
+  line-height: 1 !important;
+  transition: color 0.15s !important;
+}
+
+html.tema-aurora .wb-page-add:hover {
+  color: rgba(120,100,255,0.9) !important;
+}
+
+html.tema-aurora .wb-text-editor-layer {
+  position: absolute !important;
+  top: 0 !important; left: 0 !important;
+  width: 100% !important; height: 100% !important;
+  pointer-events: none !important;
+  z-index: 5 !important;
+}
+
+html.tema-aurora .wb-inline-text {
+  position: absolute !important;
+  pointer-events: all !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(120,100,255,0.5) !important;
+  outline: none !important;
+  min-width: 60px !important;
+  white-space: pre !important;
+  font-family: 'Syne', sans-serif !important;
+  padding: 2px 4px !important;
+  transform: translateY(-100%) !important;
+}
+
+html.tema-aurora .wb-inline-text--shape {
+  transform: translate(-50%, -50%) !important;
+  text-align: center !important;
+  border-bottom: none !important;
+  border: 1px solid rgba(120,100,255,0.4) !important;
+  border-radius: 4px !important;
+  background: rgba(10,8,30,0.7) !important;
+  padding: 4px 8px !important;
 }

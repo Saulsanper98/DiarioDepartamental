@@ -26,7 +26,7 @@ import {
   setDocs,
 } from './data.js';
 import { applyStoredTheme, loadUserTheme, USER_THEMES, isLightColor, createAuroraOrbs, removeAuroraOrbsFromDom } from './themes.js';
-import { showToast, openModal, closeModal } from './modalControl.js';
+import { showToast, openModal, closeModal, showConfirmModal } from './modalControl.js';
 import { saveData } from './notes.js';
 import { savePostitData } from './postit.js';
 import { saveProjectData } from './projects.js';
@@ -500,12 +500,19 @@ export function saveEditUserModal() {
 
 export function removeUser(id) {
   if (currentUser && currentUser.id === id) { showToast('No puedes eliminar tu propio usuario','error'); return; }
-  if (!confirm('¿Eliminar este usuario?')) return;
-  setUSERS(USERS.filter(u => u.id !== id));
-  saveUsers();
-  renderSettingsEditor();
-  renderLoginGroupCounts();
-  showToast('Usuario eliminado','info');
+  showConfirmModal({
+    icon: '👤',
+    title: '¿Eliminar este usuario?',
+    message: 'Se eliminará al usuario permanentemente.',
+    onConfirm: () => {
+      setUSERS(USERS.filter(u => u.id !== id));
+      saveUsers();
+      renderSettingsEditor();
+      renderLoginGroupCounts();
+      showToast('Usuario eliminado','info');
+    }
+  });
+  return;
 }
 
 export function saveUsers() {
@@ -585,15 +592,22 @@ export function deleteEditingGroup() {
     showToast('No puedes borrar un grupo en uso. Reasigna antes sus datos/usuarios.', 'error');
     return;
   }
-  if (!confirm(`¿Borrar el grupo "${g}"?`)) return;
-  const idx = GROUPS.indexOf(g);
-  if (idx !== -1) GROUPS.splice(idx, 1);
-  closeModal('group-modal');
-  editingGroupName = null;
-  clearGroupFilter();
-  renderLoginGroupCounts();
-  renderSettingsEditor();
-  showToast('Grupo eliminado', 'info');
+  showConfirmModal({
+    icon: '🏢',
+    title: '¿Eliminar este grupo?',
+    message: `Se eliminará el grupo "${editingGroupName}" y todos sus datos.`,
+    onConfirm: () => {
+      const idx = GROUPS.indexOf(g);
+      if (idx !== -1) GROUPS.splice(idx, 1);
+      closeModal('group-modal');
+      editingGroupName = null;
+      clearGroupFilter();
+      renderLoginGroupCounts();
+      renderSettingsEditor();
+      showToast('Grupo eliminado', 'info');
+    }
+  });
+  return;
 }
 
 export function saveGroup() {
