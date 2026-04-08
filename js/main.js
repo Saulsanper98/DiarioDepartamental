@@ -204,9 +204,18 @@ import {
 import {
   renderWhiteboard, wbSetTool, wbSetShape, wbSetColor, wbSetSize,
   wbToggleFill,
-  wbUndo, wbClear, wbExport, wbZoomIn, wbZoomOut, wbResetView,
-  wbStickyDragStart, wbDeleteSticky, wbStickyTextChange,
-  wbAddPage, wbSwitchPage, wbRenamePage, wbDeletePage, wbMinimapClick
+  wbUndo, wbRedo, wbClear, wbExport, wbZoomIn, wbZoomOut, wbResetView,
+  wbStickyDragStart, wbDeleteSticky, wbStickyTextChange, wbStickySetColor, wbStickyResizeStart,
+  wbCtxFontSize, wbCtxToggleBold, wbCtxToggleItalic, wbCtxSetColor,
+  wbCtxToggleSizeMenu, wbCtxToggleColorMenu,
+  wbStickySetTextColor, wbStickySetFontSize,
+  wbAddPage, wbSwitchPage, wbRenamePage, wbDeletePage, wbMinimapClick,
+  wbOpenCardPicker, wbCardPickerTab, wbCardPickerSearch,
+  wbAddCardToCanvas, wbOpenCardRef,
+  wbToggleLayers, renderLayersPanel, wbLayerSelect,
+  wbLayerToggleVisibility, wbLayerMoveUp, wbLayerMoveDown,
+  wbLayerDelete, wbLayerDragStart, wbLayerDrop,
+  wbToggleShapesMenu, wbPickShape
 } from './components/whiteboard.js';
 
 function loadData() {
@@ -471,10 +480,19 @@ async function initializeApp() {
       insertImageIntoCommentTextarea,
       renderWhiteboard, wbSetTool, wbSetShape, wbSetColor, wbSetSize,
       wbToggleFill,
-      wbUndo, wbClear, wbExport, wbZoomIn, wbZoomOut, wbResetView,
-      wbStickyDragStart, wbDeleteSticky, wbStickyTextChange,
+      wbUndo, wbRedo, wbClear, wbExport, wbZoomIn, wbZoomOut, wbResetView,
+      wbStickyDragStart, wbDeleteSticky, wbStickyTextChange, wbStickySetColor, wbStickyResizeStart,
+      wbCtxFontSize, wbCtxToggleBold, wbCtxToggleItalic, wbCtxSetColor,
+      wbCtxToggleSizeMenu, wbCtxToggleColorMenu,
+      wbStickySetTextColor, wbStickySetFontSize,
       wbAddPage, wbSwitchPage, wbRenamePage, wbDeletePage,
       wbMinimapClick,
+      wbOpenCardPicker, wbCardPickerTab, wbCardPickerSearch,
+      wbAddCardToCanvas, wbOpenCardRef,
+      wbToggleLayers, renderLayersPanel, wbLayerSelect,
+      wbLayerToggleVisibility, wbLayerMoveUp, wbLayerMoveDown,
+      wbLayerDelete, wbLayerDragStart, wbLayerDrop,
+      wbToggleShapesMenu, wbPickShape,
       openAddUserModal,
       openEditUserModal,
       saveEditUserModal,
