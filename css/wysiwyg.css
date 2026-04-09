@@ -1,3 +1,74 @@
+html.tema-aurora .toast-container {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+html.tema-aurora .toast {
+  background: rgba(18,14,48,0.97) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+  padding: 10px 16px !important;
+  font-size: 12px !important;
+  color: rgba(255,255,255,0.85) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 200px !important;
+}
+
+html.tema-aurora .toast.toast-success {
+  border-left: 3px solid rgba(52,211,153,0.9) !important;
+}
+
+html.tema-aurora .toast.toast-error {
+  border-left: 3px solid rgba(239,68,68,0.9) !important;
+}
+
+html.tema-aurora .toast.toast-info {
+  border-left: 3px solid rgba(120,100,255,0.9) !important;
+}
+
+html.tema-aurora .toast-icon {
+  font-size: 14px !important;
+  flex-shrink: 0 !important;
+}
+
+html.tema-aurora .toast-message {
+  flex: 1 !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora .toast-close {
+  background: none !important;
+  border: none !important;
+  color: rgba(255,255,255,0.3) !important;
+  cursor: pointer !important;
+  font-size: 16px !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  flex-shrink: 0 !important;
+}
+
+html.tema-aurora .toast-close:hover {
+  color: rgba(255,255,255,0.7) !important;
+}
+html.tema-aurora .wb-overlay-canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none !important;
+  z-index: 4 !important;
+}
 .note-wysiwyg-editor.form-textarea {
   min-height: 150px;
   white-space: pre-wrap;
@@ -5272,7 +5343,7 @@ html.tema-aurora #wb-canvas {
   width: 100% !important; height: 100% !important;
 }
 
-/* ── Zoom controls ── */
+/* ── Controles de zoom + undo/redo ── */
 html.tema-aurora .wb-zoom-controls {
   position: absolute !important;
   bottom: 16px !important;
@@ -5280,29 +5351,34 @@ html.tema-aurora .wb-zoom-controls {
   transform: translateX(-50%) !important;
   display: flex !important;
   align-items: center !important;
-  gap: 0px !important;
-  background: rgba(10,9,30,0.88) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255,255,255,0.07) !important;
-  border-radius: 8px !important;
-  padding: 3px 5px !important;
+  gap: 1px !important;
+  background: rgba(12,10,32,0.94) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 10px !important;
+  padding: 4px 6px !important;
+  box-shadow:
+    0 4px 20px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.05) !important;
   z-index: 20 !important;
 }
 
 html.tema-aurora .wb-zoom-btn {
   background: transparent !important;
   border: none !important;
-  color: rgba(255,255,255,0.4) !important;
-  width: 24px !important;
-  height: 24px !important;
-  border-radius: 5px !important;
+  color: rgba(255,255,255,0.38) !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
   cursor: pointer !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 15px !important;
+  font-size: 14px !important;
   transition: all 0.12s !important;
   padding: 0 !important;
+  flex-shrink: 0 !important;
 }
 
 html.tema-aurora .wb-zoom-btn:hover {
@@ -5310,14 +5386,28 @@ html.tema-aurora .wb-zoom-btn:hover {
   color: rgba(255,255,255,0.85) !important;
 }
 
+html.tema-aurora .wb-zoom-btn svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+
 html.tema-aurora .wb-zoom-label {
-  color: rgba(255,255,255,0.35) !important;
+  color: rgba(255,255,255,0.38) !important;
   font-family: 'DM Mono', monospace !important;
   font-size: 10px !important;
-  min-width: 34px !important;
+  min-width: 36px !important;
   text-align: center !important;
-  padding: 0 2px !important;
-  letter-spacing: 0.02em !important;
+  padding: 0 3px !important;
+  letter-spacing: 0.03em !important;
+  user-select: none !important;
+}
+
+html.tema-aurora .wb-zoom-divider {
+  width: 1px !important;
+  height: 14px !important;
+  background: rgba(255,255,255,0.07) !important;
+  margin: 0 4px !important;
+  flex-shrink: 0 !important;
 }
 
 /* ── Minimap ── */
@@ -5346,10 +5436,11 @@ html.tema-aurora .wb-stickies-layer {
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
+  width: 0 !important;
+  height: 0 !important;
   pointer-events: none !important;
   z-index: 5 !important;
+  overflow: visible !important;
 }
 
 html.tema-aurora .wb-text-editor-layer {
@@ -5364,8 +5455,6 @@ html.tema-aurora .wb-text-editor-layer {
 
 html.tema-aurora .wb-sticky {
   position: absolute !important;
-  width: 180px !important;
-  min-height: 140px !important;
   border-radius: 12px !important;
   overflow: hidden !important;
   box-shadow:
@@ -5666,13 +5755,14 @@ html.tema-aurora .wb-layers-panel {
   position: absolute !important;
   top: 8px !important;
   right: 8px !important;
-  width: 240px !important;
+  width: 220px !important;
   max-height: calc(100% - 80px) !important;
-  background: rgba(14,12,38,0.97) !important;
-  backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
+  background: rgba(12,10,32,0.96) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(120,100,255,0.2) !important;
   border-radius: 12px !important;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.5) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05) !important;
   z-index: 50 !important;
   display: flex !important;
   flex-direction: column !important;
@@ -5687,73 +5777,88 @@ html.tema-aurora .wb-layers-header {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 10px 12px 8px !important;
-  font-size: 11px !important;
+  padding: 10px 12px !important;
+  font-size: 10px !important;
   font-weight: 700 !important;
-  color: rgba(255,255,255,0.6) !important;
+  color: rgba(255,255,255,0.35) !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.06em !important;
-  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+  letter-spacing: 0.1em !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
   flex-shrink: 0 !important;
+  background: rgba(120,100,255,0.05) !important;
 }
 
 html.tema-aurora .wb-layers-header button {
   background: none !important;
   border: none !important;
-  color: rgba(255,255,255,0.3) !important;
+  color: rgba(255,255,255,0.2) !important;
   cursor: pointer !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s !important;
+}
+
+html.tema-aurora .wb-layers-header button:hover {
+  background: rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.6) !important;
 }
 
 html.tema-aurora .wb-layers-list {
   flex: 1 !important;
   overflow-y: auto !important;
-  padding: 4px !important;
+  padding: 6px !important;
 }
 
 html.tema-aurora .wb-layers-empty {
   text-align: center !important;
-  color: rgba(255,255,255,0.2) !important;
-  font-size: 12px !important;
-  padding: 20px !important;
+  color: rgba(255,255,255,0.15) !important;
+  font-size: 11px !important;
+  padding: 24px 16px !important;
   font-style: italic !important;
 }
 
 html.tema-aurora .wb-layer-item {
   display: flex !important;
   align-items: center !important;
-  gap: 6px !important;
-  padding: 6px 8px !important;
+  gap: 8px !important;
+  padding: 7px 8px !important;
   border-radius: 7px !important;
   cursor: pointer !important;
-  transition: background 0.15s !important;
+  transition: background 0.12s !important;
   border: 1px solid transparent !important;
+  margin-bottom: 1px !important;
 }
 
 html.tema-aurora .wb-layer-item:hover {
-  background: rgba(255,255,255,0.05) !important;
+  background: rgba(255,255,255,0.04) !important;
 }
 
 html.tema-aurora .wb-layer-item.selected {
-  background: rgba(120,100,255,0.15) !important;
-  border-color: rgba(120,100,255,0.3) !important;
+  background: rgba(120,100,255,0.12) !important;
+  border-color: rgba(120,100,255,0.25) !important;
 }
 
 html.tema-aurora .wb-layer-item.hidden-layer {
-  opacity: 0.4 !important;
+  opacity: 0.35 !important;
 }
 
 html.tema-aurora .wb-layer-icon {
-  font-size: 13px !important;
-  width: 20px !important;
+  font-size: 12px !important;
+  width: 18px !important;
   text-align: center !important;
   flex-shrink: 0 !important;
+  color: rgba(255,255,255,0.4) !important;
 }
 
 html.tema-aurora .wb-layer-label {
   flex: 1 !important;
   font-size: 11px !important;
-  color: rgba(255,255,255,0.75) !important;
+  color: rgba(255,255,255,0.65) !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
@@ -5762,19 +5867,20 @@ html.tema-aurora .wb-layer-label {
 
 html.tema-aurora .wb-layer-actions {
   display: flex !important;
-  gap: 2px !important;
+  gap: 1px !important;
   opacity: 0 !important;
-  transition: opacity 0.15s !important;
+  transition: opacity 0.12s !important;
 }
 
-html.tema-aurora .wb-layer-item:hover .wb-layer-actions {
+html.tema-aurora .wb-layer-item:hover .wb-layer-actions,
+html.tema-aurora .wb-layer-item.selected .wb-layer-actions {
   opacity: 1 !important;
 }
 
 html.tema-aurora .wb-layer-btn {
   background: none !important;
   border: none !important;
-  color: rgba(255,255,255,0.35) !important;
+  color: rgba(255,255,255,0.25) !important;
   cursor: pointer !important;
   width: 20px !important;
   height: 20px !important;
@@ -5782,29 +5888,31 @@ html.tema-aurora .wb-layer-btn {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 11px !important;
+  font-size: 10px !important;
   padding: 0 !important;
-  transition: all 0.15s !important;
+  transition: all 0.12s !important;
 }
 
 html.tema-aurora .wb-layer-btn:hover {
-  background: rgba(255,255,255,0.1) !important;
-  color: rgba(255,255,255,0.8) !important;
+  background: rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.7) !important;
 }
 
 html.tema-aurora .wb-layer-btn.danger:hover {
-  background: rgba(239,68,68,0.15) !important;
-  color: rgba(255,100,100,0.9) !important;
+  background: rgba(239,68,68,0.12) !important;
+  color: rgba(239,68,68,0.8) !important;
 }
 
 html.tema-aurora .wb-layer-btn:disabled {
-  opacity: 0.2 !important;
+  opacity: 0.15 !important;
   cursor: not-allowed !important;
 }
 
-html.tema-aurora .wb-layers-list::-webkit-scrollbar { width: 3px !important; }
+html.tema-aurora .wb-layers-list::-webkit-scrollbar { 
+  width: 3px !important; 
+}
 html.tema-aurora .wb-layers-list::-webkit-scrollbar-thumb {
-  background: rgba(120,100,255,0.25) !important;
+  background: rgba(120,100,255,0.2) !important;
   border-radius: 2px !important;
 }
 
@@ -5854,94 +5962,32 @@ html.tema-aurora .wb-shape-opt.active {
   color: rgba(200,185,255,1) !important;
 }
 
-html.tema-aurora .wb-context-toolbar {
+html.tema-aurora .wb-shape-menu {
   position: absolute !important;
   display: flex !important;
   align-items: center !important;
-  gap: 3px !important;
-  background: rgba(14,12,38,0.98) !important;
-  backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
-  border-radius: 8px !important;
-  padding: 4px 6px !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+  gap: 2px !important;
+  background: rgba(12,10,32,0.96) !important;
+  backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(120,100,255,0.2) !important;
+  border-radius: 10px !important;
+  padding: 5px 8px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06) !important;
   z-index: 90 !important;
   pointer-events: all !important;
 }
 
-html.tema-aurora .wb-context-toolbar.hidden {
+html.tema-aurora .wb-shape-menu.hidden {
   display: none !important;
 }
 
-html.tema-aurora .wb-ctx-dropdown {
-  position: relative !important;
-}
-
-html.tema-aurora .wb-ctx-dropdown-btn {
-  background: rgba(255,255,255,0.06) !important;
-  border: 1px solid rgba(255,255,255,0.08) !important;
-  color: rgba(255,255,255,0.7) !important;
-  border-radius: 6px !important;
-  height: 26px !important;
-  padding: 0 8px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  font-size: 11px !important;
-  cursor: pointer !important;
-  white-space: nowrap !important;
-  transition: all 0.12s !important;
-}
-
-html.tema-aurora .wb-ctx-dropdown-btn:hover {
-  background: rgba(255,255,255,0.1) !important;
-  color: rgba(255,255,255,0.9) !important;
-}
-
-html.tema-aurora .wb-ctx-dropdown-menu {
-  position: absolute !important;
-  top: calc(100% + 4px) !important;
-  left: 0 !important;
-  background: rgba(14,12,38,0.98) !important;
-  backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
-  border-radius: 8px !important;
-  padding: 4px !important;
-  min-width: 140px !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
-  z-index: 200 !important;
-}
-
-html.tema-aurora .wb-ctx-dropdown-menu.hidden {
-  display: none !important;
-}
-
-html.tema-aurora .wb-ctx-menu-item {
-  padding: 6px 10px !important;
-  border-radius: 5px !important;
-  font-size: 12px !important;
-  color: rgba(255,255,255,0.6) !important;
-  cursor: pointer !important;
-  transition: all 0.1s !important;
-}
-
-html.tema-aurora .wb-ctx-menu-item:hover {
-  background: rgba(255,255,255,0.07) !important;
-  color: rgba(255,255,255,0.9) !important;
-}
-
-html.tema-aurora .wb-ctx-menu-item.active {
-  background: rgba(120,100,255,0.15) !important;
-  color: rgba(190,175,255,1) !important;
-}
-
-html.tema-aurora .wb-ctx-btn {
+html.tema-aurora .wb-shape-menu-opt {
   background: transparent !important;
   border: 1px solid transparent !important;
-  color: rgba(255,255,255,0.45) !important;
-  border-radius: 5px !important;
-  width: 26px !important;
-  height: 26px !important;
+  color: rgba(255,255,255,0.4) !important;
+  border-radius: 6px !important;
+  width: 28px !important;
+  height: 28px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -5950,9 +5996,97 @@ html.tema-aurora .wb-ctx-btn {
   padding: 0 !important;
 }
 
+html.tema-aurora .wb-shape-menu-opt:hover {
+  background: rgba(255,255,255,0.07) !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora .wb-shape-menu-opt.active {
+  background: rgba(120,100,255,0.2) !important;
+  border-color: rgba(120,100,255,0.4) !important;
+  color: rgba(190,175,255,1) !important;
+}
+
+/* ── Toolbar contextual de texto ── */
+html.tema-aurora .wb-context-toolbar {
+  position: absolute !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  background: rgba(12,10,32,0.96) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(120,100,255,0.2) !important;
+  border-radius: 10px !important;
+  padding: 5px 8px !important;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(120,100,255,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  z-index: 90 !important;
+  pointer-events: all !important;
+}
+
+html.tema-aurora .wb-context-toolbar.hidden {
+  display: none !important;
+}
+
+html.tema-aurora .wb-ctx-size-input {
+  width: 44px !important;
+  height: 28px !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 7px !important;
+  color: rgba(255,255,255,0.85) !important;
+  font-size: 12px !important;
+  font-family: 'DM Mono', monospace !important;
+  text-align: center !important;
+  padding: 0 4px !important;
+  outline: none !important;
+  -moz-appearance: textfield !important;
+  transition: border-color 0.15s, background 0.15s !important;
+}
+
+html.tema-aurora .wb-ctx-size-input::-webkit-inner-spin-button,
+html.tema-aurora .wb-ctx-size-input::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+html.tema-aurora .wb-ctx-size-input:focus {
+  border-color: rgba(120,100,255,0.5) !important;
+  background: rgba(120,100,255,0.08) !important;
+  box-shadow: 0 0 0 2px rgba(120,100,255,0.15) !important;
+}
+
+html.tema-aurora .wb-ctx-divider {
+  width: 1px !important;
+  height: 18px !important;
+  background: rgba(255,255,255,0.07) !important;
+  margin: 0 4px !important;
+  flex-shrink: 0 !important;
+}
+
+html.tema-aurora .wb-ctx-btn {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: rgba(255,255,255,0.4) !important;
+  border-radius: 6px !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.12s !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+}
+
 html.tema-aurora .wb-ctx-btn:hover {
-  background: rgba(255,255,255,0.08) !important;
-  color: rgba(255,255,255,0.9) !important;
+  background: rgba(255,255,255,0.07) !important;
+  color: rgba(255,255,255,0.85) !important;
+  border-color: rgba(255,255,255,0.08) !important;
 }
 
 html.tema-aurora .wb-ctx-btn.active {
@@ -5961,82 +6095,40 @@ html.tema-aurora .wb-ctx-btn.active {
   color: rgba(190,175,255,1) !important;
 }
 
-html.tema-aurora .wb-ctx-italic svg {
-  font-style: italic !important;
-}
-
-html.tema-aurora .wb-ctx-divider {
-  width: 1px !important;
-  height: 18px !important;
-  background: rgba(255,255,255,0.08) !important;
-  margin: 0 2px !important;
-  flex-shrink: 0 !important;
-}
-
-html.tema-aurora .wb-ctx-color-trigger {
-  background: rgba(255,255,255,0.06) !important;
-  border: 1px solid rgba(255,255,255,0.08) !important;
+html.tema-aurora .wb-ctx-color-native {
+  position: relative !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   border-radius: 6px !important;
-  height: 26px !important;
-  padding: 0 6px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
   cursor: pointer !important;
-  color: rgba(255,255,255,0.4) !important;
-  transition: all 0.12s !important;
+  transition: border-color 0.12s !important;
 }
 
-html.tema-aurora .wb-ctx-color-trigger:hover {
-  background: rgba(255,255,255,0.1) !important;
+html.tema-aurora .wb-ctx-color-native:hover {
+  border-color: rgba(255,255,255,0.2) !important;
 }
 
-html.tema-aurora .wb-ctx-color-menu {
-  left: auto !important;
-  right: 0 !important;
-  min-width: 160px !important;
-  padding: 8px !important;
-}
-
-html.tema-aurora .wb-ctx-color-grid {
-  display: grid !important;
-  grid-template-columns: repeat(6, 1fr) !important;
-  gap: 5px !important;
-  margin-bottom: 8px !important;
-}
-
-html.tema-aurora .wb-ctx-color-opt {
-  width: 18px !important;
-  height: 18px !important;
-  border-radius: 50% !important;
+html.tema-aurora .wb-ctx-color-native input[type="color"] {
+  position: absolute !important;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0 !important;
   cursor: pointer !important;
-  border: 1.5px solid rgba(255,255,255,0.1) !important;
-  transition: transform 0.12s, border-color 0.12s !important;
-}
-
-html.tema-aurora .wb-ctx-color-opt:hover {
-  transform: scale(1.3) !important;
-  border-color: rgba(255,255,255,0.5) !important;
-}
-
-html.tema-aurora .wb-ctx-color-custom {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  padding: 4px 4px 0 !important;
-  border-top: 1px solid rgba(255,255,255,0.06) !important;
-  font-size: 11px !important;
-  color: rgba(255,255,255,0.4) !important;
-  cursor: pointer !important;
-}
-
-html.tema-aurora .wb-ctx-color-custom input {
-  width: 20px !important;
-  height: 20px !important;
-  border-radius: 4px !important;
   border: none !important;
-  cursor: pointer !important;
   padding: 0 !important;
-  background: transparent !important;
+  border-radius: 6px !important;
+}
+
+html.tema-aurora #wb-ctx-color-preview {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid rgba(255,255,255,0.2) !important;
+  pointer-events: none !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4) !important;
 }
 

@@ -17,6 +17,7 @@ let isDrawing = false;
 
 let selectedElements = [];
 let isDragging = false;
+let isResizingSticky = false;
 let dragStart = null;    // posición canvas al inicio del drag
 let dragOriginals = [];  // posiciones originales de los elementos
 let isResizing = false;
@@ -37,8 +38,10 @@ let hoveredAnchor = null;  // { elementId, anchorSide, x, y }
 
 let shapeStart = null;
 let currentShape = 'rect';
+let shapeMenuTarget = null;
 
 let editingText = null; // elemento texto en edición inline
+let activeInlineEditEl = null; // elemento texto oculto temporalmente durante edición inline
 
 let clipboard = [];
 let history = [];
@@ -130,6 +133,12 @@ export function renderWhiteboard() {
             onclick="wbPickShape('line')" title="Línea">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/></svg>
           </button>
+          <button class="wb-shape-opt" data-shape="triangle"
+            onclick="wbPickShape('triangle')" title="Triángulo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 3 22 21 2 21"/>
+            </svg>
+          </button>
         </div>
         <button class="wb-icon-btn" data-tool="connector" onclick="wbSetTool('connector')" title="Conector (K)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -155,16 +164,6 @@ export function renderWhiteboard() {
       <div class="wb-tool-divider"></div>
 
       <div class="wb-tool-section">
-        <button class="wb-icon-btn" onclick="wbUndo()" title="Deshacer (Ctrl+Z)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
-          </svg>
-        </button>
-        <button class="wb-icon-btn" onclick="wbRedo()" title="Rehacer (Ctrl+Y)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H11"/>
-          </svg>
-        </button>
         <button class="wb-icon-btn" onclick="wbClear()" title="Limpiar todo">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
@@ -202,78 +201,72 @@ export function renderWhiteboard() {
       <!-- Canvas -->
       <div class="wb-canvas-wrapper" id="wb-canvas-wrapper">
         <canvas id="wb-canvas"></canvas>
+        <canvas id="wb-overlay-canvas" class="wb-overlay-canvas"></canvas>
         <div id="wb-stickies-layer" class="wb-stickies-layer"></div>
         <div id="wb-text-editor-layer" class="wb-text-editor-layer"></div>
         <!-- Toolbar flotante contextual -->
         <div id="wb-context-toolbar" class="wb-context-toolbar hidden">
-          <!-- Selector de tamaño -->
-          <div class="wb-ctx-dropdown" id="wb-ctx-size-dropdown">
-            <button class="wb-ctx-dropdown-btn" onclick="wbCtxToggleSizeMenu()" id="wb-ctx-size-label">
-              Mediano
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            <div class="wb-ctx-dropdown-menu hidden" id="wb-ctx-size-menu">
-              <div class="wb-ctx-menu-item" onclick="wbCtxFontSize(12, 'Extra pequeño')">
-                <span style="font-size:10px">Extra pequeño</span>
-              </div>
-              <div class="wb-ctx-menu-item" onclick="wbCtxFontSize(18, 'Pequeño')">
-                <span style="font-size:12px">Pequeño</span>
-              </div>
-              <div class="wb-ctx-menu-item active" onclick="wbCtxFontSize(24, 'Mediano')">
-                <span style="font-size:14px">Mediano</span>
-              </div>
-              <div class="wb-ctx-menu-item" onclick="wbCtxFontSize(36, 'Grande')">
-                <span style="font-size:16px">Grande</span>
-              </div>
-              <div class="wb-ctx-menu-item" onclick="wbCtxFontSize(52, 'Extra grande')">
-                <span style="font-size:18px">Extra grande</span>
-              </div>
-              <div class="wb-ctx-menu-item" onclick="wbCtxFontSize(72, 'Enorme')">
-                <span style="font-size:20px">Enorme</span>
-              </div>
-            </div>
+          <!-- Tamaño numérico tipo Word -->
+          <input type="number" id="wb-ctx-size-input" 
+            class="wb-ctx-size-input"
+            value="24" min="8" max="120" step="1"
+            onchange="wbCtxFontSizeInput(this.value)"
+            onclick="event.stopPropagation()"
+            title="Tamaño de fuente">
+
+          <div class="wb-ctx-divider"></div>
+
+          <!-- Negrita, Cursiva, Subrayado -->
+          <button class="wb-ctx-btn" id="wb-ctx-bold" onclick="wbCtxToggleBold()" title="Negrita (Ctrl+B)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+              <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+            </svg>
+          </button>
+          <button class="wb-ctx-btn" id="wb-ctx-italic" onclick="wbCtxToggleItalic()" title="Cursiva (Ctrl+I)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="19" y1="4" x2="10" y2="4"/>
+              <line x1="14" y1="20" x2="5" y2="20"/>
+              <line x1="15" y1="4" x2="9" y2="20"/>
+            </svg>
+          </button>
+          <button class="wb-ctx-btn" id="wb-ctx-underline" onclick="wbCtxToggleUnderline()" title="Subrayado (Ctrl+U)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/>
+              <line x1="4" y1="21" x2="20" y2="21"/>
+            </svg>
+          </button>
+
+          <div class="wb-ctx-divider"></div>
+
+          <!-- Color nativo -->
+          <div class="wb-ctx-color-native" title="Color del texto">
+            <input type="color" id="wb-ctx-color-input" 
+              value="#ffffff"
+              onchange="wbCtxSetColor(this.value)"
+              onclick="event.stopPropagation()"
+              title="Color del texto">
+            <div id="wb-ctx-color-preview" style="background:#ffffff"></div>
           </div>
-
-          <div class="wb-ctx-divider"></div>
-
-          <!-- Negrita e Itálica -->
-          <button class="wb-ctx-btn" id="wb-ctx-bold" onclick="wbCtxToggleBold()" title="Negrita">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>
+        </div>
+        <!-- Menú rápido de forma -->
+        <div id="wb-shape-menu" class="wb-shape-menu hidden">
+          <button class="wb-shape-menu-opt" data-shape="rect" onclick="wbShapeMenuPick('rect')" title="Rectángulo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
           </button>
-          <button class="wb-ctx-btn wb-ctx-italic" id="wb-ctx-italic" onclick="wbCtxToggleItalic()" title="Cursiva">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
+          <button class="wb-shape-menu-opt" data-shape="circle" onclick="wbShapeMenuPick('circle')" title="Círculo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
           </button>
-
+          <button class="wb-shape-menu-opt" data-shape="triangle" onclick="wbShapeMenuPick('triangle')" title="Triángulo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 3 22 21 2 21"/></svg>
+          </button>
           <div class="wb-ctx-divider"></div>
-
-          <!-- Selector de color -->
-          <div class="wb-ctx-dropdown" id="wb-ctx-color-dropdown">
-            <button class="wb-ctx-color-trigger" onclick="wbCtxToggleColorMenu()" title="Color del texto">
-              <div id="wb-ctx-color-preview" style="background:#ffffff;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.3)"></div>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            <div class="wb-ctx-dropdown-menu wb-ctx-color-menu hidden" id="wb-ctx-color-menu">
-              <div class="wb-ctx-color-grid">
-                <div class="wb-ctx-color-opt" style="background:#ffffff" onclick="wbCtxSetColor('#ffffff')" title="Blanco"></div>
-                <div class="wb-ctx-color-opt" style="background:#e5e7eb" onclick="wbCtxSetColor('#e5e7eb')" title="Gris claro"></div>
-                <div class="wb-ctx-color-opt" style="background:#c4b5fd" onclick="wbCtxSetColor('#c4b5fd')" title="Lavanda"></div>
-                <div class="wb-ctx-color-opt" style="background:#818cf8" onclick="wbCtxSetColor('#818cf8')" title="Índigo"></div>
-                <div class="wb-ctx-color-opt" style="background:#86efac" onclick="wbCtxSetColor('#86efac')" title="Verde"></div>
-                <div class="wb-ctx-color-opt" style="background:#34d399" onclick="wbCtxSetColor('#34d399')" title="Esmeralda"></div>
-                <div class="wb-ctx-color-opt" style="background:#fde68a" onclick="wbCtxSetColor('#fde68a')" title="Amarillo"></div>
-                <div class="wb-ctx-color-opt" style="background:#f97316" onclick="wbCtxSetColor('#f97316')" title="Naranja"></div>
-                <div class="wb-ctx-color-opt" style="background:#fca5a5" onclick="wbCtxSetColor('#fca5a5')" title="Rojo claro"></div>
-                <div class="wb-ctx-color-opt" style="background:#ef4444" onclick="wbCtxSetColor('#ef4444')" title="Rojo"></div>
-                <div class="wb-ctx-color-opt" style="background:#7dd3fc" onclick="wbCtxSetColor('#7dd3fc')" title="Azul claro"></div>
-                <div class="wb-ctx-color-opt" style="background:#3b82f6" onclick="wbCtxSetColor('#3b82f6')" title="Azul"></div>
-              </div>
-              <div class="wb-ctx-color-custom">
-                <input type="color" id="wb-ctx-custom-color" 
-                  onchange="wbCtxSetColor(this.value)"
-                  title="Color personalizado">
-                <span>Personalizado</span>
-              </div>
-            </div>
+          <button class="wb-shape-menu-opt" id="wb-shape-fill-btn" onclick="wbShapeMenuToggleFill()" title="Relleno">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/></svg>
+          </button>
+          <div class="wb-ctx-color-native" title="Color">
+            <input type="color" id="wb-shape-color-input" onchange="wbShapeMenuSetColor(this.value)" onclick="event.stopPropagation()">
+            <div id="wb-shape-color-preview" style="background:#7864ff"></div>
           </div>
         </div>
         <canvas id="wb-minimap" class="wb-minimap"></canvas>
@@ -304,10 +297,25 @@ export function renderWhiteboard() {
 
         <!-- Zoom controls abajo centrado -->
         <div class="wb-zoom-controls">
+          <button class="wb-zoom-btn" onclick="wbUndo()" title="Deshacer (Ctrl+Z)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
+            </svg>
+          </button>
+          <button class="wb-zoom-btn" onclick="wbRedo()" title="Rehacer (Ctrl+Y)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H11"/>
+            </svg>
+          </button>
+          <div class="wb-zoom-divider"></div>
           <button class="wb-zoom-btn" onclick="wbZoomOut()" title="Alejar">−</button>
           <span class="wb-zoom-label" id="wb-zoom-label">100%</span>
           <button class="wb-zoom-btn" onclick="wbZoomIn()" title="Acercar">+</button>
-          <button class="wb-zoom-btn" onclick="wbResetView()" title="Restablecer">⊡</button>
+          <button class="wb-zoom-btn" onclick="wbResetView()" title="Restablecer vista">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -323,6 +331,11 @@ function initWhiteboard() {
   ctx = canvas.getContext('2d');
   scale = 1; panX = 0; panY = 0;
   resizeCanvas();
+  const overlay = document.getElementById('wb-overlay-canvas');
+  if (overlay) {
+    overlay.width = canvas.width;
+    overlay.height = canvas.height;
+  }
   loadWhiteboardData();
   attachWhiteboardEvents();
   renderPageTabs();
@@ -335,13 +348,25 @@ function resizeCanvas() {
   if (!wrapper || !canvas) return;
   canvas.width = wrapper.clientWidth;
   canvas.height = wrapper.clientHeight;
+  const overlay = document.getElementById('wb-overlay-canvas');
+  if (overlay) {
+    overlay.width = wrapper.clientWidth;
+    overlay.height = wrapper.clientHeight;
+  }
   redraw();
+}
+
+function updateStickiesTransform() {
+  const layer = document.getElementById('wb-stickies-layer');
+  if (!layer) return;
+  layer.style.transformOrigin = '0 0';
+  layer.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
 }
 
 function attachWhiteboardEvents() {
   canvas.addEventListener('mousedown', wbMouseDown);
   canvas.addEventListener('mousemove', wbMouseMove);
-  canvas.addEventListener('mouseup', wbMouseUp);
+  document.addEventListener('mouseup', wbMouseUp);
   canvas.addEventListener('wheel', wbWheel, { passive: false });
   canvas.addEventListener('dblclick', wbDblClick);
   canvas.addEventListener('contextmenu', e => e.preventDefault());
@@ -378,8 +403,18 @@ function getElementAnchors(el) {
     cx = el.x + (el.w||220) / 2; cy = el.y + (el.h||120) / 2;
     w = el.w||220; h = el.h||120;
   } else if (el.type === 'text') {
-    cx = el.x + 50; cy = el.y + (el.size||18) / 2;
-    w = 100; h = el.size || 18;
+    ctx.save();
+    const style = `${el.italic ? 'italic ' : ''}${el.bold ? 'bold ' : ''}`;
+    ctx.font = `${style}${el.size || 24}px 'Syne', sans-serif`;
+    const textWidth = ctx.measureText(el.text || '').width;
+    ctx.restore();
+    const textHeight = (el.size || 24);
+    const pad = 6;
+    // el.x, el.y es la esquina superior izquierda (textBaseline = 'top')
+    cx = el.x + textWidth / 2;
+    cy = el.y + textHeight / 2;
+    w = textWidth + pad * 2;
+    h = textHeight + pad * 2;
   } else {
     return [];
   }
@@ -388,6 +423,17 @@ function getElementAnchors(el) {
     { side: 'right',  x: cx + w/2, y: cy       },
     { side: 'bottom', x: cx,       y: cy + h/2 },
     { side: 'left',   x: cx - w/2, y: cy       },
+  ];
+}
+
+function getStickyAnchors(s) {
+  const w = s.w || 180;
+  const h = s.h || 140;
+  return [
+    { side: 'top',    x: s.x + w/2, y: s.y     },
+    { side: 'right',  x: s.x + w,   y: s.y+h/2 },
+    { side: 'bottom', x: s.x + w/2, y: s.y+h   },
+    { side: 'left',   x: s.x,       y: s.y+h/2 },
   ];
 }
 
@@ -400,17 +446,49 @@ function getAnchorPoint(el, side) {
 // Obtener el anclaje más cercano a un punto
 function getNearestAnchor(pos, excludeId = null) {
   let nearest = null;
-  let minDist = 30 / scale; // radio de detección
+  let minDist = Infinity;
+  const snapRadius = 80 / scale;
+
+  // Buscar en elements
   for (const el of elements) {
     if (el.id === excludeId) continue;
+    if (el.type === 'connector') continue;
     for (const anchor of getElementAnchors(el)) {
       const dist = Math.hypot(pos.x - anchor.x, pos.y - anchor.y);
-      if (dist < minDist) {
+      if (dist < snapRadius && dist < minDist) {
         minDist = dist;
-        nearest = { elementId: el.id, side: anchor.side, x: anchor.x, y: anchor.y };
+        nearest = {
+          elementId: el.id,
+          side: anchor.side,
+          x: anchor.x,
+          y: anchor.y,
+          dist,
+          isSticky: false
+        };
       }
     }
   }
+
+  // Buscar en stickies
+  for (const s of stickies) {
+    if (s.id === excludeId) continue;
+    const sAnchors = getStickyAnchors(s);
+    for (const anchor of sAnchors) {
+      const dist = Math.hypot(pos.x - anchor.x, pos.y - anchor.y);
+      if (dist < snapRadius && dist < minDist) {
+        minDist = dist;
+        nearest = {
+          elementId: s.id,
+          side: anchor.side,
+          x: anchor.x,
+          y: anchor.y,
+          dist,
+          isSticky: true
+        };
+      }
+    }
+  }
+
   return nearest;
 }
 
@@ -425,14 +503,17 @@ function updateConnectorsForElement(elId) {
 }
 
 function recalcConnectorEndpoints(conn) {
-  const fromEl = elements.find(e => e.id === conn.fromId);
-  const toEl = elements.find(e => e.id === conn.toId);
+  const fromEl = elements.find(e => e.id === conn.fromId) || stickies.find(s => s.id === conn.fromId);
+  const toEl = elements.find(e => e.id === conn.toId) || stickies.find(s => s.id === conn.toId);
+
   if (fromEl && conn.fromSide) {
-    const pt = getAnchorPoint(fromEl, conn.fromSide);
+    const anchors = fromEl.type ? getElementAnchors(fromEl) : getStickyAnchors(fromEl);
+    const pt = anchors.find(a => a.side === conn.fromSide);
     if (pt) { conn.x = pt.x; conn.y = pt.y; }
   }
   if (toEl && conn.toSide) {
-    const pt = getAnchorPoint(toEl, conn.toSide);
+    const anchors = toEl.type ? getElementAnchors(toEl) : getStickyAnchors(toEl);
+    const pt = anchors.find(a => a.side === conn.toSide);
     if (pt) { conn.x2 = pt.x; conn.y2 = pt.y; }
   }
 }
@@ -519,13 +600,11 @@ function wbMouseDown(e) {
     if (anchor) {
       connectingFrom = anchor;
       isDrawing = true;
+      // Empezar SIEMPRE desde el centro exacto del ancla, no desde el cursor
       shapeStart = { x: anchor.x, y: anchor.y };
-    } else {
-      // Empezar desde punto libre
-      connectingFrom = null;
-      isDrawing = true;
-      shapeStart = pos;
     }
+    // Si no hay ancla de origen, no iniciar el conector
+    // Los conectores solo pueden empezar desde un ancla
   } else if (tool === 'text') {
     startInlineText(pos);
   } else if (tool === 'select') {
@@ -567,6 +646,7 @@ function wbMouseDown(e) {
     } else {
       selectedElements = [];
       hideContextToolbar();
+      hideShapeMenu();
       isSelecting = true;
       selectionRect = { x: pos.x, y: pos.y, w: 0, h: 0 };
     }
@@ -578,6 +658,7 @@ function wbMouseMove(e) {
   const pos = getCanvasPos(e);
 
   if (isPanning) {
+    hideContextToolbar();
     panX += e.clientX - lastPan.x;
     panY += e.clientY - lastPan.y;
     lastPan = { x: e.clientX, y: e.clientY };
@@ -612,12 +693,25 @@ function wbMouseMove(e) {
         if (el.type === 'image') {
           return !(pos.x >= el.x && pos.x <= el.x+el.w && pos.y >= el.y && pos.y <= el.y+el.h);
         }
+        if (el.type === 'connector') {
+          return distToSegment(pos, { x: el.x, y: el.y }, { x: el.x2, y: el.y2 }) > r + 8;
+        }
+        if (el.type === 'card') {
+          return !(pos.x >= el.x && pos.x <= el.x+(el.w||220) && pos.y >= el.y && pos.y <= el.y+(el.h||120));
+        }
         return true;
       });
     }
     redraw();
-  } else if (isDrawing && (tool === 'shape' || tool === 'connector') && shapeStart) {
-    redraw(shapeStart, pos); // pasar preview al redraw
+  } else if (isDrawing && tool === 'connector' && shapeStart) {
+    // Actualizar hoveredAnchor para el visual de las anclas
+    hoveredAnchor = getNearestAnchor(pos, connectingFrom?.elementId);
+    // SIEMPRE usar posición real del ratón para el preview visual
+    // El snap solo ocurre en mouseup al crear el conector
+    redraw();  // sin preview en canvas principal
+    drawConnectorPreview(shapeStart, pos);  // preview en overlay
+  } else if (isDrawing && tool === 'shape' && shapeStart) {
+    redraw(shapeStart, pos);
   } else if (isResizing && resizeElement && dragStart) {
     const dx = pos.x - dragStart.x;
     const dy = pos.y - dragStart.y;
@@ -702,6 +796,9 @@ function wbMouseMove(e) {
 }
 
 function wbMouseUp(e) {
+  // Solo procesar si estábamos dibujando o arrastrando
+  if (!isDrawing && !isDragging && !isResizing && !isPanning && !isSelecting) return;
+
   const pos = getCanvasPos(e);
 
   if (isPanning) {
@@ -710,7 +807,7 @@ function wbMouseUp(e) {
     return;
   }
 
-  if (isDrawing && currentPath) {
+  if (isDrawing && currentPath && tool !== 'connector') {
     saveHistory();   // guardar ANTES de modificar
     if (currentPath.color === '#ERASER') {
       eraseAtPath(currentPath);
@@ -726,29 +823,38 @@ function wbMouseUp(e) {
 
   if (isDrawing && tool === 'connector' && shapeStart) {
     const endAnchor = getNearestAnchor(pos, connectingFrom?.elementId);
-    const conn = {
-      id: Date.now(),
-      type: 'connector',
-      x: shapeStart.x,
-      y: shapeStart.y,
-      x2: endAnchor ? endAnchor.x : pos.x,
-      y2: endAnchor ? endAnchor.y : pos.y,
-      color,
-      lineWidth,
-      fromId: connectingFrom?.elementId || null,
-      fromSide: connectingFrom?.side || null,
-      toId: endAnchor?.elementId || null,
-      toSide: endAnchor?.side || null,
-      curved: true,
-    };
-    if (Math.hypot(conn.x2 - conn.x, conn.y2 - conn.y) > 5) {
+
+    // Solo crear el conector si hay ancla de destino válida
+    if (endAnchor) {
+      const conn = {
+        id: Date.now(),
+        type: 'connector',
+        x: shapeStart.x,
+        y: shapeStart.y,
+        x2: endAnchor.x,
+        y2: endAnchor.y,
+        color,
+        lineWidth,
+        fromId: connectingFrom?.elementId || null,
+        fromSide: connectingFrom?.side || null,
+        toId: endAnchor.elementId,
+        toSide: endAnchor.side,
+        curved: true,
+      };
       saveHistory();
       elements.push(conn);
       saveWhiteboardData();
+    } else {
+      // No hay destino — mostrar feedback al usuario
+      showToast('Conecta el conector a un elemento', 'info');
     }
+
     shapeStart = null;
     connectingFrom = null;
     isDrawing = false;
+    hoveredAnchor = null;
+    const overlay = document.getElementById('wb-overlay-canvas');
+    if (overlay) overlay.getContext('2d').clearRect(0,0,overlay.width,overlay.height);
     redraw();
     return;
   }
@@ -797,13 +903,19 @@ function wbMouseUp(e) {
     saveWhiteboardData();
     if (selectedElements.length === 1) {
       const el = selectedElements[0];
-      if (el.type === 'text' || el.type === 'shape') {
+      if (el.type === 'text') {
         showContextToolbar(el);
+        hideShapeMenu();
+      } else if (el.type === 'shape' && el.shape !== 'arrow' && el.shape !== 'line') {
+        hideContextToolbar();
+        showShapeMenu(el);
       } else {
         hideContextToolbar();
+        hideShapeMenu();
       }
     } else {
       hideContextToolbar();
+      hideShapeMenu();
     }
     return;
   }
@@ -820,13 +932,19 @@ function wbMouseUp(e) {
     redraw();
     if (selectedElements.length === 1) {
       const el = selectedElements[0];
-      if (el.type === 'text' || el.type === 'shape') {
+      if (el.type === 'text') {
         showContextToolbar(el);
+        hideShapeMenu();
+      } else if (el.type === 'shape' && el.shape !== 'arrow' && el.shape !== 'line') {
+        hideContextToolbar();
+        showShapeMenu(el);
       } else {
         hideContextToolbar();
+        hideShapeMenu();
       }
     } else {
       hideContextToolbar();
+      hideShapeMenu();
     }
   }
 
@@ -836,6 +954,7 @@ function wbMouseUp(e) {
     selectionRect = null;
     selectedElements = [];
     hideContextToolbar();
+    hideShapeMenu();
     redraw();
   }
   if (layersPanelOpen) renderLayersPanel();
@@ -844,6 +963,7 @@ function wbMouseUp(e) {
 // ── Zoom centrado en cursor ──
 function wbWheel(e) {
   e.preventDefault();
+  hideContextToolbar();
   const rect = canvas.getBoundingClientRect();
   const mouseX = e.clientX - rect.left;
   const mouseY = e.clientY - rect.top;
@@ -934,7 +1054,7 @@ function wbKeyDown(e) {
   if (e.key === 'h') wbSetTool('highlight');
   if (e.key === 'n') wbSetTool('sticky');
   if (e.key === 'k') wbSetTool('connector');
-  if (e.key === 'Escape') { selectedElements = []; editingText = null; hideContextToolbar(); redraw(); }
+  if (e.key === 'Escape') { selectedElements = []; editingText = null; hideContextToolbar(); hideShapeMenu(); redraw(); }
 }
 
 function wbKeyUp(e) {
@@ -1090,6 +1210,8 @@ function startInlineTextEdit(el) {
   const wrapper = document.getElementById('wb-canvas-wrapper');
   if (!wrapper) return;
   wrapper.querySelectorAll('.wb-inline-text').forEach(node => node.remove());
+  activeInlineEditEl = el;
+  redraw();
 
   const screenX = el.x * scale + panX;
   const screenY = el.y * scale + panY;
@@ -1099,7 +1221,7 @@ function startInlineTextEdit(el) {
   div.style.cssText = `
     position: absolute;
     left: ${screenX}px;
-    top: ${screenY - 20}px;
+    top: ${screenY}px;
     color: ${el.color || color};
     font-size: ${(el.size || 18) * scale}px;
     font-family: 'Syne', sans-serif;
@@ -1113,6 +1235,8 @@ function startInlineTextEdit(el) {
     white-space: pre;
     caret-color: rgba(120,100,255,0.9);
   `;
+  div.style.top = screenY + 'px';
+  div.style.transform = 'none';
   div.textContent = el.text || '';
   wrapper.appendChild(div);
 
@@ -1122,7 +1246,9 @@ function startInlineTextEdit(el) {
     committed = true;
     el.text = div.textContent.trim();
     if (!el.text) elements = elements.filter(e => e !== el);
-    saveWhiteboardData(); redraw();
+    saveWhiteboardData();
+    activeInlineEditEl = null;
+    redraw();
     div.remove();
   };
 
@@ -1134,7 +1260,12 @@ function startInlineTextEdit(el) {
     window.getSelection()?.addRange(range);
     div.addEventListener('blur', commit);
     div.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { committed = true; div.remove(); }
+      if (e.key === 'Escape') {
+        committed = true;
+        activeInlineEditEl = null;
+        redraw();
+        div.remove();
+      }
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
     });
   }, 100);
@@ -1194,10 +1325,14 @@ function hitTestElement(el, pos) {
     return pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h;
   }
   if (el.type === 'text') {
-    ctx.font = `${el.size || 18}px 'Syne', sans-serif`;
+    ctx.save();
+    const style = `${el.italic ? 'italic ' : ''}${el.bold ? 'bold ' : ''}`;
+    ctx.font = `${style}${el.size || 24}px 'Syne', sans-serif`;
     const w = ctx.measureText(el.text).width;
+    const h = (el.size || 24) * 1.2;
+    ctx.restore();
     return pos.x >= el.x - pad && pos.x <= el.x + w + pad &&
-           pos.y >= el.y - (el.size || 18) - pad && pos.y <= el.y + pad;
+           pos.y >= el.y - pad && pos.y <= el.y + h + pad;
   }
   if (el.type === 'image') {
     return pos.x >= el.x && pos.x <= el.x + el.w && pos.y >= el.y && pos.y <= el.y + el.h;
@@ -1226,29 +1361,38 @@ function redraw(previewStart, previewEnd) {
   ctx.save();
   ctx.translate(panX, panY);
   ctx.scale(scale, scale);
-  paths.forEach(p => drawPath(p));
+
+  // 1. Trazos
+  paths.forEach(p => { if (!p.hidden) drawPath(p); });
   if (currentPath) drawPath(currentPath);
+
+  // 2. Elementos
   elements.forEach(el => {
-    if (el.hidden) return; // saltar elementos ocultos
+    if (el.hidden) return;
     if (el.type === 'shape') drawShape(el);
     else if (el.type === 'text') drawTextEl(el);
     else if (el.type === 'image') drawImageEl(el);
     else if (el.type === 'card') drawCard(el);
     else if (el.type === 'connector') drawConnector(el);
   });
-  // Selección
+
+  // 3. Selección
   selectedElements.forEach(el => drawSelectionBox(el));
   if (isSelecting && selectionRect) drawSelectionArea();
-  // Mostrar anclas cuando tool es connector
-  if (tool === 'connector') {
+
+  // 4. Anclas de conexión (debajo del preview)
+  if (tool === 'connector' || (isDrawing && connectingFrom !== undefined)) {
     drawAllAnchors();
   }
-  // Preview de forma dentro del transform correcto
+
+  // 5. Preview del conector SIEMPRE AL FINAL para que no quede tapado
   if (previewStart && previewEnd) drawShapePreview(previewStart, previewEnd);
+
   ctx.restore();
   drawMinimap();
   updateGridBackground();
-  renderStickies(); // re-renderizar stickies con nuevo pan/zoom
+  if (!isResizingSticky) renderStickies(); // re-renderizar stickies con nuevo pan/zoom
+  updateStickiesTransform();
   if (layersPanelOpen) renderLayersPanel();
 }
 
@@ -1265,10 +1409,15 @@ function updateGridBackground() {
 function drawPath(path) {
   if (!path.points.length) return;
   ctx.save();
+  // CRÍTICO: siempre resetear antes de dibujar
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+
   if (path.color === '#ERASER') {
     ctx.globalCompositeOperation = 'destination-out';
     ctx.strokeStyle = 'rgba(0,0,0,1)';
   } else {
+    ctx.globalCompositeOperation = 'source-over';
     ctx.strokeStyle = path.color;
   }
   ctx.lineWidth = path.width;
@@ -1287,6 +1436,9 @@ function drawPath(path) {
   ctx.lineTo(path.points[path.points.length-1].x, path.points[path.points.length-1].y);
   ctx.stroke();
   ctx.restore();
+  // CRÍTICO: resetear explícitamente después del restore
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
 }
 
 function drawShape(el) {
@@ -1359,17 +1511,45 @@ function drawShape(el) {
       ctx.textBaseline = 'middle';
       ctx.fillText(el.text, el.x + el.w/2, el.y + el.h/2);
     }
+  } else if (el.shape === 'triangle') {
+    ctx.beginPath();
+    const tx = el.x, ty = el.y, tw = el.w, th = el.h;
+    ctx.moveTo(tx + tw/2, ty);
+    ctx.lineTo(tx + tw, ty + th);
+    ctx.lineTo(tx, ty + th);
+    ctx.closePath();
+    if (el.fill) { ctx.fillStyle = el.color + '33'; ctx.fill(); }
+    ctx.stroke();
+    if (el.text) {
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = `${Math.max(12, Math.min(16, Math.abs(el.h)*0.25))}px 'Syne', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(el.text, tx + tw/2, ty + th*0.65);
+    }
   }
   ctx.restore();
 }
 
 function drawTextEl(el) {
+  if (el === activeInlineEditEl) return; // no dibujar mientras se edita inline
   ctx.save();
   ctx.fillStyle = el.color || color;
   const style = `${el.italic ? 'italic ' : ''}${el.bold ? 'bold ' : ''}`;
-  ctx.font = `${style}${el.size || 18}px 'Syne', sans-serif`;
+  ctx.font = `${style}${el.size || 24}px 'Syne', sans-serif`;
   ctx.textBaseline = 'top';
   ctx.fillText(el.text, el.x, el.y);
+  // Subrayado manual
+  if (el.underline) {
+    const w = ctx.measureText(el.text).width;
+    const underlineY = el.y + (el.size || 24) + 2;
+    ctx.strokeStyle = el.color || color;
+    ctx.lineWidth = Math.max(1, (el.size || 24) / 16);
+    ctx.beginPath();
+    ctx.moveTo(el.x, underlineY);
+    ctx.lineTo(el.x + w, underlineY);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -1509,49 +1689,86 @@ function drawConnector(el) {
     ctx.moveTo(x1, y1);
     ctx.bezierCurveTo(cx1, cy1, cx2, cy2, x2, y2);
     ctx.stroke();
-
-    const angle = Math.atan2(y2 - cy2, x2 - cx2);
-    const headLen = Math.max(12, Math.min(el.lineWidth * 4, 20));
-    const headAngle = Math.PI / 6;
-    ctx.fillStyle = el.color || '#7864ff';
-    ctx.beginPath();
-    ctx.moveTo(x2, y2);
-    ctx.lineTo(x2 - headLen * Math.cos(angle - headAngle), y2 - headLen * Math.sin(angle - headAngle));
-    ctx.lineTo(x2 - headLen * Math.cos(angle + headAngle), y2 - headLen * Math.sin(angle + headAngle));
-    ctx.closePath();
-    ctx.fill();
   } else {
     ctx.beginPath();
     ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
     ctx.stroke();
   }
 
-  ctx.fillStyle = el.color || '#7864ff';
-  ctx.beginPath();
-  ctx.arc(x1, y1, 3, 0, Math.PI * 2);
-  ctx.fill();
-
   ctx.restore();
 }
 
 function drawAllAnchors() {
+  // Anclas de elements
   elements.forEach(el => {
     const anchors = getElementAnchors(el);
     anchors.forEach(anchor => {
       const isHovered = hoveredAnchor &&
         hoveredAnchor.elementId === el.id &&
         hoveredAnchor.side === anchor.side;
-      ctx.save();
-      ctx.fillStyle = isHovered ? 'rgba(120,100,255,1)' : 'rgba(120,100,255,0.5)';
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 1.5 / scale;
-      ctx.beginPath();
-      ctx.arc(anchor.x, anchor.y, isHovered ? 6/scale : 4/scale, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
+      drawAnchorDot(anchor.x, anchor.y, isHovered);
     });
   });
+
+  // Anclas de stickies
+  stickies.forEach(s => {
+    getStickyAnchors(s).forEach(anchor => {
+      const isHovered = hoveredAnchor &&
+        hoveredAnchor.elementId === s.id &&
+        hoveredAnchor.side === anchor.side;
+      drawAnchorDot(anchor.x, anchor.y, isHovered);
+    });
+  });
+
+  // Programar redraw continuo mientras hay ancla hovereada
+  // para efecto de pulso
+  if (hoveredAnchor && (tool === 'connector')) {
+    if (!window._wbAnchorPulse) {
+      window._wbAnchorPulse = true;
+      let pulse = 0;
+      const animate = () => {
+        if (!hoveredAnchor || tool !== 'connector') {
+          window._wbAnchorPulse = false;
+          return;
+        }
+        pulse += 0.08;
+        const pulseFactor = 1 + Math.sin(pulse) * 0.15;
+        window._wbAnchorPulseFactor = pulseFactor;
+        redraw();
+        requestAnimationFrame(animate);
+      };
+      requestAnimationFrame(animate);
+    }
+  } else {
+    window._wbAnchorPulse = false;
+  }
+}
+
+function drawAnchorDot(ax, ay, isHovered) {
+  ctx.save();
+  if (isHovered) {
+    ctx.fillStyle = 'rgba(120,100,255,0.15)';
+    ctx.beginPath(); ctx.arc(ax, ay, 20/scale, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,100,255,0.6)';
+    ctx.lineWidth = 1.5/scale;
+    ctx.beginPath(); ctx.arc(ax, ay, 12/scale, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = 'rgba(120,100,255,1)';
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2/scale;
+    ctx.beginPath(); ctx.arc(ax, ay, 6/scale, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    const c = 4/scale;
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5/scale;
+    ctx.beginPath();
+    ctx.moveTo(ax-c, ay); ctx.lineTo(ax+c, ay);
+    ctx.moveTo(ax, ay-c); ctx.lineTo(ax, ay+c);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = 'rgba(120,100,255,0.45)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1/scale;
+    ctx.beginPath(); ctx.arc(ax, ay, 4/scale, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawSelectionBox(el) {
@@ -1641,23 +1858,10 @@ function drawSelectionArea() {
 }
 
 function drawShapePreview(start, end) {
-  // Si es connector, dibujar curva bezier de preview
-  if (tool === 'connector') {
-    const dx = end.x - start.x;
-    const cx1 = start.x + dx * 0.5;
-    const cx2 = end.x - dx * 0.5;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
-    ctx.setLineDash([5/scale, 3/scale]);
-    ctx.globalAlpha = 0.7;
-    ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.bezierCurveTo(cx1, start.y, cx2, end.y, end.x, end.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.globalAlpha = 1;
-    return;
-  }
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.setLineDash([]);
 
   ctx.strokeStyle = color;
   ctx.lineWidth = lineWidth;
@@ -1669,6 +1873,13 @@ function drawShapePreview(start, end) {
   } else if (currentShape === 'circle') {
     ctx.beginPath();
     ctx.ellipse(start.x+w/2, start.y+h/2, Math.abs(w/2), Math.abs(h/2), 0, 0, Math.PI*2);
+    ctx.stroke();
+  } else if (currentShape === 'triangle') {
+    ctx.beginPath();
+    ctx.moveTo(start.x + w/2, start.y);
+    ctx.lineTo(start.x + w, start.y + h);
+    ctx.lineTo(start.x, start.y + h);
+    ctx.closePath();
     ctx.stroke();
   } else if (currentShape === 'arrow' || currentShape === 'line') {
     ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke();
@@ -1686,6 +1897,36 @@ function drawShapePreview(start, end) {
   }
   ctx.setLineDash([]);
   ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawConnectorPreview(start, end) {
+  const overlay = document.getElementById('wb-overlay-canvas');
+  if (!overlay) return;
+  const oCtx = overlay.getContext('2d');
+  oCtx.clearRect(0, 0, overlay.width, overlay.height);
+  if (!start || !end) return;
+
+  // Convertir coordenadas mundo a pantalla
+  const sx = start.x * scale + panX;
+  const sy = start.y * scale + panY;
+  const ex = end.x * scale + panX;
+  const ey = end.y * scale + panY;
+
+  oCtx.save();
+  oCtx.globalCompositeOperation = 'source-over';
+  oCtx.globalAlpha = 0.9;
+  oCtx.strokeStyle = color;
+  oCtx.lineWidth = Math.max(lineWidth, 2);
+  oCtx.lineCap = 'round';
+  oCtx.setLineDash([8, 5]);
+
+  const dx = ex - sx;
+  oCtx.beginPath();
+  oCtx.moveTo(sx, sy);
+  oCtx.bezierCurveTo(sx + dx*0.5, sy, ex - dx*0.5, ey, ex, ey);
+  oCtx.stroke();
+  oCtx.restore();
 }
 
 // ── Minimap ──
@@ -1771,6 +2012,11 @@ export function wbMinimapClick(e) {
 // ── Herramientas ──
 export function wbSetTool(t) {
   tool = t;
+  // Limpiar estado de dibujo al cambiar herramienta
+  currentPath = null;
+  isDrawing = false;
+  shapeStart = null;
+  connectingFrom = null;
   document.querySelectorAll('.wb-icon-btn[data-tool]').forEach(b => {
     b.classList.toggle('active', b.dataset.tool === t && (!b.dataset.shape || b.dataset.shape === currentShape));
   });
@@ -1815,7 +2061,8 @@ export function wbPickShape(shape) {
     rect: '<rect x="3" y="3" width="18" height="18" rx="2"/>',
     circle: '<circle cx="12" cy="12" r="9"/>',
     arrow: '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',
-    line: '<line x1="5" y1="19" x2="19" y2="5"/>'
+    line: '<line x1="5" y1="19" x2="19" y2="5"/>',
+    triangle: '<polygon points="12 3 22 21 2 21"/>'
   };
   const triggerIcon = document.getElementById('wb-shapes-trigger-icon');
   if (triggerIcon) triggerIcon.innerHTML = icons[shape] || icons.rect;
@@ -1950,12 +2197,20 @@ function normalizeRect(r) {
 
 // ── Stickies ──
 function addSticky(pos) {
-  saveHistory();  // <- añadir esta línea antes del push
-  const sticky = { id: Date.now(), x: pos.x, y: pos.y,
-    text: 'Nota...', color: color,
-    authorId: currentUser?.id };
+  saveHistory();
+  const sticky = {
+    id: Date.now(),
+    x: pos.x,      // coordenadas MUNDO (ya vienen de getCanvasPos)
+    y: pos.y,
+    w: 180,   // siempre 180px fijos
+    h: 140,   // siempre 140px fijos
+    text: 'Nota...',
+    color: color,
+    authorId: currentUser?.id
+  };
   stickies.push(sticky);
-  renderStickies(); saveWhiteboardData();
+  renderStickies();
+  saveWhiteboardData();
 }
 
 function renderStickies() {
@@ -1966,11 +2221,10 @@ function renderStickies() {
     const bg = s.color || '#7864ff';
     return `
     <div class="wb-sticky" id="wb-sticky-${s.id}"
-      style="left:${s.x * scale + panX}px;
-         top:${s.y * scale + panY}px;
-         width:${(s.w || 180) * scale}px;
-         min-height:${(s.h || 140) * scale}px;
-         transform-origin:top left"
+      style="left:${s.x}px;
+         top:${s.y}px;
+         width:${s.w || 180}px;
+         min-height:${s.h || 140}px;"
       onmousedown="wbStickyDragStart(event,${s.id})">
       
       <!-- Header de la sticky -->
@@ -2006,13 +2260,13 @@ function renderStickies() {
       <div class="wb-sticky-body" style="background:${bg}">
         <div class="wb-sticky-text" 
           contenteditable="true"
-          style="color:${s.textColor || 'rgba(0,0,0,0.75)'};font-size:${s.fontSize || 13}px"
+          style="color:${s.textColor || 'rgba(0,0,0,0.75)'};font-size:${(s.fontSize || 13) * scale}px"
           onblur="wbStickyTextChange(${s.id},this.innerText)"
           onmousedown="event.stopPropagation()">${s.text}</div>
       </div>
 
       <div class="wb-sticky-resize-handle"
-        onmousedown="event.stopPropagation();wbStickyResizeStart(event,${s.id})">
+        onpointerdown="event.stopPropagation();wbStickyResizeStart(event,${s.id})">
       </div>
 
     </div>
@@ -2023,16 +2277,19 @@ export function wbStickyDragStart(e, id) {
   if (e.target.classList.contains('wb-sticky-text') || e.target.classList.contains('wb-sticky-close')) return;
   const sticky = stickies.find(s => s.id === id);
   if (!sticky) return;
-  const startX = e.clientX - (sticky.x * scale + panX);
-  const startY = e.clientY - (sticky.y * scale + panY);
+  const startX = (e.clientX - panX) / scale - sticky.x;
+  const startY = (e.clientY - panY) / scale - sticky.y;
   function onMove(ev) {
-    sticky.x = (ev.clientX - startX - panX) / scale;
-    sticky.y = (ev.clientY - startY - panY) / scale;
+    sticky.x = (ev.clientX - panX) / scale - startX;
+    sticky.y = (ev.clientY - panY) / scale - startY;
     const el = document.getElementById('wb-sticky-'+id);
     if (el) {
-      el.style.left = sticky.x * scale + panX + 'px';
-      el.style.top = sticky.y * scale + panY + 'px';
+      el.style.left = sticky.x + 'px';
+      el.style.top = sticky.y + 'px';
     }
+    // Actualizar conectores enlazados al sticky
+    updateConnectorsForElement(id);
+    redraw();
   }
   function onUp() {
     document.removeEventListener('mousemove', onMove);
@@ -2058,6 +2315,17 @@ export function wbStickySetColor(id, newColor) {
   if (!s) return;
   saveHistory();
   s.color = newColor;
+  
+  // Auto-detectar si el texto debe ser oscuro o claro
+  // según la luminosidad del color de fondo
+  const hex = newColor.replace('#', '');
+  const r = parseInt(hex.substr(0,2), 16);
+  const g = parseInt(hex.substr(2,2), 16);
+  const b = parseInt(hex.substr(4,2), 16);
+  // Fórmula de luminosidad perceptual
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  s.textColor = luminance > 0.5 ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.9)';
+
   saveWhiteboardData();
   renderStickies();
 }
@@ -2065,35 +2333,43 @@ export function wbStickySetColor(id, newColor) {
 function showContextToolbar(el) {
   const toolbar = document.getElementById('wb-context-toolbar');
   if (!toolbar || !canvas) return;
-
-  // Solo para texto y post-it (stickies se manejan diferente)
-  if (el.type !== 'text' && el.type !== 'shape') return;
-
+  // Solo para texto, NO para shapes
+  if (el.type !== 'text') {
+    hideContextToolbar();
+    return;
+  }
   toolbar.classList.remove('hidden');
   toolbar._targetEl = el;
 
-  // Posición: encima del elemento
+  // Sincronizar valores actuales
+  const sizeInput = document.getElementById('wb-ctx-size-input');
+  if (sizeInput) sizeInput.value = el.size || 24;
+
+  const colorInput = document.getElementById('wb-ctx-color-input');
+  const colorPreview = document.getElementById('wb-ctx-color-preview');
+  const currentColor = el.color || '#ffffff';
+  if (colorInput) colorInput.value = currentColor;
+  if (colorPreview) colorPreview.style.background = currentColor;
+
+  document.getElementById('wb-ctx-bold')?.classList.toggle('active', !!el.bold);
+  document.getElementById('wb-ctx-italic')?.classList.toggle('active', !!el.italic);
+  document.getElementById('wb-ctx-underline')?.classList.toggle('active', !!el.underline);
+
+  // Posición
   let screenX, screenY;
   if (el.type === 'text') {
     screenX = el.x * scale + panX;
-    screenY = el.y * scale + panY - 50;
+    screenY = el.y * scale + panY - 54;
   } else {
     screenX = (el.x + el.w/2) * scale + panX;
-    screenY = Math.min(el.y, el.y + el.h) * scale + panY - 50;
+    screenY = Math.min(el.y, el.y + el.h) * scale + panY - 54;
   }
-
-  // Evitar que se salga del canvas
   const wrapper = document.getElementById('wb-canvas-wrapper');
-  const maxX = wrapper ? wrapper.clientWidth - 280 : screenX;
-  screenX = Math.max(8, Math.min(screenX - 140, maxX));
+  const maxX = wrapper ? wrapper.clientWidth - 260 : screenX;
+  screenX = Math.max(8, Math.min(screenX - 130, maxX));
   screenY = Math.max(8, screenY);
-
   toolbar.style.left = screenX + 'px';
   toolbar.style.top = screenY + 'px';
-
-  // Actualizar estado de botones según el elemento
-  document.getElementById('wb-ctx-bold')?.classList.toggle('active', !!el.bold);
-  document.getElementById('wb-ctx-italic')?.classList.toggle('active', !!el.italic);
 }
 
 function hideContextToolbar() {
@@ -2102,22 +2378,87 @@ function hideContextToolbar() {
     toolbar.classList.add('hidden');
     toolbar._targetEl = null;
   }
+  hideShapeMenu();
 }
 
-export function wbCtxFontSize(size, label) {
+export function wbShapeMenuPick(shape) {
+  if (!shapeMenuTarget) return;
+  saveHistory();
+  shapeMenuTarget.shape = shape;
+  // Actualizar activo
+  document.querySelectorAll('.wb-shape-menu-opt[data-shape]').forEach(b => {
+    b.classList.toggle('active', b.dataset.shape === shape);
+  });
+  saveWhiteboardData(); redraw();
+}
+
+export function wbShapeMenuToggleFill() {
+  if (!shapeMenuTarget) return;
+  saveHistory();
+  shapeMenuTarget.fill = !shapeMenuTarget.fill;
+  const btn = document.getElementById('wb-shape-fill-btn');
+  if (btn) btn.classList.toggle('active', shapeMenuTarget.fill);
+  saveWhiteboardData(); redraw();
+}
+
+export function wbShapeMenuSetColor(c) {
+  if (!shapeMenuTarget) return;
+  saveHistory();
+  shapeMenuTarget.color = c;
+  const preview = document.getElementById('wb-shape-color-preview');
+  if (preview) preview.style.background = c;
+  saveWhiteboardData(); redraw();
+}
+
+function showShapeMenu(el) {
+  const menu = document.getElementById('wb-shape-menu');
+  if (!menu || !canvas) return;
+  shapeMenuTarget = el;
+  menu.classList.remove('hidden');
+
+  // Posición encima de la forma
+  const screenX = (el.x + el.w/2) * scale + panX;
+  const screenY = Math.min(el.y, el.y + el.h) * scale + panY - 46;
+  const wrapper = document.getElementById('wb-canvas-wrapper');
+  const maxX = wrapper ? wrapper.clientWidth - 180 : screenX;
+  menu.style.left = Math.max(8, Math.min(screenX - 90, maxX)) + 'px';
+  menu.style.top = Math.max(8, screenY) + 'px';
+
+  // Sincronizar estado
+  document.querySelectorAll('.wb-shape-menu-opt[data-shape]').forEach(b => {
+    b.classList.toggle('active', b.dataset.shape === el.shape);
+  });
+  const fillBtn = document.getElementById('wb-shape-fill-btn');
+  if (fillBtn) fillBtn.classList.toggle('active', !!el.fill);
+  const colorInput = document.getElementById('wb-shape-color-input');
+  const colorPreview = document.getElementById('wb-shape-color-preview');
+  if (colorInput) colorInput.value = el.color || '#7864ff';
+  if (colorPreview) colorPreview.style.background = el.color || '#7864ff';
+}
+
+function hideShapeMenu() {
+  const menu = document.getElementById('wb-shape-menu');
+  if (menu) { menu.classList.add('hidden'); }
+  shapeMenuTarget = null;
+}
+
+export function wbCtxFontSizeInput(size) {
+  const toolbar = document.getElementById('wb-context-toolbar');
+  const el = toolbar?._targetEl;
+  if (!el) return;
+  const s = Math.max(8, Math.min(120, parseInt(size) || 24));
+  saveHistory();
+  el.size = s;
+  saveWhiteboardData(); redraw();
+}
+
+export function wbCtxToggleUnderline() {
   const toolbar = document.getElementById('wb-context-toolbar');
   const el = toolbar?._targetEl;
   if (!el) return;
   saveHistory();
-  el.size = size;
-  // Actualizar label
-  const lbl = document.getElementById('wb-ctx-size-label');
-  if (lbl) lbl.childNodes[0].textContent = label || 'Mediano';
-  // Marcar activo
-  document.querySelectorAll('.wb-ctx-menu-item').forEach(item => {
-    item.classList.toggle('active', item.textContent.trim() === (label || ''));
-  });
-  document.getElementById('wb-ctx-size-menu')?.classList.add('hidden');
+  el.underline = !el.underline;
+  document.getElementById('wb-ctx-underline')?.classList.toggle('active', el.underline);
   saveWhiteboardData(); redraw();
 }
 
@@ -2151,22 +2492,7 @@ export function wbCtxSetColor(c) {
   // Actualizar preview
   const preview = document.getElementById('wb-ctx-color-preview');
   if (preview) preview.style.background = c;
-  document.getElementById('wb-ctx-color-menu')?.classList.add('hidden');
   saveWhiteboardData(); redraw();
-}
-
-export function wbCtxToggleSizeMenu() {
-  const menu = document.getElementById('wb-ctx-size-menu');
-  const colorMenu = document.getElementById('wb-ctx-color-menu');
-  colorMenu?.classList.add('hidden');
-  menu?.classList.toggle('hidden');
-}
-
-export function wbCtxToggleColorMenu() {
-  const menu = document.getElementById('wb-ctx-color-menu');
-  const sizeMenu = document.getElementById('wb-ctx-size-menu');
-  sizeMenu?.classList.add('hidden');
-  menu?.classList.toggle('hidden');
 }
 
 export function wbStickySetTextColor(id, color) {
@@ -2187,34 +2513,43 @@ export function wbStickySetFontSize(id, size) {
 
 export function wbStickyResizeStart(e, id) {
   e.preventDefault();
+  e.stopPropagation();
+  
   const sticky = stickies.find(s => s.id === id);
   if (!sticky) return;
-  
-  const el = document.getElementById('wb-sticky-' + id);
-  if (!el) return;
-  
-  const startX = e.clientX;
-  const startY = e.clientY;
+
+  const startMouseX = e.clientX;
+  const startMouseY = e.clientY;
   const startW = sticky.w || 180;
   const startH = sticky.h || 140;
   
+  isResizingSticky = true;
+
+  // Usar el handle como elemento de captura
+  const handle = e.currentTarget || e.target;
+  
   function onMove(ev) {
-    const dx = ev.clientX - startX;
-    const dy = ev.clientY - startY;
-    sticky.w = Math.max(120, startW + dx / scale);
-    sticky.h = Math.max(100, startH + dy / scale);
-    el.style.width = sticky.w * scale + 'px';
-    el.style.minHeight = sticky.h * scale + 'px';
+    sticky.w = Math.max(80, startW + (ev.clientX - startMouseX) / scale);
+    sticky.h = Math.max(60, startH + (ev.clientY - startMouseY) / scale);
+    const el = document.getElementById('wb-sticky-' + id);
+    if (el) {
+      el.style.width = sticky.w + 'px';
+      el.style.minHeight = sticky.h + 'px';
+    }
   }
-  
+
   function onUp() {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
+    isResizingSticky = false;
+    handle.removeEventListener('pointermove', onMove);
+    handle.removeEventListener('pointerup', onUp);
+    handle.releasePointerCapture(e.pointerId);
     saveWhiteboardData();
+    renderStickies();
   }
-  
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+
+  handle.setPointerCapture(e.pointerId);
+  handle.addEventListener('pointermove', onMove);
+  handle.addEventListener('pointerup', onUp);
 }
 
 // ── Páginas ──

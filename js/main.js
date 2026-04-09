@@ -206,8 +206,7 @@ import {
   wbToggleFill,
   wbUndo, wbRedo, wbClear, wbExport, wbZoomIn, wbZoomOut, wbResetView,
   wbStickyDragStart, wbDeleteSticky, wbStickyTextChange, wbStickySetColor, wbStickyResizeStart,
-  wbCtxFontSize, wbCtxToggleBold, wbCtxToggleItalic, wbCtxSetColor,
-  wbCtxToggleSizeMenu, wbCtxToggleColorMenu,
+  wbCtxFontSizeInput, wbCtxToggleBold, wbCtxToggleItalic, wbCtxToggleUnderline, wbCtxSetColor,
   wbStickySetTextColor, wbStickySetFontSize,
   wbAddPage, wbSwitchPage, wbRenamePage, wbDeletePage, wbMinimapClick,
   wbOpenCardPicker, wbCardPickerTab, wbCardPickerSearch,
@@ -215,7 +214,8 @@ import {
   wbToggleLayers, renderLayersPanel, wbLayerSelect,
   wbLayerToggleVisibility, wbLayerMoveUp, wbLayerMoveDown,
   wbLayerDelete, wbLayerDragStart, wbLayerDrop,
-  wbToggleShapesMenu, wbPickShape
+  wbToggleShapesMenu, wbPickShape,
+  wbShapeMenuPick, wbShapeMenuToggleFill, wbShapeMenuSetColor
 } from './components/whiteboard.js';
 
 function loadData() {
@@ -482,8 +482,7 @@ async function initializeApp() {
       wbToggleFill,
       wbUndo, wbRedo, wbClear, wbExport, wbZoomIn, wbZoomOut, wbResetView,
       wbStickyDragStart, wbDeleteSticky, wbStickyTextChange, wbStickySetColor, wbStickyResizeStart,
-      wbCtxFontSize, wbCtxToggleBold, wbCtxToggleItalic, wbCtxSetColor,
-      wbCtxToggleSizeMenu, wbCtxToggleColorMenu,
+      wbCtxFontSizeInput, wbCtxToggleBold, wbCtxToggleItalic, wbCtxToggleUnderline, wbCtxSetColor,
       wbStickySetTextColor, wbStickySetFontSize,
       wbAddPage, wbSwitchPage, wbRenamePage, wbDeletePage,
       wbMinimapClick,
@@ -493,6 +492,7 @@ async function initializeApp() {
       wbLayerToggleVisibility, wbLayerMoveUp, wbLayerMoveDown,
       wbLayerDelete, wbLayerDragStart, wbLayerDrop,
       wbToggleShapesMenu, wbPickShape,
+      wbShapeMenuPick, wbShapeMenuToggleFill, wbShapeMenuSetColor,
       openAddUserModal,
       openEditUserModal,
       saveEditUserModal,
