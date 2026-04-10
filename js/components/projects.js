@@ -275,6 +275,226 @@ export function renderProjects() {
   }
 }
 
+function renderTasksList(p) {
+  if (p.tasks.length === 0) {
+    return `<div class="empty-state" style="padding:20px"><div>Sin tareas aún</div></div>`;
+  }
+  return p.tasks.map(t => {
+    const assignee = USERS.find(u => u.id === t.assigneeId);
+    const isFiltered = projectUserFilter !== null && t.assigneeId !== projectUserFilter;
+    const taskComments = commentIndicators('task', p.id, t.id);
+    return `<div class="task-item" data-task-id="${t.id}" style="${isFiltered ? 'opacity:0.35;' : ''}">
+      <div class="task-check ${t.done?'done':''}" onclick="quickToggleTask(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)},this)">${t.done?'✓':''}</div>
+      <span class="task-name ${t.done?'done':''}" style="cursor:pointer"
+        onclick="openTaskViewer(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})">
+        <span>${t.name}${taskComments}${t.desc ? ' <span style="font-size:9px;opacity:0.85">📄</span>' : ''}</span>
+      </span>
+      ${t.priority!=='normal'?`<span class="task-priority ${t.priority}">${t.priority}</span>`:''}
+      ${t.dueDate ? `<span class="task-due ${new Date(t.dueDate+'T12:00:00') < new Date() && !t.done ? 'task-due-overdue' : ''}">${t.dueDate}</span>` : ''}
+      ${assignee?`<span class="task-assignee" style="display:flex;align-items:center;gap:4px"><div style="width:14px;height:14px;border-radius:50%;background:${assignee.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:var(--accent-text-on-bg)">${assignee.initials}</div>${assignee.name}</span>`:''}
+      <button type="button" class="task-comment-btn" onclick="event.stopPropagation();openTaskCommentsModal(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})" title="Comentarios">💬</button>
+      <button class="task-edit-btn" onclick="event.stopPropagation();openEditTaskModal(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})" title="Editar">✏️</button>
+      <button class="task-delete-btn" onclick="deleteTask(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function renderTasksKanban(p) {
+  const columns = [
+    { id: 'pending',     label: 'Pendiente',    filter: t => !t.done && t.status !== 'progress' },
+    { id: 'progress',    label: 'En progreso',  filter: t => !t.done && t.status === 'progress' },
+    { id: 'done',        label: 'Completado',   filter: t => t.done },
+  ];
+
+  return `<div class="kanban-board">
+    ${columns.map(col => {
+      const tasks = p.tasks.filter(col.filter);
+      return `<div class="kanban-col" data-col="${col.id}"
+        ondragover="event.preventDefault()"
+        ondrop="dropTaskToColumn(event,'${col.id}',${toOnclickStringArg(p.id)})">
+        <div class="kanban-col-header">
+          <span class="kanban-col-title">${col.label}</span>
+          <span class="kanban-col-count">${tasks.length}</span>
+        </div>
+        <div class="kanban-col-body">
+          ${tasks.length === 0
+            ? `<div class="kanban-empty">Sin tareas</div>`
+            : tasks.map(t => {
+                const assignee = USERS.find(u => u.id === t.assigneeId);
+                const pid = toOnclickStringArg(p.id);
+                const tid = toOnclickStringArg(t.id);
+                return `<div class="kanban-card" 
+                  draggable="true"
+                  ondragstart="dragTaskStart(event,${tid},${pid})"
+                  onclick="openTaskViewer(${pid},${tid})">
+                  <div class="kanban-card-name">${escapeChatHtml(t.name)}</div>
+                  ${t.priority !== 'normal' ? `<span class="task-priority ${t.priority}" style="font-size:9px">${t.priority}</span>` : ''}
+                  ${t.dueDate ? `<div class="kanban-card-due ${new Date(t.dueDate+'T12:00:00') < new Date() && !t.done ? 'overdue' : ''}">${t.dueDate}</div>` : ''}
+                  <div class="kanban-card-footer">
+                    ${assignee ? `<div class="kanban-avatar" style="background:${assignee.color}" title="${escapeChatHtml(assignee.name)}">${assignee.initials}</div>` : ''}
+                    <button onclick="event.stopPropagation();quickToggleTask(${pid},${tid},this)" 
+                      class="kanban-check ${t.done?'done':''}" title="${t.done?'Marcar pendiente':'Marcar completado'}">${t.done?'✓':'○'}</button>
+                  </div>
+                </div>`;
+              }).join('')
+          }
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+let _viewerProjectId = null;
+let _viewerTaskId = null;
+
+export function openTaskViewer(projectId, taskId) {
+  const p = projects.find(pr => sameId(pr.id, projectId));
+  if (!p) return;
+  const t = p.tasks.find(tk => sameId(tk.id, taskId));
+  if (!t) return;
+
+  _viewerProjectId = projectId;
+  _viewerTaskId = taskId;
+
+  const assignee = USERS.find(u => sameId(u.id, t.assigneeId));
+  const priorityLabels = { alta: 'Alta', media: 'Media', normal: 'Normal', baja: 'Baja' };
+
+  const isOverdue = t.dueDate && new Date(t.dueDate + 'T12:00:00') < new Date() && !t.done;
+
+  document.getElementById('task-viewer-title').textContent = t.name;
+
+  const dot = document.getElementById('task-viewer-status-dot');
+  dot.style.cssText = `width:9px;height:9px;border-radius:50%;flex-shrink:0;background:${t.done ? 'var(--success)' : t.status === 'progress' ? 'var(--accent2)' : 'var(--text-muted)'}`;
+
+  const taskCommentCount = comments.filter(c => c.kind === 'task' && sameId(c.targetId, projectId) && sameId(c.extraId, taskId)).length;
+  document.getElementById('task-viewer-badges').innerHTML = `
+    ${t.done
+      ? `<span style="background:rgba(52,211,153,0.15);color:rgba(52,211,153,0.9);border:1px solid rgba(52,211,153,0.25);font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:0.03em">✓ Completada</span>`
+      : t.status === 'progress'
+        ? `<span style="background:rgba(251,191,36,0.12);color:rgba(255,210,60,0.9);border:1px solid rgba(251,191,36,0.22);font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:0.03em">⏳ En progreso</span>`
+        : `<span style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.4);border:1px solid rgba(255,255,255,0.1);font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:0.03em">○ Pendiente</span>`
+    }
+    ${t.priority && t.priority !== 'normal'
+      ? `<span style="font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:0.03em;${
+          t.priority === 'alta' ? 'background:rgba(239,68,68,0.15);color:rgba(255,120,120,0.95);border:1px solid rgba(239,68,68,0.25)' :
+          t.priority === 'media' ? 'background:rgba(251,191,36,0.12);color:rgba(255,210,60,0.95);border:1px solid rgba(251,191,36,0.22)' :
+          'background:rgba(52,211,153,0.1);color:rgba(52,211,153,0.85);border:1px solid rgba(52,211,153,0.2)'
+        }">⚑ ${priorityLabels[t.priority]}</span>`
+      : ''
+    }
+    ${isOverdue ? `<span style="background:rgba(239,68,68,0.15);color:rgba(255,100,100,0.9);border:1px solid rgba(239,68,68,0.25);font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px">⚠ Vencida</span>` : ''}
+    ${taskCommentCount > 0 ? `<span style="font-size:10px;color:rgba(255,255,255,0.3)">💬 ${taskCommentCount} comentario${taskCommentCount !== 1 ? 's' : ''}</span>` : ''}
+  `;
+
+  const descWrap = document.getElementById('task-viewer-desc-wrap');
+  if (t.desc) {
+    descWrap.style.display = 'block';
+    document.getElementById('task-viewer-desc').innerHTML = renderMarkdown(t.desc, t.images || {});
+  } else {
+    descWrap.style.display = 'none';
+  }
+
+  const metaItems = [];
+  if (assignee) {
+    metaItems.push(`
+      <div class="task-viewer-meta-item">
+        <div class="task-viewer-meta-label">Asignado a</div>
+        <div class="task-viewer-meta-value" style="display:flex;align-items:center;gap:6px">
+          <div style="width:20px;height:20px;border-radius:50%;background:${assignee.color};display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:white">${assignee.initials}</div>
+          ${escapeChatHtml(assignee.name)}
+        </div>
+      </div>`);
+  }
+  if (t.dueDate) {
+    metaItems.push(`
+      <div class="task-viewer-meta-item">
+        <div class="task-viewer-meta-label">Fecha límite</div>
+        <div class="task-viewer-meta-value ${isOverdue ? 'task-due-overdue' : ''}">${t.dueDate}</div>
+      </div>`);
+  }
+
+  document.getElementById('task-viewer-meta').innerHTML = metaItems.join('');
+  document.getElementById('task-viewer-project-dot').style.background = p.color;
+  document.getElementById('task-viewer-project-name').textContent = p.name;
+
+  const taskComments = comments
+    .filter(c => c.kind === 'task' && sameId(c.targetId, projectId) && sameId(c.extraId, taskId))
+    .slice(-3);
+  const commentsWrap = document.getElementById('task-viewer-comments-wrap');
+  if (taskComments.length > 0) {
+    commentsWrap.style.display = 'block';
+    document.getElementById('task-viewer-comments').innerHTML = taskComments.map(c => {
+      const author = USERS.find(u => sameId(u.id, c.authorId));
+      return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);margin-bottom:4px">
+      <div style="width:24px;height:24px;border-radius:50%;background:${author?.color || 'rgba(120,100,255,0.4)'};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0">${author?.initials || '?'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:3px">${author ? escapeChatHtml(author.name) : 'Anónimo'}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.75);line-height:1.5;word-break:break-word">${escapeChatHtml(c.body || '')}</div>
+      </div>
+    </div>`;
+    }).join('');
+  } else {
+    commentsWrap.style.display = 'none';
+  }
+
+  openModal('task-viewer-modal');
+}
+
+export function openEditFromViewer() {
+  if (!_viewerProjectId || !_viewerTaskId) return;
+  closeModal('task-viewer-modal');
+  openEditTaskModal(_viewerProjectId, _viewerTaskId);
+}
+
+export function openTaskCommentsFromViewer() {
+  if (!_viewerProjectId || !_viewerTaskId) return;
+  closeModal('task-viewer-modal');
+  if (typeof window.openTaskCommentsModal === 'function') {
+    window.openTaskCommentsModal(_viewerProjectId, _viewerTaskId);
+  }
+}
+
+export function setProjectViewMode(mode, projectId) {
+  window._projectViewMode = mode;
+  selectProject(projectId);
+}
+
+let _dragTaskId = null;
+let _dragProjectId = null;
+
+export function dragTaskStart(event, taskId, projectId) {
+  _dragTaskId = taskId;
+  _dragProjectId = projectId;
+  event.dataTransfer.effectAllowed = 'move';
+}
+
+export function dropTaskToColumn(event, colId, projectId) {
+  event.preventDefault();
+  if (!_dragTaskId || !_dragProjectId) return;
+  const p = projects.find(pr => sameId(pr.id, _dragProjectId));
+  if (!p) return;
+  const task = p.tasks.find(t => sameId(t.id, _dragTaskId));
+  if (!task) return;
+
+  if (colId === 'done') {
+    task.done = true;
+    task.status = 'done';
+  } else if (colId === 'progress') {
+    task.done = false;
+    task.status = 'progress';
+  } else {
+    task.done = false;
+    task.status = 'pending';
+    delete task.status;
+  }
+
+  _dragTaskId = null;
+  _dragProjectId = null;
+  saveProjectData();
+  renderProjects();
+  selectProject(projectId);
+}
+
 export function selectProject(id) {
   setCurrentProjectId(id);
   const p = projects.find(pr => sameId(pr.id, id));
@@ -335,26 +555,17 @@ export function selectProject(id) {
     <div class="tasks-section">
       <div class="tasks-section-header">
         <h4>Tareas</h4>
-        <button class="btn-primary" onclick="openAddTaskModal(${toOnclickStringArg(p.id)})" style="font-size:11px;padding:5px 12px">+ Tarea</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div class="view-toggle">
+            <button class="view-toggle-btn ${window._projectViewMode !== 'kanban' ? 'active' : ''}" 
+              onclick="setProjectViewMode('list',${toOnclickStringArg(p.id)})" title="Vista lista">≡</button>
+            <button class="view-toggle-btn ${window._projectViewMode === 'kanban' ? 'active' : ''}" 
+              onclick="setProjectViewMode('kanban',${toOnclickStringArg(p.id)})" title="Vista Kanban">⊞</button>
+          </div>
+          <button class="btn-primary" onclick="openAddTaskModal(${toOnclickStringArg(p.id)})" style="font-size:11px;padding:5px 12px">+ Tarea</button>
+        </div>
       </div>
-      ${p.tasks.length === 0
-        ? `<div class="empty-state" style="padding:20px"><div>Sin tareas aún</div></div>`
-        : p.tasks.map(t => {
-          const assignee = USERS.find(u => u.id === t.assigneeId);
-          const isFiltered = projectUserFilter !== null && t.assigneeId !== projectUserFilter;
-          const taskComments = commentIndicators('task', p.id, t.id);
-          return `<div class="task-item" data-task-id="${t.id}" style="${isFiltered ? 'opacity:0.35;' : ''}">
-            <div class="task-check ${t.done?'done':''}" onclick="quickToggleTask(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)},this)">${t.done?'✓':''}</div>
-            <span class="task-name ${t.done?'done':''}">
-              <span>${t.name}${taskComments}${t.desc ? ' <span style="font-size:9px;opacity:0.85">📄</span>' : ''}</span>
-            </span>
-            ${t.priority!=='normal'?`<span class="task-priority ${t.priority}">${t.priority}</span>`:''}
-            ${assignee?`<span class="task-assignee" style="display:flex;align-items:center;gap:4px"><div style="width:14px;height:14px;border-radius:50%;background:${assignee.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:var(--accent-text-on-bg)">${assignee.initials}</div>${assignee.name}</span>`:''}
-            <button type="button" class="task-comment-btn" onclick="event.stopPropagation();openTaskCommentsModal(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})" title="Comentarios de tarea">💬${taskComments ? ` ${comments.filter(c=>c.kind==='task'&&sameId(c.targetId,p.id)&&sameId(c.extraId,t.id)).length}` : ''}</button>
-            <button class="task-edit-btn" onclick="event.stopPropagation();openEditTaskModal(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})" title="Editar tarea">✏️</button>
-            <button class="task-delete-btn" onclick="deleteTask(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})">✕</button>
-          </div>`;
-        }).join('')}
+      ${window._projectViewMode === 'kanban' ? renderTasksKanban(p) : renderTasksList(p)}
     </div>
     ${subprojectsBlock}
     <div style="margin-top:var(--space-6)">
@@ -579,6 +790,7 @@ export function openAddTaskModal(projectId) {
   document.getElementById('task-desc-input').value = '';
   document.getElementById('task-desc-preview').innerHTML = '';
   document.getElementById('task-priority-input').value = 'normal';
+  document.getElementById('task-due-date').value = '';
   fillCollabTargetSelect('task-collab-target-select');
   const tts = document.getElementById('task-collab-target-select');
   const tps = document.getElementById('task-collab-permission-select');
@@ -611,6 +823,7 @@ export function openEditTaskModal(projectId, taskId) {
   document.getElementById('task-desc-input').value = t.desc || '';
   document.getElementById('task-desc-preview').innerHTML = t.desc ? renderMarkdown(t.desc, editingTaskImages) : '';
   document.getElementById('task-priority-input').value = t.priority || 'normal';
+  document.getElementById('task-due-date').value = t.dueDate || '';
   fillCollabTargetSelect('task-collab-target-select');
   const sh = (t.shares || []).find(s => s.type === 'dept' || s.type === 'workgroup');
   const tts = document.getElementById('task-collab-target-select');
@@ -648,16 +861,17 @@ export function saveTask() {
   const addSh = buildSharesFromCollabSelect('task-collab-target-select', 'task-collab-permission-select');
   const assigneeId = parseInt(document.getElementById('task-assignee-input').value) || null;
   const priority = document.getElementById('task-priority-input').value;
+  const dueDate = document.getElementById('task-due-date').value || null;
 
   if (editingTaskId) {
     const t = p.tasks.find(x => x.id === editingTaskId);
     if (!t) return;
     const old = t.shares || [];
     const rest = old.filter(s => s.type !== 'dept' && s.type !== 'workgroup');
-    Object.assign(t, { name, desc, images, assigneeId, priority, shares: [...rest, ...addSh] });
+    Object.assign(t, { name, desc, images, assigneeId, priority, dueDate, shares: [...rest, ...addSh] });
     showToast('Tarea actualizada','success');
   } else {
-    p.tasks.push({id:Date.now(),name,desc,done:false,assigneeId,priority,images,shares:addSh});
+    p.tasks.push({id:Date.now(),name,desc,done:false,assigneeId,priority,dueDate,images,shares:addSh});
     showToast('Tarea añadida','success');
   }
   saveProjectData();
@@ -668,15 +882,20 @@ export function saveTask() {
 }
 
 export function quickToggleTask(projectId, taskId, el) {
-  const p = projects.find(pr => pr.id === projectId);
+  const p = projects.find(pr => sameId(pr.id, projectId));
   if (!p) return;
-  const t = p.tasks.find(t => t.id === taskId);
+  const t = p.tasks.find(x => sameId(x.id, taskId));
   if (!t) return;
   t.done = !t.done;
   saveProjectData();
   el.classList.toggle('done', t.done);
-  el.textContent = t.done ? '✓' : '';
-  const nameEl = el.nextElementSibling;
+  if (el.classList.contains('kanban-check')) {
+    el.textContent = t.done ? '✓' : '○';
+  } else {
+    el.textContent = t.done ? '✓' : '';
+  }
+  const card = el.closest('.kanban-card');
+  const nameEl = card ? card.querySelector('.kanban-card-name') : el.nextElementSibling;
   if (nameEl) nameEl.classList.toggle('done', t.done);
   const allTasks = p.tasks;
   const done = allTasks.filter(t => t.done).length;
@@ -686,6 +905,9 @@ export function quickToggleTask(projectId, taskId, el) {
   if (fill) fill.style.width = pct + '%';
   const projItem = document.querySelector(`.project-item[data-project-id="${projectId}"] .project-item-meta span:last-child`);
   if (projItem) projItem.textContent = `${done}/${total} tareas`;
+  if (window._projectViewMode === 'kanban') {
+    selectProject(projectId);
+  }
 }
 
 export function toggleTask(projectId, taskId) {

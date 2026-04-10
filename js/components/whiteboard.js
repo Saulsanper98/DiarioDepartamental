@@ -437,6 +437,90 @@ function getStickyAnchors(s) {
   ];
 }
 
+// Calcular punto en el perímetro del elemento más cercano al punto externo
+function getPerimeterPoint(el, externalPoint) {
+  let cx, cy, w, h;
+
+  if (el.type === 'shape' && el.shape !== 'arrow' && el.shape !== 'line') {
+    cx = el.x + el.w/2; cy = el.y + el.h/2;
+    w = Math.abs(el.w); h = Math.abs(el.h);
+  } else if (el.type === 'card') {
+    cx = el.x + (el.w||220)/2; cy = el.y + (el.h||120)/2;
+    w = el.w||220; h = el.h||120;
+  } else if (el.type === 'text') {
+    ctx.save();
+    const style = `${el.italic ? 'italic ' : ''}${el.bold ? 'bold ' : ''}`;
+    ctx.font = `${style}${el.size || 24}px 'Syne', sans-serif`;
+    const tw = ctx.measureText(el.text || '').width;
+    ctx.restore();
+    cx = el.x + tw/2; cy = el.y + (el.size||24)/2;
+    w = tw + 12; h = (el.size||24) + 12;
+  } else if (el.w !== undefined) {
+    // Sticky
+    cx = el.x + (el.w||180)/2;
+    cy = el.y + (el.h||140)/2;
+    w = el.w||180; h = el.h||140;
+  } else {
+    return { x: el.x, y: el.y };
+  }
+
+  // Vector desde el centro del elemento hacia el punto externo
+  const dx = externalPoint.x - cx;
+  const dy = externalPoint.y - cy;
+
+  if (dx === 0 && dy === 0) return { x: cx, y: cy - h/2 };
+
+  // Calcular intersección con el perímetro del rectángulo
+  const halfW = w / 2;
+  const halfH = h / 2;
+
+  // Escalar para encontrar el punto en el borde
+  const scaleX = halfW / Math.abs(dx);
+  const scaleY = halfH / Math.abs(dy);
+  const s = Math.min(scaleX, scaleY);
+
+  return {
+    x: cx + dx * s,
+    y: cy + dy * s
+  };
+}
+
+// Para triángulos, calcular punto en el perímetro del triángulo
+function getTrianglePerimeterPoint(el, externalPoint) {
+  const tx = el.x, ty = el.y, tw = el.w, th = el.h;
+  // Vértices del triángulo
+  const vertices = [
+    { x: tx + tw/2, y: ty },
+    { x: tx + tw, y: ty + th },
+    { x: tx, y: ty + th }
+  ];
+  const cx = tx + tw/2;
+  const cy = ty + th * 0.6;
+
+  // Encontrar intersección con el lado más cercano al punto externo
+  let best = null;
+  let bestDist = Infinity;
+
+  for (let i = 0; i < vertices.length; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % vertices.length];
+    const pt = lineIntersect(cx, cy, externalPoint.x, externalPoint.y, a.x, a.y, b.x, b.y);
+    if (pt) {
+      const dist = Math.hypot(pt.x - externalPoint.x, pt.y - externalPoint.y);
+      if (dist < bestDist) { bestDist = dist; best = pt; }
+    }
+  }
+  return best || { x: cx, y: ty };
+}
+
+// Intersección de dos segmentos infinitos
+function lineIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+  const denom = (x1-x2)*(y3-y4) - (y1-y2)*(x3-x4);
+  if (Math.abs(denom) < 0.001) return null;
+  const t = ((x1-x3)*(y3-y4) - (y1-y3)*(x3-x4)) / denom;
+  return { x: x1 + t*(x2-x1), y: y1 + t*(y2-y1) };
+}
+
 // Obtener el punto de un anclaje específico
 function getAnchorPoint(el, side) {
   const anchors = getElementAnchors(el);
@@ -462,6 +546,26 @@ function getNearestAnchor(pos, excludeId = null) {
           side: anchor.side,
           x: anchor.x,
           y: anchor.y,
+          dist,
+          isSticky: false
+        };
+      }
+    }
+
+    // Punto de perímetro más cercano al cursor
+    const perimPt = el.type === 'shape' && el.shape === 'triangle'
+      ? getTrianglePerimeterPoint(el, pos)
+      : getPerimeterPoint(el, pos);
+
+    if (perimPt) {
+      const dist = Math.hypot(pos.x - perimPt.x, pos.y - perimPt.y);
+      if (dist < snapRadius && dist < minDist) {
+        minDist = dist;
+        nearest = {
+          elementId: el.id,
+          side: 'perimeter',
+          x: perimPt.x,
+          y: perimPt.y,
           dist,
           isSticky: false
         };
@@ -506,15 +610,87 @@ function recalcConnectorEndpoints(conn) {
   const fromEl = elements.find(e => e.id === conn.fromId) || stickies.find(s => s.id === conn.fromId);
   const toEl = elements.find(e => e.id === conn.toId) || stickies.find(s => s.id === conn.toId);
 
-  if (fromEl && conn.fromSide) {
-    const anchors = fromEl.type ? getElementAnchors(fromEl) : getStickyAnchors(fromEl);
-    const pt = anchors.find(a => a.side === conn.fromSide);
-    if (pt) { conn.x = pt.x; conn.y = pt.y; }
+  if (fromEl && toEl) {
+    const fromCenter = getElementCenter(fromEl);
+    const toCenter = getElementCenter(toEl);
+
+    // Calcular punto en el perímetro de cada elemento
+    // apuntando hacia el centro del otro elemento
+    let fromPt, toPt;
+
+    if (fromEl.type === 'shape' && fromEl.shape === 'triangle') {
+      fromPt = getTrianglePerimeterPoint(fromEl, toCenter);
+    } else {
+      fromPt = getPerimeterPoint(fromEl, toCenter);
+    }
+
+    if (toEl.type === 'shape' && toEl.shape === 'triangle') {
+      toPt = getTrianglePerimeterPoint(toEl, fromCenter);
+    } else {
+      toPt = getPerimeterPoint(toEl, fromCenter);
+    }
+
+    if (fromPt) { conn.x = fromPt.x; conn.y = fromPt.y; }
+    if (toPt) { conn.x2 = toPt.x; conn.y2 = toPt.y; }
+
+    // Actualizar sides para compatibilidad
+    conn.fromSide = getBestAnchorSide(fromCenter, toCenter);
+    conn.toSide = getBestAnchorSide(toCenter, fromCenter);
+
+  } else {
+    // Fallback para conectores con solo un extremo anclado
+    if (fromEl) {
+      const toPos = { x: conn.x2, y: conn.y2 };
+      const pt = fromEl.type === 'shape' && fromEl.shape === 'triangle'
+        ? getTrianglePerimeterPoint(fromEl, toPos)
+        : getPerimeterPoint(fromEl, toPos);
+      if (pt) { conn.x = pt.x; conn.y = pt.y; }
+    }
+    if (toEl) {
+      const fromPos = { x: conn.x, y: conn.y };
+      const pt = toEl.type === 'shape' && toEl.shape === 'triangle'
+        ? getTrianglePerimeterPoint(toEl, fromPos)
+        : getPerimeterPoint(toEl, fromPos);
+      if (pt) { conn.x2 = pt.x; conn.y2 = pt.y; }
+    }
   }
-  if (toEl && conn.toSide) {
-    const anchors = toEl.type ? getElementAnchors(toEl) : getStickyAnchors(toEl);
-    const pt = anchors.find(a => a.side === conn.toSide);
-    if (pt) { conn.x2 = pt.x; conn.y2 = pt.y; }
+}
+
+// Obtener el centro de un elemento
+function getElementCenter(el) {
+  if (el.type === 'shape' && el.shape !== 'arrow' && el.shape !== 'line') {
+    return { x: el.x + el.w/2, y: el.y + el.h/2 };
+  }
+  if (el.type === 'card') {
+    return { x: el.x + (el.w||220)/2, y: el.y + (el.h||120)/2 };
+  }
+  if (el.type === 'text') {
+    return { x: el.x, y: el.y };
+  }
+  if (el.type === 'image') {
+    return { x: el.x + el.w/2, y: el.y + el.h/2 };
+  }
+  // Sticky
+  if (el.w !== undefined) {
+    return { x: el.x + (el.w||180)/2, y: el.y + (el.h||140)/2 };
+  }
+  return { x: el.x, y: el.y };
+}
+
+// Determinar el mejor lado del elemento A para conectar al elemento B
+// basado en la dirección de B relativa a A
+function getBestAnchorSide(fromCenter, toCenter) {
+  const dx = toCenter.x - fromCenter.x;
+  const dy = toCenter.y - fromCenter.y;
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+
+  // Si la diferencia horizontal es mayor, usar left/right
+  // Si la diferencia vertical es mayor, usar top/bottom
+  if (absDx > absDy) {
+    return dx > 0 ? 'right' : 'left';
+  } else {
+    return dy > 0 ? 'bottom' : 'top';
   }
 }
 

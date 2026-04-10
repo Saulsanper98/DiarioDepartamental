@@ -146,6 +146,12 @@ import {
   quickToggleTask,
   deleteTask,
   toggleProjectTreeCollapse,
+  setProjectViewMode,
+  dragTaskStart,
+  dropTaskToColumn,
+  openTaskViewer,
+  openEditFromViewer,
+  openTaskCommentsFromViewer,
 } from './components/projects.js';
 import { exportNotes, exportAllData, clearAllData } from './components/export.js';
 import {
@@ -434,6 +440,12 @@ async function initializeApp() {
       deleteTask,
       openProjectCommentsModal,
       toggleProjectTreeCollapse,
+      setProjectViewMode,
+      dragTaskStart,
+      dropTaskToColumn,
+      openTaskViewer,
+      openEditFromViewer,
+      openTaskCommentsFromViewer,
       openNewChatModal,
       sendChatMessage,
       openChatLinkPicker,

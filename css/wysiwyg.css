@@ -5762,7 +5762,10 @@ html.tema-aurora .wb-layers-panel {
   -webkit-backdrop-filter: blur(24px) !important;
   border: 1px solid rgba(120,100,255,0.2) !important;
   border-radius: 12px !important;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  box-shadow: 
+    0 16px 48px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(120,100,255,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.05) !important;
   z-index: 50 !important;
   display: flex !important;
   flex-direction: column !important;
@@ -5777,7 +5780,7 @@ html.tema-aurora .wb-layers-header {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 10px 12px !important;
+  padding: 10px 14px !important;
   font-size: 10px !important;
   font-weight: 700 !important;
   color: rgba(255,255,255,0.35) !important;
@@ -5785,7 +5788,7 @@ html.tema-aurora .wb-layers-header {
   letter-spacing: 0.1em !important;
   border-bottom: 1px solid rgba(255,255,255,0.06) !important;
   flex-shrink: 0 !important;
-  background: rgba(120,100,255,0.05) !important;
+  background: rgba(120,100,255,0.06) !important;
 }
 
 html.tema-aurora .wb-layers-header button {
@@ -5794,9 +5797,9 @@ html.tema-aurora .wb-layers-header button {
   color: rgba(255,255,255,0.2) !important;
   cursor: pointer !important;
   font-size: 12px !important;
-  width: 20px !important;
-  height: 20px !important;
-  border-radius: 4px !important;
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 5px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -5812,6 +5815,17 @@ html.tema-aurora .wb-layers-list {
   flex: 1 !important;
   overflow-y: auto !important;
   padding: 6px !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(120,100,255,0.2) transparent !important;
+}
+
+html.tema-aurora .wb-layers-list::-webkit-scrollbar {
+  width: 3px !important;
+}
+
+html.tema-aurora .wb-layers-list::-webkit-scrollbar-thumb {
+  background: rgba(120,100,255,0.25) !important;
+  border-radius: 2px !important;
 }
 
 html.tema-aurora .wb-layers-empty {
@@ -5826,43 +5840,54 @@ html.tema-aurora .wb-layer-item {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
-  padding: 7px 8px !important;
-  border-radius: 7px !important;
+  padding: 6px 8px !important;
+  border-radius: 8px !important;
   cursor: pointer !important;
-  transition: background 0.12s !important;
+  transition: all 0.12s !important;
   border: 1px solid transparent !important;
-  margin-bottom: 1px !important;
+  margin-bottom: 2px !important;
 }
 
 html.tema-aurora .wb-layer-item:hover {
   background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.05) !important;
 }
 
 html.tema-aurora .wb-layer-item.selected {
   background: rgba(120,100,255,0.12) !important;
-  border-color: rgba(120,100,255,0.25) !important;
+  border-color: rgba(120,100,255,0.3) !important;
 }
 
 html.tema-aurora .wb-layer-item.hidden-layer {
-  opacity: 0.35 !important;
+  opacity: 0.3 !important;
 }
 
 html.tema-aurora .wb-layer-icon {
   font-size: 12px !important;
-  width: 18px !important;
-  text-align: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   flex-shrink: 0 !important;
-  color: rgba(255,255,255,0.4) !important;
+  background: rgba(255,255,255,0.05) !important;
+  border-radius: 5px !important;
+  color: rgba(255,255,255,0.5) !important;
 }
 
 html.tema-aurora .wb-layer-label {
   flex: 1 !important;
   font-size: 11px !important;
-  color: rgba(255,255,255,0.65) !important;
+  color: rgba(255,255,255,0.6) !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
   font-family: 'DM Mono', monospace !important;
+  letter-spacing: 0.01em !important;
+}
+
+html.tema-aurora .wb-layer-item.selected .wb-layer-label {
+  color: rgba(200,185,255,0.9) !important;
 }
 
 html.tema-aurora .wb-layer-actions {
@@ -5870,6 +5895,7 @@ html.tema-aurora .wb-layer-actions {
   gap: 1px !important;
   opacity: 0 !important;
   transition: opacity 0.12s !important;
+  flex-shrink: 0 !important;
 }
 
 html.tema-aurora .wb-layer-item:hover .wb-layer-actions,
@@ -5880,7 +5906,7 @@ html.tema-aurora .wb-layer-item.selected .wb-layer-actions {
 html.tema-aurora .wb-layer-btn {
   background: none !important;
   border: none !important;
-  color: rgba(255,255,255,0.25) !important;
+  color: rgba(255,255,255,0.2) !important;
   cursor: pointer !important;
   width: 20px !important;
   height: 20px !important;
@@ -5904,16 +5930,9 @@ html.tema-aurora .wb-layer-btn.danger:hover {
 }
 
 html.tema-aurora .wb-layer-btn:disabled {
-  opacity: 0.15 !important;
+  opacity: 0.12 !important;
   cursor: not-allowed !important;
-}
-
-html.tema-aurora .wb-layers-list::-webkit-scrollbar { 
-  width: 3px !important; 
-}
-html.tema-aurora .wb-layers-list::-webkit-scrollbar-thumb {
-  background: rgba(120,100,255,0.2) !important;
-  border-radius: 2px !important;
+  pointer-events: none !important;
 }
 
 html.tema-aurora .wb-shapes-submenu {
@@ -6130,5 +6149,257 @@ html.tema-aurora #wb-ctx-color-preview {
   border: 1.5px solid rgba(255,255,255,0.2) !important;
   pointer-events: none !important;
   box-shadow: 0 1px 4px rgba(0,0,0,0.4) !important;
+}
+
+html.tema-aurora .view-toggle {
+  display: flex !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 7px !important;
+  padding: 2px !important;
+  gap: 2px !important;
+}
+
+html.tema-aurora .view-toggle-btn {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255,255,255,0.35) !important;
+  border-radius: 5px !important;
+  width: 26px !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  transition: all 0.12s !important;
+}
+
+html.tema-aurora .view-toggle-btn.active {
+  background: rgba(120,100,255,0.25) !important;
+  color: rgba(200,185,255,1) !important;
+}
+
+html.tema-aurora .kanban-board {
+  display: flex !important;
+  gap: 12px !important;
+  overflow-x: auto !important;
+  padding: 4px 0 8px !important;
+  min-height: 200px !important;
+}
+
+html.tema-aurora .kanban-col {
+  flex: 1 !important;
+  min-width: 180px !important;
+  max-width: 280px !important;
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+html.tema-aurora .kanban-col[data-col="done"] {
+  border-color: rgba(52,211,153,0.15) !important;
+  background: rgba(52,211,153,0.03) !important;
+}
+
+html.tema-aurora .kanban-col[data-col="progress"] {
+  border-color: rgba(251,191,36,0.15) !important;
+  background: rgba(251,191,36,0.03) !important;
+}
+
+html.tema-aurora .kanban-col-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 12px 8px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora .kanban-col-title {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: rgba(255,255,255,0.5) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+}
+
+html.tema-aurora .kanban-col-count {
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.25) !important;
+  background: rgba(255,255,255,0.07) !important;
+  border-radius: 10px !important;
+  padding: 1px 7px !important;
+  font-family: 'DM Mono', monospace !important;
+}
+
+html.tema-aurora .kanban-col-body {
+  flex: 1 !important;
+  padding: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  overflow-y: auto !important;
+  min-height: 60px !important;
+}
+
+html.tema-aurora .kanban-card {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 8px !important;
+  padding: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+html.tema-aurora .kanban-card:hover {
+  background: rgba(120,100,255,0.1) !important;
+  border-color: rgba(120,100,255,0.25) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+}
+
+html.tema-aurora .kanban-card-name {
+  font-size: 12px !important;
+  color: rgba(255,255,255,0.85) !important;
+  line-height: 1.4 !important;
+}
+
+html.tema-aurora .kanban-card-due {
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.35) !important;
+  font-family: 'DM Mono', monospace !important;
+}
+
+html.tema-aurora .kanban-card-due.overdue {
+  color: rgba(239,68,68,0.8) !important;
+}
+
+html.tema-aurora .kanban-card-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-top: 2px !important;
+}
+
+html.tema-aurora .kanban-avatar {
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  color: white !important;
+  flex-shrink: 0 !important;
+}
+
+html.tema-aurora .kanban-check {
+  background: none !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  color: rgba(255,255,255,0.3) !important;
+  border-radius: 50% !important;
+  width: 18px !important;
+  height: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 9px !important;
+  cursor: pointer !important;
+  transition: all 0.12s !important;
+  padding: 0 !important;
+}
+
+html.tema-aurora .kanban-check.done {
+  background: rgba(52,211,153,0.2) !important;
+  border-color: rgba(52,211,153,0.5) !important;
+  color: rgba(52,211,153,0.9) !important;
+}
+
+html.tema-aurora .kanban-empty {
+  text-align: center !important;
+  color: rgba(255,255,255,0.15) !important;
+  font-size: 11px !important;
+  padding: 16px 8px !important;
+  font-style: italic !important;
+}
+
+html.tema-aurora .task-due {
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.3) !important;
+  font-family: 'DM Mono', monospace !important;
+}
+
+html.tema-aurora .task-due-overdue {
+  color: rgba(239,68,68,0.8) !important;
+}
+
+html.tema-aurora .task-viewer-modal-inner {
+  background: rgba(10,8,28,0.98) !important;
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
+  border: 1px solid rgba(120,100,255,0.18) !important;
+  border-radius: 16px !important;
+  box-shadow: 
+    0 32px 80px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(120,100,255,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora .task-viewer-meta-item {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  transition: background 0.15s !important;
+}
+
+html.tema-aurora .task-viewer-meta-label {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  color: rgba(255,255,255,0.25) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  margin-bottom: 6px !important;
+}
+
+html.tema-aurora .task-viewer-meta-value {
+  font-size: 13px !important;
+  color: rgba(255,255,255,0.8) !important;
+  font-weight: 500 !important;
+}
+
+html.tema-aurora .task-priority {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  padding: 2px 8px !important;
+  border-radius: 20px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  flex-shrink: 0 !important;
+}
+
+html.tema-aurora .task-priority.alta {
+  background: rgba(239,68,68,0.15) !important;
+  color: rgba(255,120,120,0.95) !important;
+  border: 1px solid rgba(239,68,68,0.25) !important;
+}
+
+html.tema-aurora .task-priority.media {
+  background: rgba(251,191,36,0.12) !important;
+  color: rgba(255,210,60,0.95) !important;
+  border: 1px solid rgba(251,191,36,0.22) !important;
+}
+
+html.tema-aurora .task-priority.baja {
+  background: rgba(52,211,153,0.1) !important;
+  color: rgba(52,211,153,0.85) !important;
+  border: 1px solid rgba(52,211,153,0.2) !important;
 }
 
