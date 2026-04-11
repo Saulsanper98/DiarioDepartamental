@@ -1,10 +1,11 @@
 // ===== VIEWS MODULE =====
 
 // Import required dependencies
-import { currentUser, currentView, currentNoteView, currentDate, weekOffset, activeShiftFilters, searchQuery, notes, USERS, sameId, toDateStr, setCurrentView, setCurrentNoteView, setCurrentDate, workGroups, wgInvites, setWorkGroups, setWgInvites, CORE_DEPARTMENT_GROUPS, setActiveShiftFilters, setSearchQuery, setProjectUserFilter, setWeekOffset } from './data.js';
+import { currentUser, currentView, currentNoteView, currentDate, weekOffset, activeShiftFilters, searchQuery, notes, USERS, sameId, toDateStr, setCurrentView, setCurrentNoteView, setCurrentDate, workGroups, wgInvites, setWorkGroups, setWgInvites, CORE_DEPARTMENT_GROUPS, setActiveShiftFilters, setSearchQuery, setSearchNotesAllDates, setProjectUserFilter, setWeekOffset } from './data.js';
 import { renderThemeGrid } from './themes.js';
 import { showToast, escapeChatHtml, openModal, closeModal, showConfirmModal } from './modalControl.js';
-import { renderNotes, renderPublicNotes } from './notes.js';
+import { renderNotes, renderPublicNotes, userCanSeeNote } from './notes.js';
+import { loadReadMentions, saveReadMentions } from './mentionsRead.js';
 import { renderProjects, userIsActiveWorkGroupMember } from './projects.js';
 import { renderPostitBoard } from './postit.js';
 import { renderDocs } from './docs.js';
@@ -12,6 +13,9 @@ import { renderChat, updateChatNavBadge } from './chat.js';
 import { renderShortcuts, onShortcutIconModeChange } from './shortcuts.js';
 import { renderWhiteboard } from './whiteboard.js';
 import { renderSettingsEditor, updateWorkGroupInviteNavBadge } from './login.js';
+
+export { loadReadMentions, saveReadMentions };
+
 // ===== VIEW CONSTANTS =====
 const VIEWS = ['notes','public-notes','my-groups','postit','projects','docs','chat','shortcuts','settings','whiteboard'];
 
@@ -29,23 +33,33 @@ function getViewHTML(view) {
       return `
         <div class="topbar">
           <h2 id="view-title">Todas las Notas</h2>
-          <div class="search-bar">
-            <span class="search-icon">🔍</span>
-            <input type="text" placeholder="Buscar notas..." id="search-input" oninput="handleSearch(this.value)">
-          </div>
-          <div style="display:flex;gap:8px">
-            <div style="position:relative">
-              <button class="notif-btn" title="Notificaciones">🔔<span class="notif-badge hidden" id="notif-badge"></span></button>
+          <div class="notes-search-wrap">
+            <div class="search-bar">
+              <span class="search-icon">🔍</span>
+              <input type="text" placeholder="Buscar notas…" id="search-input" oninput="handleSearch(this.value)">
             </div>
-            <div class="export-toolbar-wrap">
-              <span class="export-toolbar-label">Exportar notas (archivo)</span>
+            <label class="notes-search-history-toggle" title="Con el buscador relleno, incluye todas las fechas">
+              <input type="checkbox" id="notes-search-history" class="notes-search-history-input" onchange="onNotesSearchHistoryChange(this)">
+              <span class="notes-search-history-track" aria-hidden="true"><span class="notes-search-history-thumb"></span></span>
+              <span class="notes-search-history-caption">Historial completo</span>
+            </label>
+          </div>
+          <div class="topbar-notes-actions">
+            <div class="export-toolbar-wrap" title="Exportar notas del día, semana o mes como archivo de texto">
+              <span class="export-toolbar-label export-toolbar-label--notes-inline">Exportar</span>
               <div class="export-btn-group">
                 <button type="button" class="export-btn" onclick="exportNotes('day')" title="Descargar notas del día como archivo de texto">📄 Día</button>
                 <button type="button" class="export-btn" onclick="exportNotes('week')" title="Descargar notas de la semana">📅 Semana</button>
                 <button type="button" class="export-btn" onclick="exportNotes('month')" title="Descargar notas del mes">🗓 Mes</button>
               </div>
             </div>
-            <button class="btn-action" onclick="openNewNoteModal()">✏️ Nueva Nota</button>
+            <div style="position:relative">
+              <button class="notif-btn" title="Notificaciones">🔔<span class="notif-badge hidden" id="notif-badge"></span></button>
+            </div>
+            <button type="button" class="btn-topbar-templates" onclick="openNoteTemplatesModal()" title="Plantillas de nota guardadas en este equipo">
+              <span class="btn-topbar-templates-icon" aria-hidden="true">📋</span><span class="btn-topbar-templates-text">Plantillas</span>
+            </button>
+            <button type="button" class="btn-action" onclick="openNewNoteModal()">✏️ Nueva Nota</button>
           </div>
         </div>
 
@@ -102,7 +116,10 @@ function getViewHTML(view) {
       return `
         <div class="topbar">
           <h2>🎯 Proyectos & Tareas</h2>
-          <button class="btn-action" onclick="openNewProjectModal()">🎯 Nuevo Proyecto</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button type="button" class="btn-secondary" onclick="openMyWorkTasksView()">📋 Mis tareas</button>
+            <button class="btn-action" onclick="openNewProjectModal()">🎯 Nuevo Proyecto</button>
+          </div>
         </div>
         <div class="project-user-filter" id="project-user-filter">
           <span class="puf-label">Filtrar por:</span>
@@ -374,7 +391,9 @@ function getViewHTML(view) {
               <button class="export-btn" onclick="exportNotes('week')">📅 Notas de la Semana</button>
               <button class="export-btn" onclick="exportNotes('month')">🗓 Notas del Mes</button>
               <button class="export-btn" onclick="exportAllData()">💾 Exportar Todo</button>
+              <button type="button" class="export-btn" onclick="triggerImportDiarioBackup()">📥 Importar backup</button>
             </div>
+            <p style="font-size:11px;color:var(--text-muted);margin:10px 0 0;line-height:1.45">«Exportar todo» incluye notas, proyectos, documentos, post-it, chat, <strong>comentarios</strong> (notas, post-it, proyectos, tareas, documentos), grupos de trabajo y <strong>plantillas de proyecto personalizadas</strong>. «Importar backup» sustituye esos datos por los del archivo JSON (tras confirmación).</p>
           </div>
 
           <div class="settings-section">
@@ -524,8 +543,8 @@ export function renderDateNav() {
     });
     const hasUnreadMention = notes.some(n =>
       n.date === ds &&
-      n.group === currentUser.group &&
-      (n.mentions || []).includes(currentUser.id) &&
+      userCanSeeNote(n) &&
+      (n.mentions || []).some(mid => sameId(mid, currentUser.id)) &&
       !readSet.has(n.id)
     );
     const label = isToday ? 'Hoy' : d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
@@ -594,7 +613,12 @@ export function toggleShiftFilter(shift, btn) {
  * @param {string} q - Search query
  */
 export function handleSearch(q) {
-  setSearchQuery(q.toLowerCase());
+  setSearchQuery(q.toLowerCase().trim());
+  renderNotes();
+}
+
+export function onNotesSearchHistoryChange(el) {
+  setSearchNotesAllDates(!!(el && el.checked));
   renderNotes();
 }
 
@@ -614,26 +638,6 @@ export function setNoteView(view, btn) {
 }
 
 // ===== UTILITY FUNCTIONS =====
-// These functions are placeholders that will be implemented in other modules
-
-export function loadReadMentions() {
-  const key = getReadMentionsKey();
-  if (!key) return new Set();
-  try {
-    const stored = localStorage.getItem(key);
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  } catch { return new Set(); }
-}
-
-function departmentDiarySameCoreDeptNote(n) {
-  // Will be implemented in notes.js
-  return false;
-}
-
-function userCanSeeNote(n) {
-  // Will be implemented in notes.js
-  return true;
-}
 
 function renderMyGroupsView() {
   const root = document.getElementById('my-groups-root');
@@ -691,15 +695,6 @@ function renderMyGroupsView() {
 }
 
 // ===== MENTION MANAGEMENT =====
-function getReadMentionsKey() {
-  return currentUser ? `diario_read_mentions_${currentUser.id}` : null;
-}
-
-export function saveReadMentions(readSet) {
-  const key = getReadMentionsKey();
-  if (!key) return;
-  localStorage.setItem(key, JSON.stringify([...readSet]));
-}
 
 export function markMentionAsRead(noteId) {
   if (!currentUser) return;
@@ -709,7 +704,7 @@ export function markMentionAsRead(noteId) {
     saveReadMentions(readSet);
     updateBadges();
     // Si estamos en la vista menciones, actualizar sin re-renderizar todo
-    const card = document.querySelector(`.note-card[data-note-id="${noteId}"]`);
+    const card = document.querySelector(`[data-note-id="${noteId}"]`);
     if (card) {
       card.classList.add('mention-read');
       const dot = card.querySelector('.mention-read-dot');
@@ -720,10 +715,27 @@ export function markMentionAsRead(noteId) {
   }
 }
 
+/** Marca como leídas todas las notas donde el usuario actual está mencionado (y puede ver). */
+export function markAllNoteMentionsAsRead() {
+  if (!currentUser) return;
+  const readSet = loadReadMentions();
+  for (const n of notes) {
+    if (!userCanSeeNote(n)) continue;
+    if (!(n.mentions || []).some(mid => sameId(mid, currentUser.id))) continue;
+    readSet.add(n.id);
+  }
+  saveReadMentions(readSet);
+  updateBadges();
+  renderNotes();
+}
+
 export function updateBadges() {
   if (!currentUser) return;
   const readSet = loadReadMentions();
-  const allMentions = notes.filter(n => n.group === currentUser.group && n.mentions.includes(currentUser.id));
+  const allMentions = notes.filter(n =>
+    userCanSeeNote(n) &&
+    (n.mentions || []).some(mid => sameId(mid, currentUser.id))
+  );
   const unreadMentions = allMentions.filter(n => !readSet.has(n.id));
 
   const mentionsBadge = document.getElementById('mention-badge');

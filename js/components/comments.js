@@ -482,11 +482,11 @@ function highlight(text) {
 }
 
 function openDetail(id) {
-  const note = notes.find(n => n.id === id);
+  const note = notes.find(n => sameId(n.id, id));
   if (!note || !userCanSeeNote(note)) return;
-  const author = USERS.find(u => u.id === note.authorId) || {color:'#888',initials:'?',name:'Desconocido'};
+  const author = USERS.find(u => sameId(u.id, note.authorId)) || {color:'#888',initials:'?',name:'Desconocido'};
   const shift = SHIFTS[note.shift];
-  const mentionedUsers = note.mentions.map(mid => USERS.find(u => sameId(u.id, mid))).filter(Boolean);
+  const mentionedUsers = (note.mentions || []).map(mid => USERS.find(u => sameId(u.id, mid))).filter(Boolean);
   let body = note.body;
   body = renderMarkdown(body, note.images || {});
   document.getElementById('detail-body').innerHTML = `
@@ -495,7 +495,7 @@ function openDetail(id) {
         <div class="mention-chip"><div class="chip-avatar mention-avatar" style="background:${author.color}">${author.initials}</div>${author.name}</div>
         <span class="note-tag note-tag-shift">${shift.emoji} ${shift.label}</span>
         ${note.priority!=='normal'?`<span class="note-tag priority-${note.priority}">${note.priority==='alta'?'🔴 Alta':'Media'}</span>`:''}
-        ${note.visibility==='public'?'<span class="note-tag note-tag-public">🌐 Pública</span>':'<span class="note-tag note-tag-private">🔒 Privada</span>'}
+        ${note.visibility==='public'?'<span class="note-tag note-tag-public">🌐 Pública</span>':note.visibility==='department'?'<span class="note-tag note-tag-dept">🏢 Departamento</span>':'<span class="note-tag note-tag-private">🔒 Privada</span>'}
         <span class="note-tag note-tag-group" title="Departamento de origen">🏢 Origen: ${note.group || '—'}</span>
         ${note.reminder ? `<span class="note-reminder">⏰ ${typeof note.reminder === 'string' ? escapeChatHtml(note.reminder) : escapeChatHtml(note.reminderTime || 'Recordatorio activo')}</span>` : ''}
       </div>
@@ -513,7 +513,7 @@ function openDetail(id) {
   openModal('detail-modal');
 
   // Marcar mención como leída si el usuario actual está mencionado
-  if (note.mentions && note.mentions.includes(currentUser.id)) {
+  if ((note.mentions || []).some(mid => sameId(mid, currentUser.id))) {
     markMentionAsRead(note.id);
   }
 }

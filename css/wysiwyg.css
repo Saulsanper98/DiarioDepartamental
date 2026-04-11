@@ -314,6 +314,10 @@ html.tema-aurora .wb-overlay-canvas {
 .shift-notes .note-card .note-card-header .note-tags {
   margin-left: auto;
   flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 #view-notes .note-card .note-author-avatar,
@@ -422,8 +426,10 @@ html.tema-aurora .wb-overlay-canvas {
 #public-notes-area .note-card .note-actions,
 .shift-notes .note-card .note-actions {
   display: flex;
-  gap: 0;
+  gap: 8px;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   margin-left: auto;
   opacity: 0;
   transition: opacity 0.15s ease;
@@ -448,16 +454,19 @@ html.tema-aurora .wb-overlay-canvas {
 #public-notes-area .note-card .note-action-btn,
 .shift-notes .note-card .note-action-btn {
   font-size: 11px;
-  font-weight: 500;
-  padding: 0 2px;
+  font-weight: 600;
+  font-family: 'Syne', sans-serif;
+  padding: 6px 12px;
   margin: 0;
-  border: none;
-  border-radius: 0;
-  background: none;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  background: var(--surface3, rgba(255, 255, 255, 0.06));
   box-shadow: none;
   color: var(--color-text-secondary, var(--text-muted));
   opacity: 1;
   cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
 #view-notes .note-card .note-action-btn:hover,
@@ -466,7 +475,8 @@ html.tema-aurora .wb-overlay-canvas {
 #public-notes-area .note-card .note-action-btn:hover,
 .shift-notes .note-card .note-action-btn:hover {
   color: var(--color-text-primary, var(--text-primary, var(--text)));
-  background: none;
+  background: var(--surface2, rgba(255, 255, 255, 0.1));
+  border-color: rgba(120, 88, 246, 0.4);
 }
 
 html[class*='tema-claro'] #view-notes .note-card .note-action-btn:hover,
@@ -476,7 +486,7 @@ html[class*='tema-claro'] #public-notes-area .note-card .note-action-btn:hover,
 html[class*='tema-claro'] .shift-notes .note-card .note-action-btn:hover {
   color: var(--color-text-primary, #374151) !important;
   -webkit-text-fill-color: var(--color-text-primary, #374151) !important;
-  background: none !important;
+  background: var(--surface3, #f3f4f6) !important;
 }
 
 #view-notes .note-card .note-action-btn.delete:hover,
@@ -1395,6 +1405,182 @@ html.tema-aurora #project-modal input[type="color"] {
   box-shadow: none !important;
 }
 
+/* ── Aurora — Plantillas de proyecto: guardar / gestionar / renombrar (misma línea que #project-modal) ── */
+html.tema-aurora #save-project-template-modal,
+html.tema-aurora #manage-project-templates-modal,
+html.tema-aurora #rename-project-template-modal,
+html.tema-aurora #apply-template-to-project-modal {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora #save-project-template-modal .modal,
+html.tema-aurora #manage-project-templates-modal .modal,
+html.tema-aurora #rename-project-template-modal .modal,
+html.tema-aurora #apply-template-to-project-modal .modal {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora #save-project-template-modal .modal-header,
+html.tema-aurora #manage-project-templates-modal .modal-header,
+html.tema-aurora #rename-project-template-modal .modal-header,
+html.tema-aurora #apply-template-to-project-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #save-project-template-modal .modal-title,
+html.tema-aurora #save-project-template-modal h2,
+html.tema-aurora #save-project-template-modal h3,
+html.tema-aurora #manage-project-templates-modal .modal-title,
+html.tema-aurora #manage-project-templates-modal h2,
+html.tema-aurora #manage-project-templates-modal h3,
+html.tema-aurora #rename-project-template-modal .modal-title,
+html.tema-aurora #rename-project-template-modal h2,
+html.tema-aurora #rename-project-template-modal h3,
+html.tema-aurora #apply-template-to-project-modal .modal-title,
+html.tema-aurora #apply-template-to-project-modal h2,
+html.tema-aurora #apply-template-to-project-modal h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #save-project-template-modal .modal-body,
+html.tema-aurora #manage-project-templates-modal .modal-body,
+html.tema-aurora #rename-project-template-modal .modal-body,
+html.tema-aurora #apply-template-to-project-modal .modal-body {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+html.tema-aurora #save-project-template-modal .modal-body > p,
+html.tema-aurora #manage-project-templates-modal .modal-body > p,
+html.tema-aurora #rename-project-template-modal .modal-body > p,
+html.tema-aurora #apply-template-to-project-modal .modal-body > p,
+html.tema-aurora #apply-template-to-project-modal .apply-template-help,
+html.tema-aurora #save-project-template-modal #template-save-task-count {
+  color: rgba(255,255,255,0.52) !important;
+}
+
+html.tema-aurora #save-project-template-modal label,
+html.tema-aurora #rename-project-template-modal label,
+html.tema-aurora #apply-template-to-project-modal label {
+  color: rgba(255,255,255,0.45) !important;
+}
+
+html.tema-aurora #save-project-template-modal input[type="text"],
+html.tema-aurora #rename-project-template-modal input[type="text"] {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255,255,255,0.9) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #apply-template-to-project-modal select,
+html.tema-aurora #apply-template-to-project-modal select option {
+  background: #1a2035 !important;
+  color: rgba(255,255,255,0.8) !important;
+  color-scheme: dark !important;
+}
+html.tema-aurora #apply-template-to-project-modal select {
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  padding: 9px 12px !important;
+}
+html.tema-aurora #apply-template-to-project-modal input[type="checkbox"] {
+  accent-color: rgba(120,100,255,0.85);
+}
+
+html.tema-aurora #save-project-template-modal input::placeholder,
+html.tema-aurora #rename-project-template-modal input::placeholder {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+html.tema-aurora #save-project-template-modal .modal-footer,
+html.tema-aurora #manage-project-templates-modal .modal-footer,
+html.tema-aurora #rename-project-template-modal .modal-footer,
+html.tema-aurora #apply-template-to-project-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  background: rgba(0,0,0,0.1) !important;
+}
+
+html.tema-aurora #save-project-template-modal .btn-cancel,
+html.tema-aurora #manage-project-templates-modal .btn-cancel,
+html.tema-aurora #rename-project-template-modal .btn-cancel,
+html.tema-aurora #apply-template-to-project-modal .btn-cancel {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.5) !important;
+}
+
+html.tema-aurora #save-project-template-modal .btn-save,
+html.tema-aurora #rename-project-template-modal .btn-save,
+html.tema-aurora #apply-template-to-project-modal .btn-save {
+  background: linear-gradient(135deg, rgba(120,100,255,0.8), rgba(80,60,200,0.8)) !important;
+  border: 1px solid rgba(120,100,255,0.5) !important;
+  box-shadow: 0 3px 12px rgba(120,100,255,0.4) !important;
+  color: white !important;
+}
+
+html.tema-aurora #manage-project-templates-modal .manage-template-row {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 12px !important;
+  margin-bottom: 10px !important;
+}
+html.tema-aurora #manage-project-templates-modal .manage-template-row:last-child {
+  margin-bottom: 0 !important;
+}
+html.tema-aurora #manage-project-templates-modal .manage-template-row-name {
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+html.tema-aurora #manage-project-templates-modal .manage-template-row-meta {
+  font-size: 11px !important;
+  color: rgba(255,255,255,0.45) !important;
+  margin-top: 4px !important;
+}
+
+html.tema-aurora #manage-project-templates-modal .btn-secondary {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  color: rgba(255,255,255,0.82) !important;
+}
+html.tema-aurora #manage-project-templates-modal .btn-secondary:hover {
+  background: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  color: #fff !important;
+}
+html.tema-aurora #manage-project-templates-modal .btn-secondary-danger {
+  background: rgba(239,68,68,0.12) !important;
+  border: 1px solid rgba(239,68,68,0.35) !important;
+  color: #fecaca !important;
+}
+html.tema-aurora #manage-project-templates-modal .btn-secondary-danger:hover {
+  background: rgba(239,68,68,0.22) !important;
+  border-color: rgba(239,68,68,0.5) !important;
+  color: #fff !important;
+}
+
+html.tema-aurora #save-project-template-modal .modal-close,
+html.tema-aurora #manage-project-templates-modal .modal-close,
+html.tema-aurora #rename-project-template-modal .modal-close,
+html.tema-aurora #apply-template-to-project-modal .modal-close {
+  color: rgba(255,255,255,0.55) !important;
+}
+html.tema-aurora #save-project-template-modal .modal-close:hover,
+html.tema-aurora #manage-project-templates-modal .modal-close:hover,
+html.tema-aurora #rename-project-template-modal .modal-close:hover,
+html.tema-aurora #apply-template-to-project-modal .modal-close:hover {
+  color: rgba(255,255,255,0.95) !important;
+  background: rgba(255,255,255,0.08) !important;
+}
+
 /* ── Aurora — Modal Nueva Tarea (#task-modal en index.html) ── */
 html.tema-aurora #task-modal {
   background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
@@ -1687,6 +1873,56 @@ html.tema-aurora .custom-select-optgroup-label {
 /* ── Aurora — Proyectos & Tareas ── */
 html.tema-aurora .projects-layout {
   background: transparent !important;
+}
+
+/* Menú contextual: clic derecho en fila del árbol de proyectos */
+.project-tree-ctx-menu {
+  position: fixed;
+  z-index: 12000;
+  min-width: 220px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  background: var(--modal-surface, #fff);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+}
+.project-tree-ctx-menu .project-tree-ctx-item {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-primary, inherit);
+  font-family: inherit;
+  line-height: 1.35;
+}
+.project-tree-ctx-menu .project-tree-ctx-item:hover {
+  background: var(--hover-bg, rgba(0, 0, 0, 0.06));
+}
+
+/* Aurora / paneles oscuros: el menú debe contrastar con el lateral (no usar superficie casi transparente) */
+html.tema-aurora .project-tree-ctx-menu {
+  background: rgba(22, 18, 48, 0.97) !important;
+  backdrop-filter: blur(20px) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    0 0 0 1px rgba(120, 100, 255, 0.12),
+    0 16px 48px rgba(0, 0, 0, 0.55) !important;
+}
+html.tema-aurora .project-tree-ctx-menu .project-tree-ctx-item {
+  color: rgba(255, 255, 255, 0.92) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.92) !important;
+}
+html.tema-aurora .project-tree-ctx-menu .project-tree-ctx-item:hover {
+  background: rgba(120, 100, 255, 0.28) !important;
+  color: #fff !important;
 }
 
 html.tema-aurora .projects-list-panel {
@@ -6401,5 +6637,386 @@ html.tema-aurora .task-priority.baja {
   background: rgba(52,211,153,0.1) !important;
   color: rgba(52,211,153,0.85) !important;
   border: 1px solid rgba(52,211,153,0.2) !important;
+}
+
+html.tema-aurora .task-sort-btns {
+  display: flex !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 7px !important;
+  padding: 2px !important;
+  gap: 2px !important;
+}
+
+html.tema-aurora .task-sort-btn {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255,255,255,0.35) !important;
+  border-radius: 5px !important;
+  width: 26px !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+  transition: all 0.12s !important;
+}
+
+html.tema-aurora .task-sort-btn:hover {
+  background: rgba(255,255,255,0.07) !important;
+  color: rgba(255,255,255,0.7) !important;
+}
+
+html.tema-aurora .task-sort-btn.active {
+  background: rgba(120,100,255,0.25) !important;
+  color: rgba(200,185,255,1) !important;
+}
+
+html.tema-aurora .task-search-wrap {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+html.tema-aurora .task-search-input {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 8px !important;
+  color: rgba(255,255,255,0.85) !important;
+  font-size: 11px !important;
+  padding: 5px 28px 5px 10px !important;
+  width: 160px !important;
+  height: 30px !important;
+  outline: none !important;
+  transition: all 0.15s !important;
+}
+
+html.tema-aurora .task-search-input:focus {
+  background: rgba(255,255,255,0.09) !important;
+  border-color: rgba(120,100,255,0.4) !important;
+  width: 200px !important;
+}
+
+html.tema-aurora .task-search-input::placeholder {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+html.tema-aurora .task-search-clear {
+  position: absolute !important;
+  right: 6px !important;
+  background: none !important;
+  border: none !important;
+  color: rgba(255,255,255,0.25) !important;
+  cursor: pointer !important;
+  font-size: 10px !important;
+  padding: 0 !important;
+  width: 16px !important;
+  height: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  transition: all 0.12s !important;
+}
+
+html.tema-aurora .task-search-clear:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.7) !important;
+}
+
+html.tema-aurora .proj-stats-block {
+  background: rgba(255,255,255,0.02) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+}
+
+html.tema-aurora .proj-stat-card {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 10px !important;
+  padding: 12px !important;
+  text-align: center !important;
+}
+
+html.tema-aurora .proj-stat-value {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: rgba(255,255,255,0.85) !important;
+  line-height: 1 !important;
+  margin-bottom: 4px !important;
+  font-family: 'DM Mono', monospace !important;
+}
+
+html.tema-aurora .proj-stat-label {
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  color: rgba(255,255,255,0.25) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+}
+
+html.tema-aurora .task-hours {
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.3) !important;
+  font-family: 'DM Mono', monospace !important;
+  flex-shrink: 0 !important;
+}
+
+html.tema-aurora .kanban-card-hours {
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.3) !important;
+  font-family: 'DM Mono', monospace !important;
+}
+
+html.tema-aurora .task-blocked {
+  opacity: 0.6 !important;
+  border-left: 2px solid rgba(239,68,68,0.3) !important;
+}
+
+html.tema-aurora .task-blocked .task-check {
+  cursor: not-allowed !important;
+  opacity: 0.5 !important;
+}
+
+html.tema-aurora .project-deps-warning {
+  margin-top: 12px !important;
+  padding: 10px 14px !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  color: rgba(255, 200, 120, 0.92) !important;
+  background: rgba(251, 191, 36, 0.08) !important;
+  border: 1px solid rgba(251, 191, 36, 0.22) !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora .my-work-header {
+  margin-bottom: 16px !important;
+  padding-bottom: 12px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+html.tema-aurora .my-work-tasks-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+html.tema-aurora .my-work-task-row {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora .my-work-task-main {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+}
+
+html.tema-aurora .my-work-task-name {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+  cursor: pointer !important;
+}
+
+html.tema-aurora .my-work-task-name:hover {
+  color: rgba(200, 185, 255, 0.95) !important;
+}
+
+html.tema-aurora .my-work-due {
+  font-size: 10px !important;
+  font-family: 'DM Mono', monospace !important;
+  color: rgba(255, 255, 255, 0.35) !important;
+  flex-shrink: 0 !important;
+  align-self: center !important;
+}
+
+html.tema-aurora .my-work-due-overdue {
+  color: rgba(239, 68, 68, 0.85) !important;
+}
+
+html.tema-aurora .project-activity-block {
+  margin-top: 12px !important;
+  padding: 12px 14px !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 10px !important;
+}
+
+html.tema-aurora .project-activity-header {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: rgba(255, 255, 255, 0.25) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  margin-bottom: 10px !important;
+}
+
+html.tema-aurora .project-activity-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  max-height: 220px !important;
+  overflow-y: auto !important;
+}
+
+html.tema-aurora .project-activity-row {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
+
+html.tema-aurora .project-activity-text {
+  color: rgba(255, 255, 255, 0.72) !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+html.tema-aurora .project-activity-when {
+  flex-shrink: 0 !important;
+  font-size: 10px !important;
+  color: rgba(255, 255, 255, 0.28) !important;
+  white-space: nowrap !important;
+}
+
+/* ── Aurora — Botones de Exportar (topbar Notas) ── */
+
+/* Label "Exportar" encima del grupo */
+html.tema-aurora #view-notes .export-toolbar-label {
+  color: rgba(255,255,255,0.35) !important;
+  letter-spacing: 0.12em !important;
+  font-size: 8px !important;
+  text-transform: uppercase !important;
+}
+
+/* Reset base para los 3 botones del topbar */
+html.tema-aurora #view-notes .export-btn {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  border-radius: 10px !important;
+  padding: 8px 14px !important;
+  transition: all 0.18s ease !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+/* Botón Día — tinte azul-índigo */
+html.tema-aurora #view-notes .export-btn[onclick*="'day'"] {
+  background: rgba(99,102,241,0.15) !important;
+  border-color: rgba(99,102,241,0.35) !important;
+  color: rgba(165,168,255,0.9) !important;
+}
+html.tema-aurora #view-notes .export-btn[onclick*="'day'"]:hover {
+  background: rgba(99,102,241,0.28) !important;
+  border-color: rgba(99,102,241,0.6) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(99,102,241,0.25) !important;
+}
+
+/* Botón Semana — tinte violeta */
+html.tema-aurora #view-notes .export-btn[onclick*="'week'"] {
+  background: rgba(139,92,246,0.15) !important;
+  border-color: rgba(139,92,246,0.35) !important;
+  color: rgba(196,181,253,0.9) !important;
+}
+html.tema-aurora #view-notes .export-btn[onclick*="'week'"]:hover {
+  background: rgba(139,92,246,0.28) !important;
+  border-color: rgba(139,92,246,0.6) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(139,92,246,0.25) !important;
+}
+
+/* Botón Mes — tinte cyan-esmeralda */
+html.tema-aurora #view-notes .export-btn[onclick*="'month'"] {
+  background: rgba(20,184,166,0.15) !important;
+  border-color: rgba(20,184,166,0.35) !important;
+  color: rgba(153,246,228,0.9) !important;
+}
+html.tema-aurora #view-notes .export-btn[onclick*="'month'"]:hover {
+  background: rgba(20,184,166,0.28) !important;
+  border-color: rgba(20,184,166,0.6) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(20,184,166,0.25) !important;
+}
+
+/* ── Aurora — Modal Plantillas de Nota ── */
+html.tema-aurora #note-templates-modal {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora #note-templates-modal .modal.modal-note-templates {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora #note-templates-modal .modal-note-templates-header {
+  background: linear-gradient(180deg, rgba(120,100,255,0.14), transparent) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #note-templates-modal .modal-note-templates-title-wrap h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #note-templates-modal .modal-note-templates-badge {
+  background: rgba(120,88,246,0.2) !important;
+  border-color: rgba(120,88,246,0.4) !important;
+}
+
+html.tema-aurora #note-templates-modal .modal-note-templates-lead {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.55) !important;
+}
+
+html.tema-aurora #note-templates-modal .modal-note-templates-lead strong {
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora #note-templates-modal .modal-note-templates-empty {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.4) !important;
+}
+
+html.tema-aurora #note-templates-modal .modal-note-templates-empty strong {
+  color: rgba(255,255,255,0.7) !important;
+}
+
+html.tema-aurora #note-templates-modal .modal-note-templates-footer {
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #note-templates-modal .modal-close {
+  color: rgba(255,255,255,0.4) !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 8px !important;
+}
+html.tema-aurora #note-templates-modal .modal-close:hover {
+  color: rgba(255,255,255,0.85) !important;
+  background: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.2) !important;
 }
 

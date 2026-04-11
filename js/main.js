@@ -1,13 +1,15 @@
 // ===== MAIN APPLICATION MODULE =====
 
-import { setNotes, setProjects, setDocs, setUSERS, setWorkGroups, setWgInvites, wgInvites, makeImageKey, registerTempImage, collectImageMap, editingNoteImages, setEditingNoteImages, editingPostitImages, setEditingPostitImages, editingDocImages, setEditingDocImages, editingProjectImages, setEditingProjectImages, editingTaskImages, setEditingTaskImages } from './components/data.js';
+import { setNotes, setProjects, setDocs, setUSERS, setWorkGroups, setWgInvites, setComments, wgInvites, makeImageKey, registerTempImage, collectImageMap, editingNoteImages, setEditingNoteImages, editingPostitImages, setEditingPostitImages, editingDocImages, setEditingDocImages, editingProjectImages, setEditingProjectImages, editingTaskImages, setEditingTaskImages } from './components/data.js';
 import {
   showView,
   renderDateNav,
   navigateWeek,
   toggleShiftFilter,
   handleSearch,
+  onNotesSearchHistoryChange,
   setNoteView,
+  markAllNoteMentionsAsRead,
   createWorkGroup,
   openWorkGroupInvitesModal,
   onWorkGroupCardClick,
@@ -80,8 +82,16 @@ import {
   selectPriority,
   selectVisibility,
   toggleReminder,
+  toggleNotePinnedModal,
   handleNoteEditorInput,
   renderNotes,
+  goToNoteInDiary,
+  duplicateNote,
+  toggleNotePinnedQuick,
+  saveNoteAsTemplate,
+  openNoteTemplatesModal,
+  applyNoteTemplate,
+  deleteNoteTemplate,
 } from './components/notes.js';
 import {
   openNewPostitModal,
@@ -147,13 +157,35 @@ import {
   deleteTask,
   toggleProjectTreeCollapse,
   setProjectViewMode,
+  setTaskSort,
+  filterTaskSearch,
+  addTaskDep,
+  removeTaskDep,
   dragTaskStart,
   dropTaskToColumn,
   openTaskViewer,
   openEditFromViewer,
   openTaskCommentsFromViewer,
+  openMyWorkTasksView,
+  openSaveProjectTemplateModal,
+  confirmSaveProjectTemplate,
+  openManageProjectTemplatesModal,
+  deleteCustomProjectTemplate,
+  openRenameProjectTemplateModal,
+  confirmRenameProjectTemplate,
+  duplicateCustomProjectTemplate,
+  showProjectTreeContextMenu,
+  openApplyTemplateToProjectModal,
+  confirmApplyTemplateToProject,
 } from './components/projects.js';
-import { exportNotes, exportAllData, clearAllData } from './components/export.js';
+import {
+  exportNotes,
+  exportAllData,
+  clearAllData,
+  exportProjectAsText,
+  openProjectPrintReport,
+  triggerImportDiarioBackup,
+} from './components/export.js';
 import {
   openNewChatModal,
   sendChatMessage,
@@ -274,6 +306,14 @@ function loadData() {
   } catch {
     setWgInvites([]);
   }
+
+  try {
+    const rawComments = localStorage.getItem('diario_comments');
+    const cList = rawComments ? JSON.parse(rawComments) : [];
+    setComments(Array.isArray(cList) ? cList : []);
+  } catch {
+    setComments([]);
+  }
 }
 
 function applyTheme() {
@@ -327,7 +367,16 @@ async function initializeApp() {
       navigateWeek,
       toggleShiftFilter,
       handleSearch,
+      onNotesSearchHistoryChange,
       setNoteView,
+      markAllNoteMentionsAsRead,
+      goToNoteInDiary,
+      duplicateNote,
+      toggleNotePinnedQuick,
+      saveNoteAsTemplate,
+      openNoteTemplatesModal,
+      applyNoteTemplate,
+      deleteNoteTemplate,
       selectGroup,
       submitPassword,
       togglePwdVisibility,
@@ -355,7 +404,10 @@ async function initializeApp() {
       renderThemeGrid,
       exportNotes,
       exportAllData,
+      triggerImportDiarioBackup,
       clearAllData,
+      exportProjectAsText,
+      openProjectPrintReport,
       openNewNoteModal,
       editNote,
       saveNote,
@@ -441,11 +493,26 @@ async function initializeApp() {
       openProjectCommentsModal,
       toggleProjectTreeCollapse,
       setProjectViewMode,
+      setTaskSort,
+      filterTaskSearch,
+      addTaskDep,
+      removeTaskDep,
       dragTaskStart,
       dropTaskToColumn,
       openTaskViewer,
       openEditFromViewer,
       openTaskCommentsFromViewer,
+      openMyWorkTasksView,
+      openSaveProjectTemplateModal,
+      confirmSaveProjectTemplate,
+      openManageProjectTemplatesModal,
+      deleteCustomProjectTemplate,
+      openRenameProjectTemplateModal,
+      confirmRenameProjectTemplate,
+      duplicateCustomProjectTemplate,
+      showProjectTreeContextMenu,
+      openApplyTemplateToProjectModal,
+      confirmApplyTemplateToProject,
       openNewChatModal,
       sendChatMessage,
       openChatLinkPicker,
@@ -522,6 +589,7 @@ async function initializeApp() {
       selectPriority,
       selectVisibility,
       toggleReminder,
+      toggleNotePinnedModal,
       handleNoteEditorInput,
     });
 

@@ -1,7 +1,8 @@
 // ===== NOTES MODULE =====
 
 // Import required dependencies
-import { currentUser, notes, currentDate, activeShiftFilters, searchQuery, currentNoteView, SHIFTS, USERS, GROUPS, workGroups, sameId, toDateStr, editingNoteImages, editingPostitImages, editingDocImages, editingProjectImages, editingTaskImages, setNotes, editingNoteId, selectedShift, selectedPriority, selectedMentions, selectedMentionGroup, selectedNoteVisibility, reminderOn, setEditingNoteId, setSelectedShift, setSelectedPriority, setSelectedMentions, setEditingNoteImages, setReminderOn, setSelectedNoteVisibility, setSelectedMentionGroup, makeImageKey, registerTempImage, collectImageMap, setSlashMenuActive, setSlashMenuCurrentTextArea, setSlashMenuCurrentPreview, setSlashMenuCurrentImageMap, slashMenuCurrentTextArea, slashMenuCurrentPreview, slashMenuCurrentImageMap } from './data.js';
+import { currentUser, notes, currentDate, activeShiftFilters, searchQuery, searchNotesAllDates, currentNoteView, SHIFTS, USERS, GROUPS, workGroups, sameId, toDateStr, editingNoteImages, editingPostitImages, editingDocImages, editingProjectImages, editingTaskImages, setNotes, editingNoteId, selectedShift, selectedPriority, selectedMentions, selectedMentionGroup, selectedNoteVisibility, reminderOn, setEditingNoteId, setSelectedShift, setSelectedPriority, setSelectedMentions, setEditingNoteImages, setReminderOn, setSelectedNoteVisibility, setSelectedMentionGroup, makeImageKey, registerTempImage, collectImageMap, setSlashMenuActive, setSlashMenuCurrentTextArea, setSlashMenuCurrentPreview, setSlashMenuCurrentImageMap, slashMenuCurrentTextArea, slashMenuCurrentPreview, slashMenuCurrentImageMap, setCurrentDate, setCurrentNoteView } from './data.js';
+import { loadReadMentions } from './mentionsRead.js';
 import { renderMentionChips } from './comments.js';
 import { showToast, openModal, closeModal, showConfirmModal } from './modalControl.js';
 import { updateMarkdownPreview } from './docs.js';
@@ -14,8 +15,8 @@ export const SLASH_COMMANDS = [
   {cmd: 'lista', icon: '•', label: 'Lista', desc: 'Insertar lista con viñetas', section: 'General'},
   {cmd: 'check', icon: '✓', label: 'Checklist', desc: 'Insertar checklist', section: 'General'},
   {cmd: 'divisor', icon: '─', label: 'Divisor', desc: 'Insertar línea divisor', section: 'General'},
-  {cmd: 'tabla', icon: '▦', label: 'Tabla', desc: 'Insertar tabla (pendiente de portar)', section: 'General'},
-  {cmd: 'imagen', icon: '🖼️', label: 'Imagen', desc: 'Insertar imagen (pendiente de portar)', section: 'General'},
+  {cmd: 'tabla', icon: '▦', label: 'Tabla', desc: 'Insertar tabla (elige filas y columnas)', section: 'General'},
+  {cmd: 'imagen', icon: '🖼️', label: 'Imagen', desc: 'Insertar imagen desde archivo', section: 'General'},
   {cmd: 'estilo-parrafo', icon: '¶', label: 'Párrafo (cuerpo)', desc: 'Texto de párrafo normal', section: 'Estilos de texto'},
   {cmd: 'estilo-h1', icon: 'H1', label: 'Encabezado 1', desc: 'Título nivel 1 (#)', section: 'Estilos de texto'},
   {cmd: 'estilo-h2', icon: 'H2', label: 'Encabezado 2', desc: 'Título nivel 2 (##)', section: 'Estilos de texto'},
@@ -118,13 +119,18 @@ export function userCanSeeNote(n) {
   // Author can always see their own notes
   if (sameId(n.authorId, currentUser.id)) return true;
 
+  let vis = n.visibility;
+  if (vis !== 'public' && vis !== 'department' && vis !== 'private') {
+    vis = 'private';
+  }
+
   // Public notes: visible to same department or core department notes
-  if (n.visibility === 'public') {
+  if (vis === 'public') {
     return departmentDiarySameCoreDeptNote(n);
   }
 
-  // Department notes: only same department
-  if (n.visibility === 'department') {
+  // Department: todo el departamento de la nota (campo group al guardar)
+  if (vis === 'department') {
     return n.group === currentUser.group;
   }
 
@@ -147,6 +153,21 @@ export function userCanEditNote(n) {
 /**
  * Render notes for current date and filters
  */
+function formatHistoryDateLabel(isoDateStr) {
+  const today = toDateStr(new Date());
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  const yesterday = toDateStr(y);
+  if (isoDateStr === today) return 'Hoy';
+  if (isoDateStr === yesterday) return 'Ayer';
+  const d = new Date(`${isoDateStr}T12:00:00`);
+  return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function shiftOrder(shift) {
+  return { morning: 0, afternoon: 1, night: 2 }[shift] ?? 9;
+}
+
 export function renderNotes() {
   // Special view for mentions: separate notes and comments
   if (currentNoteView === 'mentions') {
@@ -154,15 +175,23 @@ export function renderNotes() {
     return;
   }
 
+  const histCb = document.getElementById('notes-search-history');
+  if (histCb) histCb.checked = searchNotesAllDates;
+
+  const q = (searchQuery || '').trim();
+  const useHistorySearch = searchNotesAllDates && q.length > 0;
+
   let filtered = notes.filter(n => {
-    if (n.date !== currentDate) return false;
-    if (!activeShiftFilters.includes(n.shift)) return false;
+    if (!useHistorySearch && n.date !== currentDate) return false;
+    if (!useHistorySearch && !activeShiftFilters.includes(n.shift)) return false;
     if (n.visibility === 'public' && !sameId(n.authorId, currentUser.id) && !departmentDiarySameCoreDeptNote(n)) return false;
     if (!userCanSeeNote(n)) return false;
-    if (currentNoteView === 'mine' && n.authorId !== currentUser.id) return false;
+    if (currentNoteView === 'mine' && !sameId(n.authorId, currentUser.id)) return false;
     if (currentNoteView === 'reminders' && !n.reminder) return false;
-    if (searchQuery) {
-      if (!n.title.toLowerCase().includes(searchQuery) && !n.body.toLowerCase().includes(searchQuery)) return false;
+    if (q) {
+      const t = noteTextForDisplay(n.title).toLowerCase();
+      const b = noteTextForDisplay(n.body).toLowerCase();
+      if (!t.includes(q) && !b.includes(q)) return false;
     }
     return true;
   });
@@ -182,13 +211,91 @@ export function renderNotes() {
   document.getElementById('stat-night').textContent = todayNotes.filter(n => n.shift === 'night').length;
 
   const area = document.getElementById('notes-area');
+  if (!area) return;
+
   if (filtered.length === 0) {
-    area.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div>No hay notas para esta selección</div><div style="font-size:11px;color:var(--text-muted)">Crea una nueva nota para empezar</div></div>`;
+    if (useHistorySearch) {
+      area.innerHTML = `
+      <div class="notes-empty-state">
+        <div class="notes-empty-icon">🔎</div>
+        <div class="notes-empty-title">Sin resultados en el historial</div>
+        <p class="notes-empty-hint">Prueba otras palabras o desactiva «Historial completo» para limitar la búsqueda al día del calendario.</p>
+      </div>`;
+      return;
+    }
+    const emptyByView = {
+      all: {
+        icon: '📭',
+        title: 'No hay notas para esta selección',
+        hint: 'Prueba otro día con las flechas del calendario, activa los tres turnos arriba o limpia la búsqueda. Para empezar, usa ✏️ Nueva Nota.',
+      },
+      mine: {
+        icon: '👤',
+        title: 'No tienes notas propias en esta fecha',
+        hint: 'Aquí solo ves lo que escribiste tú. Cambia a «Todas las notas» o elige otra fecha para ver al equipo.',
+      },
+      reminders: {
+        icon: '🔔',
+        title: 'Sin recordatorios en esta fecha',
+        hint: 'Al crear o editar una nota, activa el recordatorio y opcionalmente la hora. Solo aparecen notas del día que tienes seleccionado en el calendario.',
+      },
+    };
+    const key = emptyByView[currentNoteView] ? currentNoteView : 'all';
+    const e = emptyByView[key];
+    const histHint =
+      searchNotesAllDates && !q.length
+        ? '<p class="notes-empty-hint" style="margin-top:12px">💡 Activa «Historial completo» y escribe en el buscador para encontrar notas de otros días.</p>'
+        : '';
+    area.innerHTML = `
+      <div class="notes-empty-state">
+        <div class="notes-empty-icon">${e.icon}</div>
+        <div class="notes-empty-title">${escapeHtml(e.title)}</div>
+        <p class="notes-empty-hint">${escapeHtml(e.hint)}</p>
+        ${histHint}
+        <div class="notes-empty-actions">
+          <button type="button" class="btn-primary" onclick="openNewNoteModal()">✏️ Nueva nota</button>
+          ${currentNoteView !== 'all' ? `<button type="button" class="btn-secondary" onclick="setNoteView('all', document.getElementById('nav-all'))">📋 Ver todas las notas</button>` : ''}
+        </div>
+      </div>`;
     return;
   }
 
-  const byShift = {morning:[],afternoon:[],night:[]};
+  if (useHistorySearch) {
+    filtered.sort((a, b) => {
+      const d = (b.date || '').localeCompare(a.date || '');
+      if (d !== 0) return d;
+      const sa = shiftOrder(a.shift);
+      const sb = shiftOrder(b.shift);
+      if (sa !== sb) return sa - sb;
+      if (!!a.pinned !== !!b.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+    const dates = [...new Set(filtered.map(n => n.date))].sort((a, b) => b.localeCompare(a));
+    area.innerHTML = `<div class="notes-history-wrap">${dates
+      .map(ds => {
+        const chunk = filtered.filter(n => n.date === ds);
+        chunk.sort((a, b) => {
+          const sa = shiftOrder(a.shift);
+          const sb = shiftOrder(b.shift);
+          if (sa !== sb) return sa - sb;
+          if (!!a.pinned !== !!b.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+          return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+        });
+        const label = formatHistoryDateLabel(ds);
+        return `<section class="notes-history-block"><h3 class="notes-history-heading">${escapeHtml(label)} <span class="notes-history-iso">${escapeHtml(ds)}</span></h3><div class="notes-history-cards">${chunk.map(n => renderNoteCard(n, { query: searchQuery })).join('')}</div></section>`;
+      })
+      .join('')}</div>`;
+    return;
+  }
+
+  const byShift = { morning: [], afternoon: [], night: [] };
   filtered.forEach(n => byShift[n.shift].push(n));
+  Object.keys(byShift).forEach(k => {
+    byShift[k].sort((a, b) => {
+      if (!!a.pinned !== !!b.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+  });
 
   area.innerHTML = Object.keys(SHIFTS).map(shift => {
     const sns = byShift[shift];
@@ -199,10 +306,10 @@ export function renderNotes() {
         <div class="shift-dot" style="background:${s.dot}"></div>
         <h3 style="color:${s.color}">${s.emoji} Turno ${s.label}</h3>
         <span class="shift-time">${s.hours}</span>
-        <span class="shift-count">${sns.length} nota${sns.length!==1?'s':''}</span>
+        <span class="shift-count">${sns.length} nota${sns.length !== 1 ? 's' : ''}</span>
         <span class="shift-toggle open">▶</span>
       </div>
-      <div class="shift-notes">${sns.map(n => renderNoteCard(n)).join('')}</div>
+      <div class="shift-notes">${sns.map(n => renderNoteCard(n, { query: searchQuery })).join('')}</div>
     </div>`;
   }).join('');
 }
@@ -274,6 +381,7 @@ function syncMdChecklistHtml(html) {
 export function renderNoteCard(note, cardOpts = {}) {
   const author = USERS.find(u => sameId(u.id, note.authorId));
   const canEdit = userCanEditNote(note);
+  const pinned = !!note.pinned;
   const date = new Date(note.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   const prRaw = note.priority || 'normal';
   const prSafe = ['normal', 'media', 'alta'].includes(prRaw) ? prRaw : 'normal';
@@ -282,7 +390,12 @@ export function renderNoteCard(note, cardOpts = {}) {
     note.priority && prSafe !== 'normal'
       ? `<span class="note-tag priority-${prSafe}">${priorityLabel}</span>`
       : '';
+  const pinTag = pinned ? `<span class="note-tag note-tag-pinned" title="Fijada">📌 Fijada</span>` : '';
   const publicTag = note.visibility === 'public' ? `<span class="note-tag note-tag-public">🌐 Pública</span>` : '';
+  const deptTag =
+    note.visibility === 'department'
+      ? `<span class="note-tag note-tag-dept">🏢 ${escapeHtml(note.group || 'Departamento')}</span>`
+      : '';
 
   const bg = escapeHtmlAttr(author?.color || '#888');
   const initials = escapeHtml(author?.initials || '?');
@@ -296,7 +409,7 @@ export function renderNoteCard(note, cardOpts = {}) {
     `<span class="note-author-name">${authorName}</span>`,
     `<span class="note-timestamp">${safeDate}</span>`,
     '</div>',
-    `<div class="note-tags">${priorityTag}${publicTag}</div>`,
+    `<div class="note-tags">${pinTag}${priorityTag}${deptTag}${publicTag}</div>`,
     '</div>',
   ].join('');
 
@@ -307,7 +420,7 @@ export function renderNoteCard(note, cardOpts = {}) {
 
   let mentionsHtml = '';
   if (note.mentions && note.mentions.length > 0) {
-    const mentionUsers = note.mentions.map(id => USERS.find(u => u.id === id)).filter(Boolean);
+    const mentionUsers = note.mentions.map(id => USERS.find(u => sameId(u.id, id))).filter(Boolean);
     if (mentionUsers.length > 0) {
       mentionsHtml = `<div class="note-mentions">${mentionUsers.map(u => 
         `<span class="mention">@${escapeHtml(u.name)}</span>`
@@ -336,7 +449,9 @@ export function renderNoteCard(note, cardOpts = {}) {
   let footerHtml = '<div class="note-footer">';
   footerHtml += reminderHtml;
   footerHtml += '<div class="note-actions">';
+  footerHtml += `<button type="button" class="note-action-btn" onclick="duplicateNote(event, ${note.id})" title="Copia en el día actual como tu nota">📄 Duplicar</button>`;
   if (canEdit) {
+    footerHtml += `<button type="button" class="note-action-btn" onclick="toggleNotePinnedQuick(event, ${note.id})" title="Mostrar primero en el turno">${pinned ? '📌 Quitar fijación' : '📌 Fijar'}</button>`;
     footerHtml += `<button type="button" class="note-action-btn" onclick="editNote(event, ${note.id})">✏️ Editar</button>`;
   }
   if (sameId(note.authorId, currentUser.id)) {
@@ -353,7 +468,8 @@ export function renderNoteCard(note, cardOpts = {}) {
     footerHtml,
   ].join('');
 
-  return `<div class="note-card" data-id="${note.id}" onclick="openDetail(${note.id})">${innerHtml}</div>`;
+  const cardClass = pinned ? 'note-card note-card--pinned' : 'note-card';
+  return `<div class="${cardClass}" data-id="${note.id}" data-note-id="${note.id}" onclick="openDetail(${note.id})">${innerHtml}</div>`;
 }
 
 /**
@@ -389,12 +505,137 @@ export function noteBodyPreview(body, query) {
 // ===== MENTIONS VIEW =====
 
 /**
- * Render mentions view
+ * Salta al día de la nota en «Todas las notas» y desplaza hasta la tarjeta.
+ */
+export function goToNoteInDiary(noteId) {
+  const note = notes.find(n => sameId(n.id, noteId));
+  if (!note || !userCanSeeNote(note)) {
+    showToast('No se encontró la nota o no tienes acceso', 'error');
+    return;
+  }
+  setCurrentDate(note.date);
+  setCurrentNoteView('all');
+  if (typeof window.showView === 'function') window.showView('notes', null);
+  const navAll = document.getElementById('nav-all');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (navAll) navAll.classList.add('active');
+  const titleEl = document.getElementById('view-title');
+  if (titleEl) titleEl.textContent = 'Todas las Notas';
+  if (typeof window.renderDateNav === 'function') window.renderDateNav();
+  renderNotes();
+  const id = note.id;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const card = document.querySelector(`[data-note-id="${id}"]`);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+}
+
+function formatMentionDateHeading(isoDateStr) {
+  const today = toDateStr(new Date());
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  const yesterday = toDateStr(y);
+  if (isoDateStr === today) return 'Hoy';
+  if (isoDateStr === yesterday) return 'Ayer';
+  const d = new Date(`${isoDateStr}T12:00:00`);
+  return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/**
+ * Lista todas las notas (cualquier día) donde el usuario actual está mencionado.
  */
 export function renderMentionsView() {
   const area = document.getElementById('notes-area');
-  if (!area) return;
-  area.innerHTML = `<div class="empty-state"><div class="empty-icon">👤</div><div>Menciones</div><div style="font-size:11px;color:var(--text-muted)">Vista de menciones en desarrollo</div></div>`;
+  if (!area || !currentUser) return;
+
+  const readSet = loadReadMentions();
+  const list = notes.filter(
+    n =>
+      userCanSeeNote(n) &&
+      (n.mentions || []).some(mid => sameId(mid, currentUser.id))
+  );
+  list.sort((a, b) => {
+    const dc = (b.date || '').localeCompare(a.date || '');
+    if (dc !== 0) return dc;
+    return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+  });
+
+  const unreadCount = list.filter(n => !readSet.has(n.id)).length;
+
+  if (list.length === 0) {
+    area.innerHTML = `
+      <div class="notes-empty-state notes-empty-state--mentions">
+        <div class="notes-empty-icon">👋</div>
+        <div class="notes-empty-title">Aún no te han mencionado</div>
+        <p class="notes-empty-hint">Cuando alguien te incluya con @ en una nota de tu departamento o en una nota pública que puedas ver, aparecerá aquí. El punto en el calendario marcará días con menciones sin leer.</p>
+        <div class="notes-empty-actions">
+          <button type="button" class="btn-primary" onclick="setNoteView('all', document.getElementById('nav-all'))">📋 Ir a todas las notas</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const dates = [...new Set(list.map(n => n.date))];
+  const groupsHtml = dates
+    .map(dateStr => {
+      const groupNotes = list.filter(n => n.date === dateStr);
+      const rows = groupNotes
+        .map(n => {
+          const unread = !readSet.has(n.id);
+          const author = USERS.find(u => sameId(u.id, n.authorId));
+          const shift = SHIFTS[n.shift] || SHIFTS.morning;
+          const bg = escapeHtmlAttr(author?.color || '#888');
+          const initials = escapeHtml(author?.initials || '?');
+          const authorName = escapeHtml(author ? author.name : 'Usuario');
+          const title = escapeHtml(noteTextForDisplay(n.title) || 'Sin título');
+          const plainBody = noteTextForDisplay(n.body).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          const sn = plainBody.length > 140 ? `${plainBody.slice(0, 140)}…` : plainBody;
+          const snippetHtml = sn ? escapeHtml(sn) : '';
+          const unreadClass = unread ? 'mention-inbox-row--unread' : 'mention-read';
+          const indClass = unread ? 'unread' : '';
+          const indText = unread ? 'Sin leer' : '✓ Leída';
+          return `
+        <article class="mention-inbox-row ${unreadClass}" data-note-id="${n.id}" role="button" tabindex="0"
+          onclick="openDetail(${n.id})"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDetail(${n.id});}">
+          <span class="mention-read-dot" style="background:${unread ? 'var(--accent)' : 'var(--success)'}"></span>
+          <div class="mention-inbox-main">
+            <div class="mention-inbox-top">
+              <span class="mention-inbox-author"><span class="mention-inbox-av" style="background:${bg}">${initials}</span>${authorName}</span>
+              <span class="note-tag note-tag-shift">${shift.emoji} ${shift.label}</span>
+              <span class="mention-read-indicator ${indClass}">${indText}</span>
+            </div>
+            <div class="mention-inbox-title">${title}</div>
+            <div class="mention-inbox-snippet">${snippetHtml || '<em class="mention-inbox-muted">Sin vista previa</em>'}</div>
+          </div>
+          <div class="mention-inbox-actions">
+            <button type="button" class="btn-secondary btn-sm" onclick="event.stopPropagation();goToNoteInDiary(${n.id})">📅 Ver en diario</button>
+          </div>
+        </article>`;
+        })
+        .join('');
+      return `
+      <section class="mention-date-group">
+        <h3 class="mention-date-heading">${escapeHtml(formatMentionDateHeading(dateStr))}</h3>
+        <p class="mention-date-sub">${escapeHtml(dateStr)}</p>
+        <div class="mention-inbox-list">${rows}</div>
+      </section>`;
+    })
+    .join('');
+
+  area.innerHTML = `
+    <div class="mentions-view-wrap">
+      <header class="mentions-view-header">
+        <div>
+          <h2 class="mentions-view-title">Menciones a ti</h2>
+          <p class="mentions-view-lead">${list.length} nota${list.length !== 1 ? 's' : ''}${unreadCount ? ` · <strong>${unreadCount}</strong> sin leer` : ' · todas leídas'}. Clic en una fila abre el detalle y marca como leída.</p>
+        </div>
+        <button type="button" class="btn-secondary" onclick="markAllNoteMentionsAsRead()">Marcar todas leídas</button>
+      </header>
+      ${groupsHtml}
+    </div>`;
 }
 
 /** Handlers del modal de nota (onclick en index.html) */
@@ -414,7 +655,7 @@ export function selectVisibility(el) {
   const p = el.closest('.visibility-pills');
   if (p) p.querySelectorAll('.visibility-opt').forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
-  setSelectedNoteVisibility(el.dataset.vis || 'private');
+  setSelectedNoteVisibility(el.dataset.vis || 'department');
 }
 
 export function toggleReminder() {
@@ -422,6 +663,10 @@ export function toggleReminder() {
   setReminderOn(next);
   document.getElementById('reminder-toggle')?.classList.toggle('on', next);
   document.getElementById('reminder-time')?.classList.toggle('hidden', !next);
+}
+
+export function toggleNotePinnedModal() {
+  document.getElementById('note-pinned-toggle')?.classList.toggle('on');
 }
 
 // ===== PUBLIC NOTES =====
@@ -447,7 +692,7 @@ export function openNewNoteModal() {
   setSelectedShift('morning');
   setSelectedPriority('normal');
   setSelectedMentions([]);
-  setSelectedNoteVisibility('private');
+  setSelectedNoteVisibility('department');
   setEditingNoteImages({});
   setReminderOn(false);
 
@@ -490,7 +735,7 @@ export function openNewNoteModal() {
  */
 export function editNote(e, id) {
   e.stopPropagation();
-  const note = notes.find(n => n.id === id);
+  const note = notes.find(n => sameId(n.id, id));
   if (!note || !userCanEditNote(note)) return;
 
   // Set editing state
@@ -504,7 +749,9 @@ export function editNote(e, id) {
     note.reminder === true ||
     (note.reminderTime != null && String(note.reminderTime).length > 0);
   setReminderOn(hasReminder);
-  setSelectedNoteVisibility(note.visibility === 'public' ? 'public' : 'private');
+  setSelectedNoteVisibility(
+    note.visibility === 'public' ? 'public' : note.visibility === 'department' ? 'department' : 'private'
+  );
 
   fillCollabTargetSelect('note-collab-target-select');
   const tts = document.getElementById('note-collab-target-select');
@@ -578,8 +825,14 @@ export function saveNote() {
   const reminder = reminderOn ? (reminderTimeVal || null) : null;
   const existingImages = editingNoteId ? notes.find(n => sameId(n.id, editingNoteId))?.images || {} : {};
   const images = collectImageMap(body, { ...existingImages, ...editingNoteImages });
-  const vis = selectedNoteVisibility === 'public' ? 'public' : 'private';
+  const vis =
+    selectedNoteVisibility === 'public'
+      ? 'public'
+      : selectedNoteVisibility === 'department'
+        ? 'department'
+        : 'private';
   const addSh = buildSharesFromCollabSelect('note-collab-target-select', 'note-collab-permission-select');
+  const pinned = document.getElementById('note-pinned-toggle')?.classList.contains('on') || false;
 
   if (editingNoteId) {
     const idx = notes.findIndex(n => sameId(n.id, editingNoteId) && userCanEditNote(n));
@@ -600,6 +853,7 @@ export function saveNote() {
       reminder,
       images,
       visibility: vis,
+      pinned,
       shares: [...rest, ...addSh],
     };
     delete updated.reminderTime;
@@ -623,6 +877,7 @@ export function saveNote() {
         createdAt: new Date().toISOString(),
         images,
         visibility: vis,
+        pinned,
         shares: addSh,
       },
     ]);
@@ -1022,8 +1277,8 @@ export function toggleShiftSection(header) {
 
 export function deleteNote(e, id) {
   e.stopPropagation();
-  const note = notes.find(n => n.id === id);
-  if (!note || note.authorId !== currentUser.id) {
+  const note = notes.find(n => sameId(n.id, id));
+  if (!note || !sameId(note.authorId, currentUser.id)) {
     showToast('No autorizado para eliminar esta nota','error');
     return;
   }
@@ -1032,7 +1287,7 @@ export function deleteNote(e, id) {
     title: '¿Eliminar esta nota?',
     message: `Se eliminará "${note.title}" y todos sus comentarios.`,
     onConfirm: () => {
-      setNotes(notes.filter(n => n.id !== id));
+      setNotes(notes.filter(n => !sameId(n.id, id)));
       saveData();
       renderNotes();
       import('./login.js').then(m => m.updateBadges());
@@ -1041,8 +1296,176 @@ export function deleteNote(e, id) {
   });
 }
 
+export function duplicateNote(e, id) {
+  e.stopPropagation();
+  const note = notes.find(n => sameId(n.id, id));
+  if (!note || !userCanSeeNote(note)) {
+    showToast('No se puede duplicar esta nota', 'error');
+    return;
+  }
+  const titleBase = (noteTextForDisplay(note.title) || 'Nota').trim();
+  const vis =
+    note.visibility === 'public' ? 'public' : note.visibility === 'private' ? 'private' : 'department';
+  let sharesCopy = [];
+  try {
+    sharesCopy = JSON.parse(JSON.stringify(note.shares || []));
+  } catch {
+    sharesCopy = [...(note.shares || [])];
+  }
+  const newNote = {
+    id: Date.now(),
+    authorId: currentUser.id,
+    group: currentUser.group,
+    date: currentDate,
+    shift: note.shift || 'morning',
+    title: `${titleBase} (copia)`,
+    body: noteTextForDisplay(note.body),
+    priority: note.priority || 'normal',
+    mentions: [...(note.mentions || [])],
+    mentionGroup: note.mentionGroup,
+    reminder: null,
+    createdAt: new Date().toISOString(),
+    images: { ...(note.images || {}) },
+    visibility: vis,
+    shares: sharesCopy,
+    pinned: false,
+  };
+  setNotes([...notes, newNote]);
+  saveData();
+  renderNotes();
+  showToast('Nota duplicada en el día actual (es tuya; revisa visibilidad si hace falta)', 'success');
+}
+
+export function toggleNotePinnedQuick(e, id) {
+  e.stopPropagation();
+  const note = notes.find(n => sameId(n.id, id));
+  if (!note || !userCanEditNote(note)) return;
+  const next = !note.pinned;
+  setNotes(notes.map(n => (sameId(n.id, id) ? { ...n, pinned: next } : n)));
+  saveData();
+  renderNotes();
+  showToast(next ? 'Nota fijada al inicio del turno' : 'Fijación quitada', 'info');
+}
+
 export function openImageModal(src) {
   if (src) window.open(src, '_blank', 'noopener,noreferrer');
+}
+
+function noteTemplatesStorageKey() {
+  return currentUser ? `diario_note_templates_${currentUser.id}` : 'diario_note_templates';
+}
+
+function loadNoteTemplatesList() {
+  try {
+    const raw = localStorage.getItem(noteTemplatesStorageKey());
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistNoteTemplatesList(list) {
+  localStorage.setItem(noteTemplatesStorageKey(), JSON.stringify(list));
+}
+
+function renderNoteTemplatesListBody() {
+  const el = document.getElementById('note-templates-list-body');
+  if (!el) return;
+  const list = loadNoteTemplatesList();
+  if (!list.length) {
+    el.innerHTML =
+      '<p class="modal-note-templates-empty">No hay plantillas aún. Abre una nota y pulsa <strong>Guardar como plantilla</strong> en el pie del formulario.</p>';
+    return;
+  }
+  el.innerHTML = list
+    .map(
+      t => `
+    <div class="note-template-row">
+      <div class="note-template-row-info">
+        <strong>${escapeHtml(t.name || 'Sin nombre')}</strong>
+        <span>${escapeHtml((t.title || '').slice(0, 80))}${(t.title || '').length > 80 ? '…' : ''}</span>
+      </div>
+      <div class="note-template-row-actions">
+        <button type="button" class="btn-primary btn-sm" onclick="applyNoteTemplate(${t.id})">Usar</button>
+        <button type="button" class="btn-secondary btn-sm" onclick="deleteNoteTemplate(${t.id})">Eliminar</button>
+      </div>
+    </div>`
+    )
+    .join('');
+}
+
+export function openNoteTemplatesModal() {
+  renderNoteTemplatesListBody();
+  openModal('note-templates-modal');
+}
+
+export function saveNoteAsTemplate() {
+  const title = document.getElementById('note-title-input')?.value.trim() || '';
+  const noteEditor = document.getElementById('note-body-editor');
+  if (noteEditor) syncMdChecklistDom(noteEditor, true);
+  syncNoteEditorToTextarea('html');
+  const body = document.getElementById('note-body-input')?.value.trim() || '';
+  if (!title || !body) {
+    showToast('Necesitas título y contenido para guardar una plantilla', 'error');
+    return;
+  }
+  const name = prompt('Nombre de la plantilla', title.slice(0, 48));
+  if (!name || !String(name).trim()) return;
+  const list = loadNoteTemplatesList();
+  list.push({
+    id: Date.now(),
+    name: String(name).trim(),
+    title,
+    body,
+    shift: selectedShift || 'morning',
+    priority: selectedPriority || 'normal',
+    visibility: selectedNoteVisibility || 'department',
+    savedAt: new Date().toISOString(),
+  });
+  persistNoteTemplatesList(list);
+  showToast('Plantilla guardada', 'success');
+  renderNoteTemplatesListBody();
+}
+
+export function applyNoteTemplate(templateId) {
+  const list = loadNoteTemplatesList();
+  const t = list.find(x => sameId(x.id, templateId));
+  if (!t) {
+    showToast('Plantilla no encontrada', 'error');
+    return;
+  }
+  closeModal('note-templates-modal');
+  openNewNoteModal();
+  setTimeout(() => {
+    setSelectedShift(t.shift || 'morning');
+    setSelectedPriority(t.priority || 'normal');
+    setSelectedNoteVisibility(
+      t.visibility === 'public' ? 'public' : t.visibility === 'private' ? 'private' : 'department'
+    );
+    setEditingNoteImages({});
+    const ti = document.getElementById('note-title-input');
+    if (ti) ti.value = t.title || '';
+    const bodyStr = t.body || '';
+    const be = document.getElementById('note-body-editor');
+    const bi = document.getElementById('note-body-input');
+    if (be) {
+      be.innerHTML =
+        bodyStr && /<[^>]+>/.test(bodyStr) ? syncMdChecklistHtml(bodyStr) : renderMarkdown(bodyStr, {});
+    }
+    if (bi) bi.value = bodyStr;
+    const preview = document.getElementById('note-content-preview');
+    if (preview) preview.innerHTML = renderMarkdown(bodyStr, {});
+    bindNoteEditorInteractions();
+    updateNoteModalUI();
+  }, 80);
+}
+
+export function deleteNoteTemplate(templateId) {
+  const list = loadNoteTemplatesList().filter(x => !sameId(x.id, templateId));
+  persistNoteTemplatesList(list);
+  renderNoteTemplatesListBody();
+  showToast('Plantilla eliminada', 'info');
 }
 
 function updateNoteModalUI() {
@@ -1054,7 +1477,12 @@ function updateNoteModalUI() {
   document.querySelectorAll('#note-modal .priority-opt').forEach(o => {
     o.classList.toggle('selected', o.dataset.priority === pri);
   });
-  const vis = selectedNoteVisibility === 'public' ? 'public' : 'private';
+  const vis =
+    selectedNoteVisibility === 'public'
+      ? 'public'
+      : selectedNoteVisibility === 'department'
+        ? 'department'
+        : 'private';
   const vp = document.getElementById('note-visibility-pills');
   if (vp) {
     vp.querySelectorAll('.visibility-opt').forEach(o => {
@@ -1063,6 +1491,8 @@ function updateNoteModalUI() {
   }
   document.getElementById('reminder-toggle')?.classList.toggle('on', reminderOn);
   document.getElementById('reminder-time')?.classList.toggle('hidden', !reminderOn);
+  const editing = editingNoteId != null ? notes.find(n => sameId(n.id, editingNoteId)) : null;
+  document.getElementById('note-pinned-toggle')?.classList.toggle('on', !!(editing && editing.pinned));
 }
 
 export function renderMarkdown(md, imageMap = {}) {
@@ -1433,7 +1863,7 @@ function cleanupSlashTriggerIfNeeded() {
 
 /**
  * Ejecuta comando / desde menú (onclick en HTML).
- * «tabla» / «imagen» muestran aviso hasta portar el editor visual del monolito.
+ * En el editor de notas (contenteditable) inserta HTML renderizado; en textareas planas, markdown.
  */
 export function executeSlashCommand(cmd) {
   const textarea = slashMenuCurrentTextArea;
