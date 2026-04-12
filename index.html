@@ -124,15 +124,12 @@
         <button class="nav-btn" onclick="showView('docs',this)">
           <span class="nav-icon">📚</span> Documentación
         </button>
-        <button class="nav-btn" id="nav-chat" onclick="showView('chat',this)">
-          <span class="nav-icon">💬</span> Chat
-          <span class="nav-badge nav-badge-chat hidden" id="chat-nav-badge">0</span>
-        </button>
         <button class="nav-btn" onclick="showView('whiteboard',this)">
           <span class="nav-icon">🎨</span> Pizarra
         </button>
-        <button class="nav-btn" onclick="showView('shortcuts',this)">
-          <span class="nav-icon">🔗</span> Accesos Directos
+        <button class="nav-btn" onclick="showView('my-groups',this)">
+          <span class="nav-icon">👥</span> Mis Grupos
+          <span class="nav-badge hidden" id="wg-invites-nav-badge">0</span>
         </button>
         <div class="nav-section-label">Notas</div>
         <button class="nav-btn active" id="nav-all" onclick="setNoteView('all',this)">
@@ -148,16 +145,25 @@
         <button class="nav-btn" id="nav-reminders" onclick="setNoteView('reminders',this)">
           <span class="nav-icon">⏰</span> Recordatorios
         </button>
+        <button class="nav-btn" id="nav-weekly" onclick="setNoteView('weekly',this)">
+          <span class="nav-icon">📊</span> Semana
+        </button>
         <button class="nav-btn" onclick="showView('public-notes',this)">
           <span class="nav-icon">🌐</span> Notas Públicas
         </button>
-        <button class="nav-btn" onclick="showView('my-groups',this)">
-          <span class="nav-icon">👥</span> Mis Grupos
-          <span class="nav-badge hidden" id="wg-invites-nav-badge">0</span>
-        </button>
         <div class="nav-section-label">Acciones</div>
+        <button class="nav-btn nav-btn-handover" onclick="openHandoverPanel()" id="nav-handover">
+          <span class="nav-icon">🔄</span> Entregar turno
+          <span class="nav-badge hidden" id="handover-nav-badge">!</span>
+        </button>
+        <button class="nav-btn" onclick="openHandoverHistory()">
+          <span class="nav-icon">🕐</span> Historial traspasos
+        </button>
         <button class="nav-btn" onclick="openNewNoteModal()">
           <span class="nav-icon">✏️</span> Nueva Nota
+        </button>
+        <button class="nav-btn" onclick="openReportModal()">
+          <span class="nav-icon">📊</span> Generar Informe
         </button>
         <button class="nav-btn" id="nav-settings" onclick="showView('settings',this)">
           <span class="nav-icon">⚙️</span> Configuración
@@ -188,6 +194,14 @@
   <div id="view-chat" style="display:none"></div>
   <div id="view-settings" style="display:none"></div>
 </main>
+  </div>
+
+  <!-- Handover Banner -->
+  <div id="handover-banner" class="handover-banner">
+  </div>
+
+  <!-- Handover Panel (slide-in lateral) -->
+  <div id="handover-panel" class="handover-panel">
   </div>
 </div>
 
@@ -316,6 +330,15 @@
         </div>
       </div>
       <div class="form-group">
+        <label class="form-label">Etiquetas</label>
+        <input type="text" class="form-input" id="note-tags-input"
+          placeholder="#incidencia #mantenimiento #urgente…"
+          autocomplete="off">
+        <p style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.5">
+          Escribe etiquetas separadas por espacios comenzando con #.
+        </p>
+      </div>
+      <div class="form-group">
         <label class="form-label">Fijar en el turno</label>
         <div class="reminder-row">
           <div class="reminder-toggle" id="note-pinned-toggle" onclick="toggleNotePinnedModal()"></div>
@@ -356,6 +379,41 @@
     <div class="modal-footer modal-note-templates-footer">
       <button type="button" class="btn-secondary" onclick="closeModal('note-templates-modal')">Cerrar</button>
       <button type="button" class="btn-primary" onclick="closeModal('note-templates-modal');openNewNoteModal()">✏️ Nueva nota en blanco</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="doc-templates-modal">
+  <div class="modal modal-note-templates">
+    <div class="modal-header modal-note-templates-header">
+      <div class="modal-note-templates-title-wrap">
+        <span class="modal-note-templates-badge" aria-hidden="true">📋</span>
+        <h3>Plantillas de documento</h3>
+      </div>
+      <button type="button" class="modal-close" onclick="closeModal('doc-templates-modal')">✕</button>
+    </div>
+    <div class="modal-body modal-note-templates-body">
+      <p class="modal-note-templates-lead">Guarda títulos y contenidos que reutilices. Las <strong>imágenes no</strong> se guardan en la plantilla.</p>
+      <div class="modal-note-templates-list" id="doc-templates-list-body"></div>
+    </div>
+    <div class="modal-footer modal-note-templates-footer">
+      <button type="button" class="btn-secondary" onclick="closeModal('doc-templates-modal')">Cerrar</button>
+      <button type="button" class="btn-primary" onclick="closeModal('doc-templates-modal');openNewDocModal()">📝 Nuevo documento en blanco</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="doc-versions-modal">
+  <div class="modal" style="max-width:560px;width:95vw">
+    <div class="modal-header">
+      <h3 id="doc-versions-title">Historial de versiones</h3>
+      <button type="button" class="modal-close" onclick="closeModal('doc-versions-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+      <div id="doc-versions-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeModal('doc-versions-modal')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -927,6 +985,7 @@
       </div>
     </div>
     <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="saveDocTemplateFromCurrent()">📋 Guardar como plantilla</button>
       <button class="btn-cancel" onclick="closeDocModalWithCleanup()">Cancelar</button>
       <button class="btn-save" onclick="saveDocOrFolder()">Guardar</button>
     </div>
@@ -1251,6 +1310,64 @@
     </div>
   </div>
 </div>
+
+<!-- Modal: Ver traspaso recibido -->
+<div class="modal-overlay" id="handover-receive-modal">
+  <div class="modal" style="max-width:580px;width:95vw">
+    <div class="modal-header">
+      <h3>📨 Traspaso de turno</h3>
+      <button type="button" class="modal-close" onclick="closeModal('handover-receive-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:65vh;overflow-y:auto">
+      <div id="handover-receive-body"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeModal('handover-receive-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Historial de traspasos -->
+<div class="modal-overlay" id="handover-history-modal">
+  <div class="modal" style="max-width:580px;width:95vw">
+    <div class="modal-header">
+      <h3>🕐 Historial de traspasos</h3>
+      <button type="button" class="modal-close" onclick="closeModal('handover-history-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:65vh;overflow-y:auto">
+      <div id="handover-history-body"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeModal('handover-history-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="report-modal">
+  <div class="modal" style="max-width:420px;width:95vw">
+    <div class="modal-header">
+      <h3>📊 Generar Informe</h3>
+      <button type="button" class="modal-close" onclick="closeModal('report-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">
+        Genera un informe PDF con la actividad del departamento: notas por turno, estado de proyectos, tareas vencidas y traspasos.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button type="button" class="btn-primary" onclick="generateDepartmentReport('week');closeModal('report-modal')">
+          📅 Informe de esta semana
+        </button>
+        <button type="button" class="btn-secondary" onclick="generateDepartmentReport('month');closeModal('report-modal')">
+          🗓 Informe del mes actual
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeModal('report-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div id="icon-popover" class="icon-popover"></div>
 
 <!-- TOAST CONTAINER -->

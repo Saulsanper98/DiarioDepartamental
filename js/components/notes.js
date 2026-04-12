@@ -1,7 +1,7 @@
 // ===== NOTES MODULE =====
 
 // Import required dependencies
-import { currentUser, notes, currentDate, activeShiftFilters, searchQuery, searchNotesAllDates, currentNoteView, SHIFTS, USERS, GROUPS, workGroups, sameId, toDateStr, editingNoteImages, editingPostitImages, editingDocImages, editingProjectImages, editingTaskImages, setNotes, editingNoteId, selectedShift, selectedPriority, selectedMentions, selectedMentionGroup, selectedNoteVisibility, reminderOn, setEditingNoteId, setSelectedShift, setSelectedPriority, setSelectedMentions, setEditingNoteImages, setReminderOn, setSelectedNoteVisibility, setSelectedMentionGroup, makeImageKey, registerTempImage, collectImageMap, setSlashMenuActive, setSlashMenuCurrentTextArea, setSlashMenuCurrentPreview, setSlashMenuCurrentImageMap, slashMenuCurrentTextArea, slashMenuCurrentPreview, slashMenuCurrentImageMap, setCurrentDate, setCurrentNoteView } from './data.js';
+import { currentUser, notes, projects, postitCards, currentDate, activeShiftFilters, searchQuery, searchNotesAllDates, activeNoteTagFilter, currentNoteView, weekOffset, SHIFTS, USERS, GROUPS, workGroups, sameId, toDateStr, editingNoteImages, editingPostitImages, editingDocImages, editingProjectImages, editingTaskImages, setNotes, editingNoteId, selectedShift, selectedPriority, selectedMentions, selectedMentionGroup, selectedNoteVisibility, reminderOn, setEditingNoteId, setSelectedShift, setSelectedPriority, setSelectedMentions, setEditingNoteImages, setReminderOn, setSelectedNoteVisibility, setSelectedMentionGroup, setActiveNoteTagFilter, makeImageKey, registerTempImage, collectImageMap, setSlashMenuActive, setSlashMenuCurrentTextArea, setSlashMenuCurrentPreview, setSlashMenuCurrentImageMap, slashMenuCurrentTextArea, slashMenuCurrentPreview, slashMenuCurrentImageMap, setCurrentDate, setCurrentNoteView, PUBLIC_NOTES_PER_GROUP_INITIAL } from './data.js';
 import { loadReadMentions } from './mentionsRead.js';
 import { renderMentionChips } from './comments.js';
 import { showToast, openModal, closeModal, showConfirmModal } from './modalControl.js';
@@ -168,10 +168,38 @@ function shiftOrder(shift) {
   return { morning: 0, afternoon: 1, night: 2 }[shift] ?? 9;
 }
 
+function syncNoteTagFilterUI() {
+  const next = activeNoteTagFilter;
+  const btn = document.getElementById('note-tag-filter-btn');
+  if (btn) {
+    btn.textContent = next ? `🏷️ ${next}` : '🏷️ Etiquetas';
+    btn.classList.toggle('active', !!next);
+  }
+  const activePill = document.getElementById('note-tag-active-filter');
+  if (activePill) {
+    if (next) {
+      activePill.innerHTML = `<span class="note-tag-active-pill">${escapeHtml(next)} <button type="button" onclick="filterNotesByTag(null)" title="Quitar filtro">✕</button></span>`;
+      activePill.classList.remove('hidden');
+    } else {
+      activePill.innerHTML = '';
+      activePill.classList.add('hidden');
+    }
+  }
+}
+
+function syncNoteTagFilterTopbar() {
+  syncNoteTagFilterUI();
+}
+
 export function renderNotes() {
   // Special view for mentions: separate notes and comments
   if (currentNoteView === 'mentions') {
     renderMentionsView();
+    syncNoteTagFilterTopbar();
+    return;
+  }
+  if (currentNoteView === 'weekly') {
+    renderWeeklyView();
     return;
   }
 
@@ -193,6 +221,9 @@ export function renderNotes() {
       const b = noteTextForDisplay(n.body).toLowerCase();
       if (!t.includes(q) && !b.includes(q)) return false;
     }
+    if (activeNoteTagFilter) {
+      if (!(n.tags || []).includes(activeNoteTagFilter)) return false;
+    }
     return true;
   });
 
@@ -204,14 +235,20 @@ export function renderNotes() {
 
   // Update statistics
   const statTotal = document.getElementById('stat-total');
-  if (!statTotal) return;
+  if (!statTotal) {
+    syncNoteTagFilterTopbar();
+    return;
+  }
   statTotal.textContent = todayNotes.length;
   document.getElementById('stat-morning').textContent = todayNotes.filter(n => n.shift === 'morning').length;
   document.getElementById('stat-afternoon').textContent = todayNotes.filter(n => n.shift === 'afternoon').length;
   document.getElementById('stat-night').textContent = todayNotes.filter(n => n.shift === 'night').length;
 
   const area = document.getElementById('notes-area');
-  if (!area) return;
+  if (!area) {
+    syncNoteTagFilterTopbar();
+    return;
+  }
 
   if (filtered.length === 0) {
     if (useHistorySearch) {
@@ -221,6 +258,7 @@ export function renderNotes() {
         <div class="notes-empty-title">Sin resultados en el historial</div>
         <p class="notes-empty-hint">Prueba otras palabras o desactiva «Historial completo» para limitar la búsqueda al día del calendario.</p>
       </div>`;
+      syncNoteTagFilterTopbar();
       return;
     }
     const emptyByView = {
@@ -257,6 +295,7 @@ export function renderNotes() {
           ${currentNoteView !== 'all' ? `<button type="button" class="btn-secondary" onclick="setNoteView('all', document.getElementById('nav-all'))">📋 Ver todas las notas</button>` : ''}
         </div>
       </div>`;
+    syncNoteTagFilterTopbar();
     return;
   }
 
@@ -285,6 +324,7 @@ export function renderNotes() {
         return `<section class="notes-history-block"><h3 class="notes-history-heading">${escapeHtml(label)} <span class="notes-history-iso">${escapeHtml(ds)}</span></h3><div class="notes-history-cards">${chunk.map(n => renderNoteCard(n, { query: searchQuery })).join('')}</div></section>`;
       })
       .join('')}</div>`;
+    syncNoteTagFilterTopbar();
     return;
   }
 
@@ -312,6 +352,7 @@ export function renderNotes() {
       <div class="shift-notes">${sns.map(n => renderNoteCard(n, { query: searchQuery })).join('')}</div>
     </div>`;
   }).join('');
+  syncNoteTagFilterTopbar();
 }
 
 /**
@@ -391,6 +432,14 @@ export function renderNoteCard(note, cardOpts = {}) {
       ? `<span class="note-tag priority-${prSafe}">${priorityLabel}</span>`
       : '';
   const pinTag = pinned ? `<span class="note-tag note-tag-pinned" title="Fijada">📌 Fijada</span>` : '';
+  const tagsHtml = (note.tags || [])
+    .map(
+      t =>
+        `<span class="note-tag note-tag-custom" onclick="event.stopPropagation();filterNotesByTag(${JSON.stringify(
+          t
+        )})" title="Filtrar por ${escapeHtmlAttr(t)}" style="cursor:pointer">${escapeHtml(t)}</span>`
+    )
+    .join('');
   const publicTag = note.visibility === 'public' ? `<span class="note-tag note-tag-public">🌐 Pública</span>` : '';
   const deptTag =
     note.visibility === 'department'
@@ -409,7 +458,7 @@ export function renderNoteCard(note, cardOpts = {}) {
     `<span class="note-author-name">${authorName}</span>`,
     `<span class="note-timestamp">${safeDate}</span>`,
     '</div>',
-    `<div class="note-tags">${pinTag}${priorityTag}${deptTag}${publicTag}</div>`,
+    `<div class="note-tags">${pinTag}${priorityTag}${deptTag}${publicTag}${tagsHtml}</div>`,
     '</div>',
   ].join('');
 
@@ -678,8 +727,63 @@ export function renderPublicNotes() {
   const area = document.getElementById('public-notes-area');
   if (!area) return;
 
-  // This will be implemented with full public notes functionality
-  area.innerHTML = `<div class="empty-state"><div class="empty-icon">🌐</div><div>Notas Públicas</div><div style="font-size:11px;color:var(--text-muted)">Vista de notas públicas en desarrollo</div></div>`;
+  const publicNotes = notes.filter(n => n.visibility === 'public' && userCanSeeNote(n));
+
+  if (publicNotes.length === 0) {
+    area.innerHTML = `
+      <div class="notes-empty-state">
+        <div class="notes-empty-icon">🌐</div>
+        <div class="notes-empty-title">Sin notas públicas</div>
+        <p class="notes-empty-hint">Las notas marcadas como públicas por tu departamento aparecerán aquí.</p>
+      </div>`;
+    return;
+  }
+
+  publicNotes.sort((a, b) => {
+    const d = (b.date || '').localeCompare(a.date || '');
+    if (d !== 0) return d;
+    const order = { morning: 0, afternoon: 1, night: 2 };
+    const sa = order[a.shift] ?? 9;
+    const sb = order[b.shift] ?? 9;
+    if (sa !== sb) return sa - sb;
+    return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+  });
+
+  if (!window._publicNotesLimits) window._publicNotesLimits = {};
+
+  const dates = [...new Set(publicNotes.map(n => n.date))];
+
+  area.innerHTML = `<div class="notes-history-wrap">${dates.map(ds => {
+    const chunk = publicNotes.filter(n => n.date === ds);
+    const sectionKey = ds;
+    const limit = window._publicNotesLimits[sectionKey] != null
+      ? window._publicNotesLimits[sectionKey]
+      : PUBLIC_NOTES_PER_GROUP_INITIAL;
+    const visible = chunk.slice(0, limit);
+    const hasMore = chunk.length > limit;
+
+    const today = toDateStr(new Date());
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const yesterday = toDateStr(y);
+    const label = ds === today ? 'Hoy'
+      : ds === yesterday ? 'Ayer'
+      : new Date(`${ds}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    const cardsHtml = visible.map(n => renderNoteCard(n, {})).join('');
+    const moreBtn = hasMore
+      ? `<div style="text-align:center;padding:12px 0">
+           <button type="button" class="btn-secondary" onclick="loadMorePublicNotes('${sectionKey}')">
+             Cargar más (${chunk.length - limit} restantes)
+           </button>
+         </div>`
+      : '';
+
+    return `<section class="notes-history-block">
+      <h3 class="notes-history-heading">${label} <span class="notes-history-iso">${ds}</span></h3>
+      <div class="notes-history-cards">${cardsHtml}</div>
+      ${moreBtn}
+    </section>`;
+  }).join('')}</div>`;
 }
 
 // ===== NOTE EDITING =====
@@ -695,6 +799,8 @@ export function openNewNoteModal() {
   setSelectedNoteVisibility('department');
   setEditingNoteImages({});
   setReminderOn(false);
+  const tagsInput = document.getElementById('note-tags-input');
+  if (tagsInput) tagsInput.value = '';
 
   fillCollabTargetSelect('note-collab-target-select');
   const ncts = document.getElementById('note-collab-target-select');
@@ -795,6 +901,8 @@ export function editNote(e, id) {
   bindNoteEditorInteractions();
 
   updateNoteModalUI();
+  const tagsInputEl = document.getElementById('note-tags-input');
+  if (tagsInputEl) tagsInputEl.value = (note.tags || []).join(' ');
   createCustomSelect('note-collab-target-select');
   createCustomSelect('note-collab-permission-select');
 }
@@ -832,6 +940,8 @@ export function saveNote() {
         ? 'department'
         : 'private';
   const addSh = buildSharesFromCollabSelect('note-collab-target-select', 'note-collab-permission-select');
+  const tagsRaw = document.getElementById('note-tags-input')?.value || '';
+  const tags = tagsRaw.match(/#[\w\u00C0-\u017F]+/gi)?.map(t => t.toLowerCase()) || [];
   const pinned = document.getElementById('note-pinned-toggle')?.classList.contains('on') || false;
 
   if (editingNoteId) {
@@ -854,6 +964,7 @@ export function saveNote() {
       images,
       visibility: vis,
       pinned,
+      tags,
       shares: [...rest, ...addSh],
     };
     delete updated.reminderTime;
@@ -878,6 +989,7 @@ export function saveNote() {
         images,
         visibility: vis,
         pinned,
+        tags,
         shares: addSh,
       },
     ]);
@@ -2129,3 +2241,252 @@ export function insertImagePostit() { insertImageIntoTextarea('postit-body-input
 export function insertImageDoc() { insertImageIntoTextarea('doc-content-input'); }
 export function insertImageProject() { insertImageIntoTextarea('project-desc-input'); }
 export function insertImageTask() { insertImageIntoTextarea('task-desc-input'); }
+
+export function getAllVisibleNoteTags() {
+  if (!currentUser) return [];
+  const tagSet = new Set();
+  notes.forEach(n => {
+    if (userCanSeeNote(n)) (n.tags || []).forEach(t => tagSet.add(t));
+  });
+  return [...tagSet].sort();
+}
+
+export function filterNotesByTag(tag) {
+  const next = activeNoteTagFilter === tag ? null : tag;
+  setActiveNoteTagFilter(next);
+  syncNoteTagFilterUI();
+  const menu = document.getElementById('note-tag-dropdown');
+  if (menu) menu.classList.add('hidden');
+  renderNotes();
+}
+
+export function toggleNoteTagDropdown() {
+  const menu = document.getElementById('note-tag-dropdown');
+  if (!menu) return;
+  const isHidden = menu.classList.contains('hidden');
+  if (isHidden) {
+    const tags = getAllVisibleNoteTags();
+    if (tags.length === 0) {
+      menu.innerHTML = '<div style="padding:10px 14px;font-size:12px;color:var(--text-muted)">No hay etiquetas todavía</div>';
+    } else {
+      menu.innerHTML = [
+        activeNoteTagFilter
+          ? `<button type="button" class="tag-dropdown-item tag-dropdown-clear" onclick="filterNotesByTag(null)">✕ Quitar filtro</button>`
+          : '',
+        ...tags.map(
+          t =>
+            `<button type="button" class="tag-dropdown-item${activeNoteTagFilter === t ? ' active' : ''}" onclick="filterNotesByTag(${JSON.stringify(
+              t
+            )})">${t}</button>`
+        ),
+      ].join('');
+    }
+    menu.classList.remove('hidden');
+    setTimeout(() => {
+      const close = e => {
+        if (!menu.contains(e.target) && e.target.id !== 'note-tag-filter-btn') {
+          menu.classList.add('hidden');
+          document.removeEventListener('click', close);
+        }
+      };
+      document.addEventListener('click', close);
+    }, 0);
+  } else {
+    menu.classList.add('hidden');
+  }
+}
+
+export function renderWeeklyView() {
+  const area = document.getElementById('notes-area');
+  if (!area || !currentUser) return;
+
+  const today = new Date();
+  today.setDate(today.getDate() + weekOffset * 7);
+  const dow = today.getDay();
+  const diffToMonday = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diffToMonday);
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return toDateStr(d);
+  });
+
+  const todayStr = toDateStr(new Date());
+  const weekEnd = new Date(monday);
+  weekEnd.setDate(monday.getDate() + 6);
+  const weekStartStr = toDateStr(monday);
+  const weekEndStr = toDateStr(weekEnd);
+  const weekStartLabel = monday.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+  const weekEndLabel = weekEnd.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  const dayLabels = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+  // Modo: 'team' o 'me'
+  const weekMode = window._weekMode || 'team';
+
+  // ── Estadísticas de la semana ──
+  const weekNotes = notes.filter(n =>
+    n.date >= weekStartStr && n.date <= weekEndStr &&
+    userCanSeeNote(n)
+  );
+  const myWeekNotes = weekNotes.filter(n => sameId(n.authorId, currentUser.id));
+  const mentionsToMe = weekNotes.filter(n => (n.mentions || []).some(id => sameId(id, currentUser.id)));
+  const highPriority = weekNotes.filter(n => n.priority === 'alta');
+
+  // ── Mis tareas con vencimiento esta semana ──
+  const myTasks = [];
+  projects.filter(p => p.group === currentUser.group).forEach(p => {
+    (p.tasks || [])
+      .filter(t => !t.done && t.assigneeId != null && sameId(t.assigneeId, currentUser.id) && t.dueDate && t.dueDate >= weekStartStr && t.dueDate <= weekEndStr)
+      .forEach(t => myTasks.push({ projectName: p.name, task: t }));
+  });
+
+  // ── Mis post-its pendientes ──
+  const myPostits = postitCards.filter(c =>
+    c.assignedTo != null && sameId(c.assignedTo, currentUser.id) &&
+    (c.column === 'pendiente' || c.column === 'progreso') &&
+    c.group === currentUser.group
+  );
+
+  // ── HTML estadísticas ──
+  const statsHtml = `
+    <div class="weekly-stats-bar">
+      <div class="weekly-stat">
+        <span class="weekly-stat-num">${weekNotes.length}</span>
+        <span class="weekly-stat-label">Notas del equipo</span>
+      </div>
+      <div class="weekly-stat">
+        <span class="weekly-stat-num">${myWeekNotes.length}</span>
+        <span class="weekly-stat-label">Mis notas</span>
+      </div>
+      <div class="weekly-stat${mentionsToMe.length > 0 ? ' weekly-stat--accent' : ''}">
+        <span class="weekly-stat-num">${mentionsToMe.length}</span>
+        <span class="weekly-stat-label">Me mencionan</span>
+      </div>
+      <div class="weekly-stat${highPriority.length > 0 ? ' weekly-stat--danger' : ''}">
+        <span class="weekly-stat-num">${highPriority.length}</span>
+        <span class="weekly-stat-label">Alta prioridad</span>
+      </div>
+    </div>`;
+
+  // ── HTML mis tareas y post-its ──
+  const myTasksHtml = myTasks.length > 0 ? `
+    <div class="weekly-my-section">
+      <h4 class="weekly-my-title">🎯 Mis tareas con vencimiento esta semana</h4>
+      <div class="weekly-my-list">
+        ${myTasks.map(({ projectName, task }) => {
+          const isOverdue = task.dueDate < todayStr;
+          return `<div class="weekly-my-item${isOverdue ? ' weekly-my-item--overdue' : ''}">
+            <span class="weekly-my-item-project">${escapeHtml(projectName)}</span>
+            <span class="weekly-my-item-name">${escapeHtml(task.name)}</span>
+            <span class="weekly-my-item-due${isOverdue ? ' overdue' : ''}">${task.dueDate}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  const myPostitHtml = myPostits.length > 0 ? `
+    <div class="weekly-my-section">
+      <h4 class="weekly-my-title">🗂 Mis post-its pendientes</h4>
+      <div class="weekly-my-list">
+        ${myPostits.map(c => `
+          <div class="weekly-my-item">
+            <span class="weekly-my-item-name">${escapeHtml(c.title || 'Sin título')}</span>
+            <span class="weekly-my-item-col">${c.column === 'progreso' ? '⚡ En progreso' : '📋 Pendiente'}</span>
+            ${c.dueDate ? `<span class="weekly-my-item-due${c.dueDate < todayStr ? ' overdue' : ''}">${c.dueDate}</span>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  // ── HTML días ──
+  const sectionsHtml = days.map((ds, idx) => {
+    const allDayNotes = notes.filter(n =>
+      n.date === ds &&
+      userCanSeeNote(n) &&
+      (n.visibility !== 'public' || sameId(n.authorId, currentUser.id) || departmentDiarySameCoreDeptNote(n))
+    );
+    const dayNotes = weekMode === 'me'
+      ? allDayNotes.filter(n => sameId(n.authorId, currentUser.id))
+      : allDayNotes;
+
+    dayNotes.sort((a, b) => {
+      const order = { morning: 0, afternoon: 1, night: 2 };
+      const sa = order[a.shift] ?? 9;
+      const sb = order[b.shift] ?? 9;
+      if (sa !== sb) return sa - sb;
+      if (!!a.pinned !== !!b.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+
+    const isToday = ds === todayStr;
+    const dateObj = new Date(`${ds}T12:00:00`);
+    const dateFormatted = dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+    const label = `${dayLabels[idx]} ${dateFormatted}${isToday ? ' · Hoy' : ''}`;
+    const countLabel = dayNotes.length === 0 ? 'Sin notas' : `${dayNotes.length} nota${dayNotes.length !== 1 ? 's' : ''}`;
+
+    const cardsHtml = dayNotes.length > 0
+      ? `<div class="notes-history-cards">${dayNotes.map(n => renderNoteCard(n, {})).join('')}</div>`
+      : `<p style="color:var(--text-muted);font-size:12px;padding:12px 0 4px">Sin notas este día.</p>`;
+
+    const openAttr = isToday ? 'open' : '';
+
+    return `
+      <details class="weekly-day-block" ${openAttr}>
+        <summary class="weekly-day-summary${isToday ? ' weekly-day-today' : ''}">
+          <span class="weekly-day-label">${label}</span>
+          <span class="weekly-day-count">${countLabel}</span>
+        </summary>
+        <div class="weekly-day-body">${cardsHtml}</div>
+      </details>`;
+  }).join('');
+
+  const weeklyHeaderHtml = `
+        <div class="weekly-view-header">
+          <button type="button" class="btn-secondary" onclick="navigateWeek(-1)">◀ Anterior</button>
+          <span class="weekly-view-range">${weekStartLabel} – ${weekEndLabel}</span>
+          <button type="button" class="btn-secondary" onclick="navigateWeek(1)">Siguiente ▶</button>
+        </div>
+        <div class="weekly-mode-toggle">
+          <button type="button" class="weekly-mode-btn${weekMode === 'team' ? ' active' : ''}" onclick="setWeekMode('team')">👥 Equipo</button>
+          <button type="button" class="weekly-mode-btn${weekMode === 'me' ? ' active' : ''}" onclick="setWeekMode('me')">👤 Mis notas</button>
+        </div>`;
+
+  if (weekMode === 'team') {
+    area.innerHTML = `
+    <div class="weekly-view-wrap weekly-view-wrap--split">
+      <div class="weekly-main-col">
+        ${weeklyHeaderHtml}
+        ${sectionsHtml}
+      </div>
+      <div class="weekly-side-col">
+        ${statsHtml}
+        <div class="weekly-side-section">
+          <h4 class="weekly-side-title">📅 Esta semana</h4>
+          <div class="weekly-side-info">
+            <span>${weekStartLabel}</span>
+            <span style="color:var(--text-muted)">→</span>
+            <span>${weekEndLabel}</span>
+          </div>
+        </div>
+        ${myTasks.length > 0 ? myTasksHtml : ''}
+        ${myPostits.length > 0 ? myPostitHtml : ''}
+      </div>
+    </div>`;
+  } else {
+    area.innerHTML = `
+    <div class="weekly-view-wrap weekly-view-wrap--me">
+      <div class="weekly-main-col">
+        ${weeklyHeaderHtml}
+        ${statsHtml}
+        ${myTasksHtml}${myPostitHtml}
+        ${sectionsHtml}
+      </div>
+    </div>`;
+  }
+}
+
+export function setWeekMode(mode) {
+  window._weekMode = mode;
+  renderWeeklyView();
+}

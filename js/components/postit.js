@@ -3,6 +3,7 @@
 import { postitCards, USERS, currentUser, collectImageMap, editingPostitId, selectedPostitPriority, sameId, comments, editingPostitImages, setEditingPostitId, setEditingPostitImages, setSelectedPostitPriority } from './data.js';
 import { showToast, openModal, showConfirmModal } from './modalControl.js';
 import { renderMarkdown } from './notes.js';
+import { commentIndicators } from './docs.js';
 
 export const POSTIT_COLS = [
   {id:'pendiente',label:'Pendiente',icon:'📋',color:'var(--text-muted)'},
@@ -12,6 +13,31 @@ export const POSTIT_COLS = [
 ];
 let draggingPostitId = null;
 let postitDropPlaceholder = null;
+let postitUserFilter = null;
+
+function renderPostitUserFilter() {
+  const bar = document.getElementById('postit-user-filter-bar');
+  if (!bar || !currentUser) return;
+  const usersInBoard = USERS.filter(u => u.group === currentUser.group);
+  bar.innerHTML = [
+    `<button type="button" class="postit-user-filter-btn${!postitUserFilter ? ' active' : ''}" data-uid="" onclick="setPostitUserFilter(null)">Todos</button>`,
+    ...usersInBoard.map(u =>
+      `<button type="button" class="postit-user-filter-btn${postitUserFilter != null && sameId(postitUserFilter, u.id) ? ' active' : ''}" data-uid="${u.id}" onclick="setPostitUserFilter(${u.id})">
+          <span class="postit-filter-av" style="background:${u.color}">${u.initials}</span>${u.name.split(' ')[0]}
+        </button>`
+    )
+  ].join('');
+}
+
+export function setPostitUserFilter(userId) {
+  postitUserFilter = userId ? Number(userId) : null;
+  document.querySelectorAll('.postit-user-filter-btn').forEach(b => {
+    const uid = b.dataset.uid;
+    const isAll = uid === '' || uid === undefined;
+    b.classList.toggle('active', postitUserFilter == null ? isAll : Number(uid) === postitUserFilter);
+  });
+  renderPostitBoard();
+}
 
 function applyPostitColorByColumn(card) {
   const colToColor = { pendiente: 'yellow', progreso: 'blue', revision: 'purple', hecho: 'green' };
@@ -21,8 +47,11 @@ function applyPostitColorByColumn(card) {
 export function renderPostitBoard() {
   const board = document.getElementById('postit-board');
   if (!board) return;
+  const visibleCards = (col) => postitCards
+    .filter(c => c.column === col.id && c.group === currentUser.group)
+    .filter(c => !postitUserFilter || sameId(c.assignedTo, postitUserFilter));
   board.innerHTML = POSTIT_COLS.map(col => {
-    const cards = postitCards.filter(c => c.column === col.id && c.group === currentUser.group);
+    const cards = visibleCards(col);
     return `<div class="postit-col">
       <div class="postit-col-header">
         <h4 style="color:${col.color}">${col.icon} ${col.label}</h4>
@@ -35,9 +64,11 @@ export function renderPostitBoard() {
     </div>`;
   }).join('');
   setupPostitDragAndDrop();
+  renderPostitUserFilter();
 }
 
 export function renderPostitCard(c) {
+  const isOverdue = c.dueDate && !c.done && new Date(c.dueDate + 'T23:59:59') < new Date();
   const author = USERS.find(u => u.id === c.authorId) || {color:'#888',initials:'?'};
   const priorityColors = {normal:'var(--text-muted)',media:'var(--accent2)',alta:'var(--danger)'};
   const bodyHtml = c.body ? renderMarkdown(c.body, c.images || {}) : '';
@@ -56,13 +87,8 @@ export function renderPostitCard(c) {
   let dueDateHtml = '';
   if (c.dueDate) {
     const due = new Date(c.dueDate + 'T12:00:00');
-    const now = new Date();
-    const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
     const dateStr = due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-    let dateClass = 'postit-due-date';
-    if (diffDays < 0) dateClass += ' overdue';
-    else if (diffDays <= 2) dateClass += ' soon';
-    dueDateHtml = `<span class="${dateClass}" title="Fecha límite: ${dateStr}">📅 ${dateStr}</span>`;
+    dueDateHtml = `<span class="postit-card-due${isOverdue ? ' postit-card-due--overdue' : ''}" title="Fecha límite: ${dateStr}">${c.dueDate}</span>`;
   }
 
   // Checklist progress
@@ -79,7 +105,7 @@ export function renderPostitCard(c) {
     </div>`;
   }
 
-  return `<div class="postit-card ${c.color}" draggable="true" data-postit-id="${c.id}" onclick="if(!window._postitDragSuppressClick){editPostitCard(${c.id})}">
+  return `<div class="postit-card ${c.color}${isOverdue ? ' postit-card--overdue' : ''}" draggable="true" data-postit-id="${c.id}" onclick="if(!window._postitDragSuppressClick){editPostitCard(${c.id})}">
     <div class="postit-card-actions">
       <button class="postit-card-action" onclick="movePostitCard(event,${c.id},-1)" title="Mover a la izquierda">←</button>
       <button class="postit-card-action" onclick="movePostitCard(event,${c.id},1)" title="Mover a la derecha">→</button>
@@ -96,6 +122,7 @@ export function renderPostitCard(c) {
       ${assignedHtml}
       <span style="color:${priorityColors[c.priority]};margin-left:auto">${c.priority !== 'normal' ? '● ' + c.priority : ''}</span>
       ${dueDateHtml}
+      ${commentIndicators('postit', c.id)}
     </div>
   </div>`;
 }

@@ -32,7 +32,7 @@ import {
   openPasswordModal,
   proceedAfterPassword,
   backToGroups,
-  selectUser,
+  selectUser as loginSelectUser,
   logout,
   addUser,
   removeUser,
@@ -92,6 +92,9 @@ import {
   openNoteTemplatesModal,
   applyNoteTemplate,
   deleteNoteTemplate,
+  filterNotesByTag,
+  toggleNoteTagDropdown,
+  setWeekMode,
 } from './components/notes.js';
 import {
   openNewPostitModal,
@@ -117,6 +120,7 @@ import {
   renderPostitSubtasks,
   renderPostitChecklist,
   renderPostitAttachments,
+  setPostitUserFilter,
 } from './components/postit.js';
 import {
   renderDocs,
@@ -141,6 +145,19 @@ import {
   saveDocOrFolder,
   toggleIconPopover,
   selectIcon,
+  setDocsViewMode,
+  setDocsSortOrder,
+  viewDoc,
+  openDocTemplatesModal,
+  applyDocTemplate,
+  deleteDocTemplate,
+  saveDocTemplateFromCurrent,
+  openDocVersionsModal,
+  restoreDocVersion,
+  editDocFolder,
+  openEditDocModal,
+  deleteDoc,
+  openDocCommentsModal,
 } from './components/docs.js';
 import {
   setProjectUserFilter,
@@ -185,6 +202,8 @@ import {
   exportProjectAsText,
   openProjectPrintReport,
   triggerImportDiarioBackup,
+  generateDepartmentReport,
+  openReportModal,
 } from './components/export.js';
 import {
   openNewChatModal,
@@ -238,6 +257,7 @@ import {
   toggleCommentMentionMenu,
   insertSelectedMentions,
   insertImageIntoCommentTextarea,
+  loadMorePublicNotes,
 } from './components/comments.js';
 import {
   renderWhiteboard, wbSetTool, wbSetShape, wbSetColor, wbSetSize,
@@ -255,6 +275,17 @@ import {
   wbToggleShapesMenu, wbPickShape,
   wbShapeMenuPick, wbShapeMenuToggleFill, wbShapeMenuSetColor
 } from './components/whiteboard.js';
+import {
+  openHandoverPanel, closeHandoverPanel, addHandoverItem,
+  removeHandoverItem, deliverHandover, checkPendingHandover,
+  dismissHandoverBanner, openHandoverReceive, confirmHandoverReceived,
+  openHandoverHistory, setupHandoverProjectAutocomplete, selectHandoverSuggestion,
+} from './handover.js';
+
+function selectUser(id) {
+  loginSelectUser(id);
+  checkPendingHandover();
+}
 
 function loadData() {
   try {
@@ -405,6 +436,8 @@ async function initializeApp() {
       exportNotes,
       exportAllData,
       triggerImportDiarioBackup,
+      generateDepartmentReport,
+      openReportModal,
       clearAllData,
       exportProjectAsText,
       openProjectPrintReport,
@@ -557,6 +590,7 @@ async function initializeApp() {
       toggleCommentMentionMenu,
       insertSelectedMentions,
       insertImageIntoCommentTextarea,
+      loadMorePublicNotes,
       renderWhiteboard, wbSetTool, wbSetShape, wbSetColor, wbSetSize,
       wbToggleFill,
       wbUndo, wbRedo, wbClear, wbExport, wbZoomIn, wbZoomOut, wbResetView,
@@ -585,17 +619,64 @@ async function initializeApp() {
       closeDocModalWithCleanup,
       toggleIconPopover,
       selectIcon,
+      setDocsViewMode,
+      setDocsSortOrder,
+      viewDoc,
+      openDocTemplatesModal,
+      applyDocTemplate,
+      deleteDocTemplate,
+      saveDocTemplateFromCurrent,
+      openDocVersionsModal,
+      restoreDocVersion,
       selectShiftOpt,
       selectPriority,
       selectVisibility,
       toggleReminder,
       toggleNotePinnedModal,
       handleNoteEditorInput,
+      filterNotesByTag,
+      toggleNoteTagDropdown,
+      setWeekMode,
     });
+
+    window.editDocFolder = editDocFolder;
+    window.editDocument = editDocument;
+    window.openEditDocModal = openEditDocModal;
+    window.selectDocFolder = selectDocFolder;
+    window.viewDoc = viewDoc;
+    window.deleteDocElement = deleteDocElement;
+    window.deleteDoc = deleteDoc;
+    window.downloadFile = downloadFile;
+    window.downloadItem = downloadItem;
+    window.downloadDocAsMarkdown = downloadDocAsMarkdown;
+    window.openDocCommentsModal = openDocCommentsModal;
+    window.setDocsViewMode = setDocsViewMode;
+    window.setDocsSortOrder = setDocsSortOrder;
+    window.openDocTemplatesModal = openDocTemplatesModal;
+    window.applyDocTemplate = applyDocTemplate;
+    window.deleteDocTemplate = deleteDocTemplate;
+    window.saveDocTemplateFromCurrent = saveDocTemplateFromCurrent;
+    window.openDocVersionsModal = openDocVersionsModal;
+    window.restoreDocVersion = restoreDocVersion;
+    window.setPostitUserFilter = setPostitUserFilter;
+
+    window.openHandoverPanel = openHandoverPanel;
+    window.closeHandoverPanel = closeHandoverPanel;
+    window.addHandoverItem = addHandoverItem;
+    window.removeHandoverItem = removeHandoverItem;
+    window.deliverHandover = deliverHandover;
+    window.checkPendingHandover = checkPendingHandover;
+    window.dismissHandoverBanner = dismissHandoverBanner;
+    window.openHandoverReceive = openHandoverReceive;
+    window.confirmHandoverReceived = confirmHandoverReceived;
+    window.openHandoverHistory = openHandoverHistory;
+    window.setupHandoverProjectAutocomplete = setupHandoverProjectAutocomplete;
+    window.selectHandoverSuggestion = selectHandoverSuggestion;
 
     loadData();
     applyTheme();
     setupEventListeners();
+    checkPendingHandover();
 
     console.log('Application initialized successfully');
   } catch (error) {

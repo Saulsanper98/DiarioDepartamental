@@ -54,6 +54,7 @@ export let activeShiftFilters = ['morning','afternoon','night'];
 export let searchQuery = '';
 /** Con texto de búsqueda, incluir todas las fechas (no solo el día del calendario). */
 export let searchNotesAllDates = false;
+export let activeNoteTagFilter = null;
 export let editingNoteId = null;
 export let editingPostitId = null;
 export let reminderOn = false;
@@ -96,6 +97,7 @@ export function setWeekOffset(val) { weekOffset = val; }
 export function setActiveShiftFilters(val) { activeShiftFilters = val; }
 export function setSearchQuery(val) { searchQuery = val; }
 export function setSearchNotesAllDates(val) { searchNotesAllDates = !!val; }
+export function setActiveNoteTagFilter(val) { activeNoteTagFilter = val; }
 export function setEditingNoteId(val) { editingNoteId = val; }
 export function setEditingPostitId(val) { editingPostitId = val; }
 export function setReminderOn(val) { reminderOn = val; }

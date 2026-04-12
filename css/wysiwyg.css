@@ -7020,3 +7020,1042 @@ html.tema-aurora #note-templates-modal .modal-close:hover {
   border-color: rgba(255,255,255,0.2) !important;
 }
 
+/* ── Aurora — Dropdown etiquetas ── */
+html.tema-aurora .note-tag-dropdown {
+  background: rgba(12, 8, 35, 0.82) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07) !important;
+}
+
+html.tema-aurora .tag-dropdown-item {
+  color: rgba(255,255,255,0.55) !important;
+  border-radius: 8px !important;
+  font-family: 'DM Mono', monospace !important;
+  font-size: 12px !important;
+}
+
+html.tema-aurora .tag-dropdown-item:hover {
+  background: rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.95) !important;
+}
+
+html.tema-aurora .tag-dropdown-item.active {
+  background: rgba(120,100,255,0.18) !important;
+  color: rgba(180,160,255,0.95) !important;
+  font-weight: 600 !important;
+}
+
+html.tema-aurora .tag-dropdown-clear {
+  color: rgba(255,110,110,0.8) !important;
+}
+
+html.tema-aurora .tag-dropdown-clear:hover {
+  background: rgba(239,68,68,0.12) !important;
+  color: rgba(255,140,140,1) !important;
+}
+
+html.tema-aurora .notes-tag-filter-trigger {
+  background: none !important;
+  border: none !important;
+  color: rgba(255,255,255,0.4) !important;
+}
+html.tema-aurora .notes-tag-filter-trigger:hover {
+  background: none !important;
+  border: none !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+html.tema-aurora .notes-tag-filter-trigger.active {
+  background: none !important;
+  border: none !important;
+  color: rgba(180,160,255,0.95) !important;
+}
+
+html.tema-aurora .note-tag-active-pill {
+  background: rgba(120,100,255,0.15) !important;
+  border-color: rgba(120,100,255,0.5) !important;
+  color: rgba(180,160,255,0.95) !important;
+}
+
+html.tema-aurora .note-tag-active-pill button {
+  color: rgba(180,160,255,0.8) !important;
+}
+
+html.tema-aurora .weekly-day-block {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  border-radius: 14px !important;
+}
+html.tema-aurora .weekly-day-summary:hover {
+  background: rgba(255,255,255,0.05) !important;
+}
+html.tema-aurora .weekly-day-today {
+  background: rgba(120,100,255,0.1) !important;
+}
+html.tema-aurora .weekly-day-label {
+  color: rgba(255,255,255,0.85) !important;
+}
+html.tema-aurora .weekly-day-count {
+  color: rgba(255,255,255,0.35) !important;
+}
+
+html.tema-aurora .docs-breadcrumb {
+  border-bottom: none !important;
+}
+html.tema-aurora .breadcrumb-item {
+  color: rgba(255,255,255,0.35) !important;
+}
+html.tema-aurora .breadcrumb-item:hover {
+  color: rgba(255,255,255,0.8) !important;
+}
+html.tema-aurora .breadcrumb-item--active {
+  color: rgba(255,255,255,0.85) !important;
+}
+html.tema-aurora .breadcrumb-sep {
+  color: rgba(255,255,255,0.15) !important;
+}
+
+html.tema-aurora .docs-view-toggle-btn,
+html.tema-aurora .docs-sort-btn {
+  background: transparent !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.35) !important;
+}
+html.tema-aurora .docs-view-toggle-btn:hover,
+html.tema-aurora .docs-sort-btn:hover {
+  background: rgba(255,255,255,0.07) !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+html.tema-aurora .docs-view-toggle-btn.active,
+html.tema-aurora .docs-sort-btn.active {
+  background: rgba(120,100,255,0.18) !important;
+  border-color: rgba(120,100,255,0.55) !important;
+  color: rgba(180,160,255,0.95) !important;
+}
+html.tema-aurora .docs-recent-banner {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+html.tema-aurora .docs-recent-banner:hover {
+  background: rgba(255,255,255,0.07) !important;
+  border-color: rgba(120,100,255,0.4) !important;
+}
+html.tema-aurora .docs-recent-title {
+  color: rgba(255,255,255,0.85) !important;
+}
+html.tema-aurora .docs-recent-arrow {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+html.tema-aurora #doc-versions-modal .modal {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+html.tema-aurora #doc-versions-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+html.tema-aurora #doc-versions-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+}
+html.tema-aurora .doc-version-item {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+html.tema-aurora .doc-version-num {
+  color: rgba(180,160,255,0.9) !important;
+}
+html.tema-aurora .doc-version-date,
+html.tema-aurora .doc-version-preview {
+  color: rgba(255,255,255,0.35) !important;
+}
+html.tema-aurora .doc-version-author {
+  color: rgba(255,255,255,0.55) !important;
+}
+
+/* ── Aurora — Modal Plantillas de Documento ── */
+html.tema-aurora #doc-templates-modal {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal.modal-note-templates {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal-note-templates-header {
+  background: linear-gradient(180deg, rgba(120,100,255,0.14), transparent) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal-note-templates-title-wrap h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal-note-templates-badge {
+  background: rgba(120,88,246,0.2) !important;
+  border-color: rgba(120,88,246,0.4) !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal-note-templates-lead {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.55) !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal-note-templates-lead strong {
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal-note-templates-empty {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.4) !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal-note-templates-empty strong {
+  color: rgba(255,255,255,0.7) !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal-note-templates-footer {
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal-close {
+  color: rgba(255,255,255,0.4) !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 8px !important;
+}
+
+html.tema-aurora #doc-templates-modal .modal-close:hover {
+  color: rgba(255,255,255,0.85) !important;
+  background: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+}
+
+html.tema-aurora .doc-template-item {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .doc-template-title {
+  color: rgba(255,255,255,0.8) !important;
+}
+
+/* ── Aurora — Modal Historial de Versiones ── */
+html.tema-aurora #doc-versions-modal {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora #doc-versions-modal .modal {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora #doc-versions-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #doc-versions-modal .modal-header h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #doc-versions-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #doc-versions-modal .modal-close {
+  color: rgba(255,255,255,0.4) !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 8px !important;
+}
+
+html.tema-aurora #doc-versions-modal .modal-close:hover {
+  color: rgba(255,255,255,0.85) !important;
+  background: rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora .doc-version-item {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .doc-version-num {
+  color: rgba(180,160,255,0.95) !important;
+}
+
+html.tema-aurora .doc-version-date {
+  color: rgba(255,255,255,0.35) !important;
+}
+
+html.tema-aurora .doc-version-author {
+  color: rgba(255,255,255,0.6) !important;
+}
+
+html.tema-aurora .doc-version-preview {
+  color: rgba(255,255,255,0.3) !important;
+  border-left: 2px solid rgba(120,100,255,0.3) !important;
+  padding-left: 8px !important;
+  margin: 4px 0 !important;
+}
+
+/* ── Aurora — Visor de documento ── */
+html.tema-aurora .doc-full-view {
+  background: transparent !important;
+}
+
+html.tema-aurora .doc-viewer-toolbar {
+  background: rgba(255,255,255,0.03) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+}
+
+html.tema-aurora .doc-viewer {
+  background: rgba(255,255,255,0.05) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.07) !important;
+  padding: 32px !important;
+}
+
+html.tema-aurora .doc-viewer h1 {
+  color: rgba(255,255,255,0.92) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  padding-bottom: 16px !important;
+  margin-bottom: 8px !important;
+}
+
+html.tema-aurora .doc-meta-bar {
+  color: rgba(255,255,255,0.35) !important;
+  font-size: 12px !important;
+  margin-bottom: 24px !important;
+}
+
+html.tema-aurora .doc-body {
+  color: rgba(255,255,255,0.75) !important;
+  line-height: 1.75 !important;
+}
+
+html.tema-aurora .doc-body h1,
+html.tema-aurora .doc-body h2,
+html.tema-aurora .doc-body h3,
+html.tema-aurora .doc-body h4 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora .doc-body a {
+  color: rgba(160,140,255,0.9) !important;
+}
+
+html.tema-aurora .doc-body code,
+html.tema-aurora .doc-body pre {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 6px !important;
+  color: rgba(180,255,200,0.85) !important;
+}
+
+html.tema-aurora .doc-body blockquote {
+  border-left: 3px solid rgba(120,100,255,0.6) !important;
+  background: rgba(120,100,255,0.06) !important;
+  color: rgba(255,255,255,0.55) !important;
+  border-radius: 0 8px 8px 0 !important;
+  padding: 10px 16px !important;
+}
+
+html.tema-aurora .doc-back {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.6) !important;
+  border-radius: 8px !important;
+  padding: 6px 14px !important;
+  transition: all 0.15s !important;
+}
+
+html.tema-aurora .doc-back:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.9) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+}
+
+html.tema-aurora .docs-list-item {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  transition: background 0.15s !important;
+}
+
+html.tema-aurora .docs-list-item:hover {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+html.tema-aurora .docs-type-filter {
+  border-bottom-color: rgba(255,255,255,0.07) !important;
+}
+html.tema-aurora .docs-type-btn {
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.35) !important;
+}
+html.tema-aurora .docs-type-btn:hover {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+html.tema-aurora .docs-type-btn.active {
+  background: rgba(120,100,255,0.15) !important;
+  border-color: rgba(120,100,255,0.5) !important;
+  color: rgba(180,160,255,0.95) !important;
+}
+
+/* ── Aurora — Post-it Board ── */
+html.tema-aurora .postit-board {
+  background: transparent !important;
+}
+
+html.tema-aurora .postit-col {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 14px !important;
+}
+
+html.tema-aurora .postit-col-header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 14px 14px 0 0 !important;
+}
+
+html.tema-aurora .postit-col-title {
+  color: rgba(255,255,255,0.75) !important;
+  font-weight: 600 !important;
+}
+
+html.tema-aurora .postit-col-count {
+  color: rgba(255,255,255,0.3) !important;
+}
+
+html.tema-aurora .postit-card {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+  transition: all 0.15s !important;
+}
+
+html.tema-aurora .postit-card:hover {
+  background: rgba(255,255,255,0.09) !important;
+  border-color: rgba(255,255,255,0.18) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3) !important;
+}
+
+html.tema-aurora .postit-card-title {
+  color: rgba(255,255,255,0.88) !important;
+}
+
+html.tema-aurora .postit-card-body {
+  color: rgba(255,255,255,0.5) !important;
+}
+
+html.tema-aurora .postit-card-footer {
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  margin-top: 10px !important;
+  padding-top: 8px !important;
+}
+
+html.tema-aurora .postit-add-btn {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px dashed rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.3) !important;
+  border-radius: 10px !important;
+  transition: all 0.15s !important;
+}
+
+html.tema-aurora .postit-add-btn:hover {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(120,100,255,0.4) !important;
+  color: rgba(255,255,255,0.7) !important;
+}
+
+html.tema-aurora .postit-user-filter-wrap {
+  background: rgba(255,255,255,0.02) !important;
+  border-bottom-color: rgba(255,255,255,0.07) !important;
+}
+html.tema-aurora .postit-user-filter-btn {
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.35) !important;
+}
+html.tema-aurora .postit-user-filter-btn:hover {
+  background: rgba(255,255,255,0.07) !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+html.tema-aurora .postit-user-filter-btn.active {
+  background: rgba(120,100,255,0.15) !important;
+  border-color: rgba(120,100,255,0.5) !important;
+  color: rgba(180,160,255,0.95) !important;
+}
+
+html.tema-aurora .postit-card--overdue {
+  border-left: 3px solid rgba(239,68,68,0.7) !important;
+  background: rgba(239,68,68,0.05) !important;
+}
+html.tema-aurora .postit-card-due--overdue {
+  color: rgba(255,120,120,0.9) !important;
+}
+
+/* ══════════════════════════════════════════
+   Aurora — Login completo
+   ══════════════════════════════════════════ */
+
+/* Fondo con orbs animados */
+html.tema-aurora #login-screen {
+  background:
+    radial-gradient(circle at 15% 25%, rgba(120,100,255,0.18) 0%, transparent 40%),
+    radial-gradient(circle at 85% 75%, rgba(20,184,166,0.14) 0%, transparent 40%),
+    radial-gradient(circle at 50% 10%, rgba(99,102,241,0.12) 0%, transparent 35%),
+    linear-gradient(135deg, #0a0520 0%, #050d1a 50%, #030f0a 100%) !important;
+  overflow: hidden !important;
+}
+
+/* Orbs animados en el fondo */
+html.tema-aurora #login-screen::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  transform-origin: center center !important;
+  background:
+    radial-gradient(ellipse 55% 45% at 12% 75%, rgba(120,100,255,0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 40% at 80% 20%, rgba(20,184,166,0.28) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 35% at 55% 55%, rgba(99,102,241,0.18) 0%, transparent 50%) !important;
+  animation: auroraLoginOrbs 8s ease-in-out infinite alternate !important;
+  pointer-events: none !important;
+}
+
+html.tema-aurora #login-screen::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  transform-origin: center center !important;
+  background:
+    radial-gradient(ellipse 65% 50% at 10% 65%, rgba(140,100,255,0.28) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 40% at 88% 30%, rgba(20,184,166,0.25) 0%, transparent 55%) !important;
+  animation: auroraLoginOrbs 8s ease-in-out infinite alternate-reverse !important;
+  pointer-events: none !important;
+}
+
+@keyframes auroraLoginOrbs {
+  0%   { opacity: 0.65; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+/* Login box — glass */
+html.tema-aurora .login-box {
+  z-index: 1 !important;
+  position: relative !important;
+  background: rgba(255,255,255,0.06) !important;
+  backdrop-filter: blur(32px) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 24px !important;
+  box-shadow:
+    0 40px 80px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+/* Logo */
+html.tema-aurora .logo-mark {
+  color: rgba(180,160,255,0.95) !important;
+  text-shadow:
+    0 0 30px rgba(120,100,255,0.6),
+    0 0 60px rgba(120,100,255,0.3) !important;
+  font-size: 56px !important;
+}
+
+/* Títulos del header */
+html.tema-aurora .login-header h1 {
+  color: rgba(255,255,255,0.4) !important;
+  letter-spacing: 4px !important;
+}
+
+html.tema-aurora .login-header p {
+  color: rgba(255,255,255,0.3) !important;
+}
+
+/* Step indicator */
+html.tema-aurora .step-dot {
+  background: rgba(255,255,255,0.15) !important;
+}
+
+html.tema-aurora .step-dot.active {
+  background: rgba(160,140,255,0.9) !important;
+  box-shadow: 0 0 8px rgba(120,100,255,0.6) !important;
+}
+
+html.tema-aurora .step-dot.done {
+  background: rgba(20,184,166,0.8) !important;
+}
+
+html.tema-aurora .step-label {
+  color: rgba(255,255,255,0.3) !important;
+}
+
+/* Botones de grupo */
+html.tema-aurora .group-btn {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 16px !important;
+  color: rgba(255,255,255,0.85) !important;
+  transition: all 0.2s ease !important;
+  padding: 24px 16px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora .group-btn .g-icon {
+  font-size: 32px !important;
+  filter: drop-shadow(0 2px 8px rgba(120,100,255,0.3)) !important;
+}
+
+html.tema-aurora .group-btn .g-count {
+  color: rgba(255,255,255,0.3) !important;
+}
+
+html.tema-aurora .group-btn:hover {
+  background: rgba(120,100,255,0.18) !important;
+  border-color: rgba(120,100,255,0.55) !important;
+  color: rgba(255,255,255,0.98) !important;
+  transform: translateY(-4px) !important;
+  box-shadow:
+    0 16px 40px rgba(0,0,0,0.4),
+    0 0 24px rgba(120,100,255,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.15) !important;
+}
+
+/* Botones de usuario */
+html.tema-aurora .profile-btn {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 16px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .profile-btn:hover {
+  background: rgba(120,100,255,0.15) !important;
+  border-color: rgba(120,100,255,0.5) !important;
+  transform: translateY(-3px) !important;
+  box-shadow:
+    0 12px 32px rgba(0,0,0,0.35),
+    0 0 18px rgba(120,100,255,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+
+html.tema-aurora .profile-info strong {
+  color: rgba(255,255,255,0.88) !important;
+}
+
+html.tema-aurora .profile-info span {
+  color: rgba(255,255,255,0.35) !important;
+}
+
+/* Botón volver */
+html.tema-aurora .btn-back {
+  background: transparent !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.4) !important;
+}
+
+html.tema-aurora .btn-back:hover {
+  border-color: rgba(120,100,255,0.5) !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+/* Selector de tema flotante */
+html.tema-aurora .theme-toggle-btn {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+html.tema-aurora .theme-toggle-btn:hover {
+  background: rgba(255,255,255,0.12) !important;
+  border-color: rgba(120,100,255,0.5) !important;
+}
+
+html.tema-aurora .theme-panel-mini {
+  background: rgba(10,5,30,0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+/* Modal de contraseña */
+html.tema-aurora #password-modal-overlay {
+  background: rgba(0,0,0,0.6) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+html.tema-aurora #password-modal-box {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(32px) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 32px 64px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora #password-modal-box h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #password-modal-box p {
+  color: rgba(255,255,255,0.4) !important;
+}
+
+html.tema-aurora .pwd-input-wrap input {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.9) !important;
+  border-radius: 12px !important;
+}
+
+html.tema-aurora .pwd-input-wrap input:focus {
+  border-color: rgba(120,100,255,0.6) !important;
+  box-shadow: 0 0 0 3px rgba(120,100,255,0.15) !important;
+  background: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .pwd-input-wrap input::placeholder {
+  color: rgba(255,255,255,0.2) !important;
+}
+
+html.tema-aurora .pwd-toggle-btn {
+  color: rgba(255,255,255,0.3) !important;
+}
+
+html.tema-aurora .pwd-toggle-btn:hover {
+  color: rgba(255,255,255,0.8) !important;
+}
+
+html.tema-aurora .pwd-error {
+  color: rgba(255,120,120,0.9) !important;
+}
+
+html.tema-aurora .pwd-attempts {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+/* ── Aurora — Traspaso de Turno ── */
+html.tema-aurora .handover-panel {
+  background: rgba(8,4,24,0.95) !important;
+  backdrop-filter: blur(32px) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  border-left: 1px solid rgba(255,255,255,0.1) !important;
+  box-shadow: -12px 0 48px rgba(0,0,0,0.5) !important;
+}
+
+html.tema-aurora .handover-panel-header {
+  background: linear-gradient(180deg, rgba(120,100,255,0.1), transparent) !important;
+  border-bottom-color: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .handover-subtitle {
+  color: rgba(255,255,255,0.65) !important;
+}
+
+html.tema-aurora .handover-subtitle strong {
+  color: rgba(180,160,255,0.95) !important;
+}
+
+html.tema-aurora .handover-section {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .handover-section-summary {
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora .handover-section-summary:hover {
+  background: rgba(255,255,255,0.04) !important;
+}
+
+html.tema-aurora .handover-section-body {
+  border-top-color: rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora .handover-section-count {
+  background: rgba(255,255,255,0.07) !important;
+  color: rgba(255,255,255,0.35) !important;
+}
+
+html.tema-aurora .handover-item {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .handover-item-text {
+  color: rgba(255,255,255,0.82) !important;
+}
+
+html.tema-aurora .handover-add-btn {
+  border-color: rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.35) !important;
+}
+
+html.tema-aurora .handover-add-btn:hover {
+  border-color: rgba(120,100,255,0.5) !important;
+  color: rgba(180,160,255,0.9) !important;
+}
+
+html.tema-aurora .handover-avisos-input {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.82) !important;
+}
+
+html.tema-aurora .handover-avisos-input::placeholder {
+  color: rgba(255,255,255,0.2) !important;
+}
+
+html.tema-aurora .handover-panel-footer {
+  border-top-color: rgba(255,255,255,0.08) !important;
+  background: rgba(255,255,255,0.02) !important;
+}
+
+html.tema-aurora .handover-empty {
+  color: rgba(255,255,255,0.3) !important;
+}
+
+html.tema-aurora .handover-close-btn {
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.4) !important;
+}
+
+html.tema-aurora .handover-close-btn:hover {
+  border-color: rgba(255,255,255,0.25) !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora .handover-banner {
+  background: rgba(120,100,255,0.15) !important;
+  border-bottom-color: rgba(120,100,255,0.3) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+html.tema-aurora .handover-banner-text {
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora #handover-receive-modal {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora #handover-history-modal {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora #handover-receive-modal .modal,
+html.tema-aurora #handover-history-modal .modal {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora #handover-receive-modal .modal-header,
+html.tema-aurora #handover-history-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #handover-receive-modal .modal-header h3,
+html.tema-aurora #handover-history-modal .modal-header h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #handover-receive-modal .modal-footer,
+html.tema-aurora #handover-history-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #handover-receive-modal .modal-close,
+html.tema-aurora #handover-history-modal .modal-close {
+  color: rgba(255,255,255,0.4) !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 8px !important;
+}
+
+html.tema-aurora #handover-receive-modal .modal-close:hover,
+html.tema-aurora #handover-history-modal .modal-close:hover {
+  color: rgba(255,255,255,0.85) !important;
+  background: rgba(255,255,255,0.1) !important;
+}
+
+html.tema-aurora .handover-receive-meta {
+  color: rgba(255,255,255,0.4) !important;
+  border-bottom-color: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .handover-receive-section h4 {
+  color: rgba(255,255,255,0.35) !important;
+}
+
+html.tema-aurora .handover-receive-list,
+html.tema-aurora .handover-avisos-text {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+html.tema-aurora .handover-history-item {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .handover-history-item:hover {
+  background: rgba(255,255,255,0.07) !important;
+}
+
+html.tema-aurora .handover-history-shifts {
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora .handover-history-meta {
+  color: rgba(255,255,255,0.35) !important;
+}
+
+html.tema-aurora .handover-received-stamp {
+  background: rgba(16,185,129,0.1) !important;
+  border-color: rgba(16,185,129,0.25) !important;
+}
+
+html.tema-aurora .weekly-stat {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+html.tema-aurora .weekly-stat--accent {
+  border-color: rgba(120,100,255,0.4) !important;
+  background: rgba(120,100,255,0.06) !important;
+}
+html.tema-aurora .weekly-stat--danger {
+  border-color: rgba(239,68,68,0.35) !important;
+  background: rgba(239,68,68,0.05) !important;
+}
+html.tema-aurora .weekly-stat-num { color: rgba(255,255,255,0.9) !important; }
+html.tema-aurora .weekly-stat--accent .weekly-stat-num { color: rgba(180,160,255,0.95) !important; }
+html.tema-aurora .weekly-stat-label { color: rgba(255,255,255,0.3) !important; }
+html.tema-aurora .weekly-mode-btn {
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.35) !important;
+}
+html.tema-aurora .weekly-mode-btn:hover {
+  background: rgba(255,255,255,0.06) !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+html.tema-aurora .weekly-mode-btn.active {
+  background: rgba(120,100,255,0.15) !important;
+  border-color: rgba(120,100,255,0.5) !important;
+  color: rgba(180,160,255,0.95) !important;
+}
+html.tema-aurora .weekly-my-section {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(255,255,255,0.07) !important;
+}
+html.tema-aurora .weekly-my-item {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.07) !important;
+}
+html.tema-aurora .weekly-my-item--overdue {
+  border-color: rgba(239,68,68,0.4) !important;
+}
+html.tema-aurora .weekly-my-item-name { color: rgba(255,255,255,0.78) !important; }
+
+html.tema-aurora #report-modal {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+html.tema-aurora #report-modal .modal {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+html.tema-aurora #report-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+html.tema-aurora #report-modal .modal-header h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+html.tema-aurora #report-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+}
+html.tema-aurora #report-modal p {
+  color: rgba(255,255,255,0.5) !important;
+}
+
+html.tema-aurora .weekly-side-section {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+html.tema-aurora .weekly-side-title {
+  color: rgba(255,255,255,0.3) !important;
+}
+
+html.tema-aurora .handover-autocomplete-list {
+  background: rgba(10,5,30,0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+html.tema-aurora .handover-autocomplete-input {
+  color: rgba(255,255,255,0.82) !important;
+}
+html.tema-aurora .handover-autocomplete-item {
+  color: rgba(255,255,255,0.55) !important;
+}
+html.tema-aurora .handover-autocomplete-item:hover {
+  background: rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora .handover-autocomplete-type--task {
+  background: rgba(99,102,241,0.2) !important;
+  color: rgba(165,168,255,0.9) !important;
+}
+html.tema-aurora .handover-autocomplete-type--project {
+  background: rgba(20,184,166,0.2) !important;
+  color: rgba(45,212,191,0.9) !important;
+}
+

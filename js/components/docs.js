@@ -24,6 +24,24 @@ export const DOC_CATS = [
 
 export let docsSearchTerm = '';
 export let docsTypeFilteru = { notes: true, urls: true, files: true };
+export let docsViewMode = 'grid'; // 'grid' | 'list'
+export let docsSortOrder = 'recent'; // 'recent' | 'name' | 'type'
+
+export function setDocsViewMode(mode) {
+  docsViewMode = mode;
+  document.querySelectorAll('.docs-view-toggle-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  renderDocsGrid();
+}
+
+export function setDocsSortOrder(order) {
+  docsSortOrder = order;
+  document.querySelectorAll('.docs-sort-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.sort === order);
+  });
+  renderDocsGrid();
+}
 
 export function renderDocs() {
   renderDocsFolderTree();
@@ -56,11 +74,27 @@ export function setDocCat(cat) {
   closeDocViewIfOpen();
   currentDocCat = cat;
   renderDocs();
+  document.querySelectorAll('.docs-type-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.cat === cat);
+  });
 }
 
 export function renderDocsGrid() {
   const content = document.getElementById('docs-content');
-  
+
+  const lastDocId = currentUser ? localStorage.getItem(`diario_last_doc_${currentUser.id}`) : null;
+  const lastDoc = lastDocId ? docs.find(d => sameId(d.id, lastDocId)) : null;
+  const recentBannerHtml = (lastDoc && currentDocFolderId == null && !docsSearchTerm)
+    ? `<div class="docs-recent-banner" onclick="viewDoc(${lastDoc.id})" title="Abrir último documento visto">
+        <span class="docs-recent-icon">${lastDoc.icon || '📄'}</span>
+        <div class="docs-recent-info">
+          <span class="docs-recent-label">Último visto</span>
+          <span class="docs-recent-title">${escapeChatHtml(lastDoc.title)}</span>
+        </div>
+        <span class="docs-recent-arrow">→</span>
+       </div>`
+    : '';
+
   // If a specific item is selected and it's not a folder, show its details
   if (currentDocFolderId != null) {
     const selectedItem = docs.find(d => sameId(d.id, currentDocFolderId));
@@ -82,9 +116,10 @@ export function renderDocsGrid() {
             <div class="doc-preview-container">
               ${renderMarkdown(selectedItem.content || '', selectedItem.images || {})}
             </div>
-            <div style="display:flex;gap:12px;margin-top:24px">
+            <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap">
               <button onclick="downloadDocAsMarkdown('${selectedItem.id}')" class="btn-action">⬇️ Descargar como .md</button>
               <button onclick="editDocument('${selectedItem.id}')" class="btn-action">✏️ Editar</button>
+              <button onclick="openDocVersionsModal('${selectedItem.id}')" class="btn-secondary">🕐 Historial</button>
             </div>
           </div>
         `;
@@ -148,11 +183,16 @@ export function renderDocsGrid() {
   
   // Aplicar búsqueda
   if (docsSearchTerm) {
-    items = items.filter(d => 
-      d.title.toLowerCase().includes(docsSearchTerm)
+    items = items.filter(d =>
+      d.title.toLowerCase().includes(docsSearchTerm) ||
+      (d.docType === 'document' && (d.content || '').toLowerCase().includes(docsSearchTerm)) ||
+      (d.description || '').toLowerCase().includes(docsSearchTerm)
     );
   }
-  
+  if (currentDocCat !== 'all') {
+    items = items.filter(d => d.category === currentDocCat || d.cat === currentDocCat);
+  }
+
   if (items.length === 0) {
     content.innerHTML = `<div class="empty-state" style="padding:40px;text-align:center"><div class="empty-icon" style="font-size:48px;margin-bottom:16px">📁</div><div>No hay elementos en esta ubicación</div></div>`;
     return;
@@ -162,7 +202,16 @@ export function renderDocsGrid() {
   const folders = items.filter(d => d.docType === 'folder');
   const documents = items.filter(d => d.docType === 'document');
   const files = items.filter(d => d.docType === 'file');
-  
+
+  const sortItems = (arr) => {
+    if (docsSortOrder === 'name') return [...arr].sort((a, b) => a.title.localeCompare(b.title, 'es'));
+    if (docsSortOrder === 'type') return [...arr].sort((a, b) => (a.docType || '').localeCompare(b.docType || ''));
+    return [...arr].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  };
+  const sortedFolders = sortItems(folders);
+  const sortedDocuments = sortItems(documents);
+  const sortedFiles = sortItems(files);
+
   let html = '';
   
   // Show folder header with download button if viewing a folder
@@ -178,14 +227,19 @@ export function renderDocsGrid() {
     `;
   }
   
-  html += '<div class="docs-grid-modern">';
+  if (currentDocFolderId != null) {
+    html += buildFolderBreadcrumb(currentDocFolderId);
+  }
+
+  html += recentBannerHtml;
+  html += `<div class="${docsViewMode === 'list' ? 'docs-list-modern' : 'docs-grid-modern'}">`;
   
   // Render folders first
-  folders.forEach(folder => {
+  sortedFolders.forEach(folder => {
     const folderItems = docs.filter(d => sameId(d.parentFolderId, folder.id)).length;
     const date = new Date(folder.createdAt).toLocaleDateString('es-ES', {day:'numeric', month:'short', year:'numeric'});
     const author = USERS.find(u => u.id === folder.authorId);
-    html += `<div class="docs-grid-item" onclick="selectDocFolder('${folder.id}')" style="cursor:pointer">
+    html += `<div class="docs-grid-item${docsViewMode === 'list' ? ' docs-list-item' : ''}" onclick="selectDocFolder('${folder.id}')" style="cursor:pointer">
       <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px">
         <span style="font-size:24px">📁</span>
         <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocElement('${folder.id}')" style="opacity:0;transition:opacity 0.2s;z-index:10" title="Eliminar">🗑</button>
@@ -202,10 +256,10 @@ export function renderDocsGrid() {
   });
   
   // Render documents
-  documents.forEach(d => {
+  sortedDocuments.forEach(d => {
     const author = USERS.find(u => u.id === d.authorId);
     const date = new Date(d.createdAt).toLocaleDateString('es-ES', {day:'numeric', month:'short', year:'numeric'});
-    html += `<div class="docs-grid-item" onclick="selectDocFolder('${d.id}')" style="cursor:pointer">
+    html += `<div class="docs-grid-item${docsViewMode === 'list' ? ' docs-list-item' : ''}" onclick="selectDocFolder('${d.id}')" style="cursor:pointer">
       <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px">
         <span style="font-size:24px">${d.icon || '📄'}</span>
         <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocElement('${d.id}')" style="opacity:0;transition:opacity 0.2s;z-index:10" title="Eliminar">🗑</button>
@@ -214,19 +268,21 @@ export function renderDocsGrid() {
       <div class="doc-card-meta" style="font-size:11px;color:var(--text-muted);margin-bottom:auto">
         ${date} • <span>${author ? author.name : '—'}</span>
       </div>
-      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e0e0e0;display:flex;gap:6px">
+      ${commentIndicators('doc', d.id)}
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:6px">
         <button class="btn-secondary" type="button" onclick="event.stopPropagation(); selectDocFolder('${d.id}')" style="font-size:11px;padding:6px 12px;flex:1">👁️ Ver</button>
+        <button class="btn-secondary" type="button" onclick="event.stopPropagation(); openDocCommentsModal(${d.id})" style="font-size:11px;padding:6px 12px" title="Comentarios">💬</button>
         <button class="btn-secondary" type="button" onclick="event.stopPropagation(); editDocument('${d.id}')" style="font-size:11px;padding:6px 12px">✏️</button>
       </div>
     </div>`;
   });
-  
+
   // Render files
-  files.forEach(d => {
+  sortedFiles.forEach(d => {
     const date = new Date(d.createdAt).toLocaleDateString('es-ES', {day:'numeric', month:'short', year:'numeric'});
     const fileSize = d.file?.size ? (d.file.size / 1024).toFixed(2) + ' KB' : 'N/A';
     const author = USERS.find(u => u.id === d.authorId);
-    html += `<div class="docs-grid-item" onclick="selectDocFolder('${d.id}')" style="cursor:pointer">
+    html += `<div class="docs-grid-item${docsViewMode === 'list' ? ' docs-list-item' : ''}" onclick="selectDocFolder('${d.id}')" style="cursor:pointer">
       <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px">
         <span style="font-size:24px">${d.icon || '📎'}</span>
         <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocElement('${d.id}')" style="opacity:0;transition:opacity 0.2s;z-index:10" title="Eliminar">🗑</button>
@@ -235,6 +291,7 @@ export function renderDocsGrid() {
       <div class="doc-card-meta" style="font-size:11px;color:var(--text-muted);margin-bottom:auto">
         ${date} • <span>${author ? author.name : '—'}</span>
       </div>
+      ${commentIndicators('doc', d.id)}
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e0e0e0;display:flex;gap:6px">
         <button class="btn-secondary" type="button" onclick="event.stopPropagation(); selectDocFolder('${d.id}')" style="font-size:11px;padding:6px 12px;flex:1">👁️ Ver</button>
         <button class="btn-secondary" type="button" onclick="event.stopPropagation(); downloadFile('${d.id}')" style="font-size:11px;padding:6px 12px">⬇️</button>
@@ -247,6 +304,9 @@ export function renderDocsGrid() {
 }
 
 export function viewDoc(id) {
+  if (currentUser) {
+    localStorage.setItem(`diario_last_doc_${currentUser.id}`, String(id));
+  }
   console.log('viewDoc called with id:', id);
   const d = docs.find(doc => sameId(doc.id, id));
   console.log('found doc:', d);
@@ -276,8 +336,9 @@ export function viewDoc(id) {
       <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border)">
         <button type="button" class="btn-primary btn-full-width" onclick="openDocCommentsModal(${d.id})">💬 Abrir comentarios</button>
       </div>
-      <div style="margin-top:24px;display:flex;gap:10px">
+      <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn-secondary" onclick='openEditDocModal(${JSON.stringify(d.id)})'>✏️ Editar</button>
+        <button class="btn-secondary" onclick="openDocVersionsModal(${d.id})">🕐 Historial</button>
         <button class="btn-secondary btn-secondary-danger" onclick='deleteDoc(${JSON.stringify(d.id)})'>🗑 Eliminar</button>
       </div>
     </div>`;
@@ -760,6 +821,32 @@ export function saveDocOrFolder() {
   }
 }
 
+function saveDocVersion(doc) {
+  if (!doc || !currentUser) return;
+  const key = `diario_doc_versions_${doc.id}`;
+  let versions = [];
+  try {
+    const raw = localStorage.getItem(key);
+    versions = raw ? JSON.parse(raw) : [];
+  } catch { versions = []; }
+  versions.unshift({
+    id: Date.now(),
+    content: doc.content || '',
+    title: doc.title || '',
+    savedAt: new Date().toISOString(),
+    savedBy: currentUser.id
+  });
+  versions = versions.slice(0, 10);
+  localStorage.setItem(key, JSON.stringify(versions));
+}
+
+function loadDocVersions(docId) {
+  try {
+    const raw = localStorage.getItem(`diario_doc_versions_${docId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
 export function saveDoc() {
   const title = document.getElementById('doc-title-input')?.value.trim();
   if (!title) {
@@ -794,6 +881,7 @@ export function saveDoc() {
   if (editingDocId) {
     const idx = docs.findIndex(d => sameId(d.id, editingDocId));
     if (idx !== -1) {
+      saveDocVersion(docs.find(d => sameId(d.id, editingDocId)));
       const prev = docs[idx];
       setDocs(docs.map((d, i) => (i === idx ? { ...prev, ...docPayload } : d)));
       showToast('Documento actualizado', 'success');
@@ -943,10 +1031,20 @@ export function deleteDoc(id) {
 export function renderDocsFolderTree() {
   const container = document.getElementById('docs-categories');
   if (!container) return;
-  
+
+  let filterHtml = `
+    <div class="docs-type-filter" id="docs-type-filter">
+      <button type="button" class="docs-type-btn active" data-cat="all" onclick="setDocCat('all')">📁 Todos</button>
+      <button type="button" class="docs-type-btn" data-cat="manual" onclick="setDocCat('manual')">📖 Manuales</button>
+      <button type="button" class="docs-type-btn" data-cat="procedimiento" onclick="setDocCat('procedimiento')">📋 Procedimientos</button>
+      <button type="button" class="docs-type-btn" data-cat="guia" onclick="setDocCat('guia')">🗺 Guías</button>
+      <button type="button" class="docs-type-btn" data-cat="politica" onclick="setDocCat('politica')">📜 Políticas</button>
+      <button type="button" class="docs-type-btn" data-cat="otro" onclick="setDocCat('otro')">📄 Otros</button>
+    </div>`;
+
   const userDocs = docs.filter(d => d.group === currentUser.group);
-  
-  let html = '<div style="padding:4px 0">';
+
+  let html = filterHtml + '<div style="padding:4px 0">';
   html += `<div class="doc-tree-item ${currentDocFolderId==null?'active':''}" onclick="selectDocFolder(null)" style="padding:10px 12px;font-weight:500">
     <span style="font-size:14px">📁</span> <span>Todos</span>
   </div>`;
@@ -1037,6 +1135,9 @@ export function renderDocsFolderTree() {
   html += `<button class="btn-primary" onclick="openCreateFolderModal()" style="width:100%;padding:8px 12px;font-size:12px;cursor:pointer">+ Nueva Carpeta</button>`;
   html += `</div>`;
   container.innerHTML = html;
+  document.querySelectorAll('.docs-type-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.cat === currentDocCat);
+  });
 }
 
 export function selectDocFolder(folderId) {
@@ -1714,5 +1815,162 @@ export function saveFolder() {
   closeModal('doc-modal');
   renderDocsFolderTree();
   renderDocsGrid();
+}
+
+function buildFolderBreadcrumb(folderId) {
+  const crumbs = [];
+  let current = folderId;
+  while (current != null) {
+    const folder = docs.find(d => sameId(d.id, current));
+    if (!folder) break;
+    crumbs.unshift({ id: folder.id, title: folder.title, icon: folder.icon || '📁' });
+    current = folder.parentFolderId ?? null;
+  }
+  if (crumbs.length === 0) return '';
+  const parts = [
+    `<span class="breadcrumb-item" onclick="selectDocFolder(null)" style="cursor:pointer">📁 Raíz</span>`
+  ];
+  crumbs.forEach((c, i) => {
+    parts.push(`<span class="breadcrumb-sep">›</span>`);
+    if (i === crumbs.length - 1) {
+      parts.push(`<span class="breadcrumb-item breadcrumb-item--active">${c.icon} ${escapeChatHtml(c.title)}</span>`);
+    } else {
+      parts.push(`<span class="breadcrumb-item" onclick="selectDocFolder('${c.id}')" style="cursor:pointer">${c.icon} ${escapeChatHtml(c.title)}</span>`);
+    }
+  });
+  return `<nav class="docs-breadcrumb">${parts.join('')}</nav>`;
+}
+
+function getDocTemplatesKey() {
+  return currentUser ? `diario_doc_templates_${currentUser.group}` : null;
+}
+
+export function loadDocTemplates() {
+  const key = getDocTemplatesKey();
+  if (!key) return [];
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+export function saveDocTemplateFromCurrent() {
+  const title = document.getElementById('doc-title-input')?.value.trim();
+  const content = document.getElementById('doc-content-input')?.value.trim();
+  if (!title && !content) {
+    showToast('El documento está vacío', 'error');
+    return;
+  }
+  const templates = loadDocTemplates();
+  const key = getDocTemplatesKey();
+  if (!key) return;
+  templates.push({
+    id: Date.now(),
+    title: title || 'Sin título',
+    content: content || '',
+    createdAt: new Date().toISOString()
+  });
+  localStorage.setItem(key, JSON.stringify(templates));
+  showToast('Plantilla guardada', 'success');
+}
+
+export function deleteDocTemplate(id) {
+  const key = getDocTemplatesKey();
+  if (!key) return;
+  const templates = loadDocTemplates().filter(t => t.id !== id);
+  localStorage.setItem(key, JSON.stringify(templates));
+  openDocTemplatesModal();
+}
+
+export function applyDocTemplate(id) {
+  const t = loadDocTemplates().find(t => t.id === id);
+  if (!t) return;
+  const titleEl = document.getElementById('doc-title-input');
+  const contentEl = document.getElementById('doc-content-input');
+  if (titleEl) titleEl.value = t.title;
+  if (contentEl) {
+    contentEl.value = t.content;
+    updateMarkdownPreview('doc-content-input', 'doc-content-preview', editingDocImages);
+  }
+  closeModal('doc-templates-modal');
+  showToast('Plantilla aplicada', 'success');
+}
+
+export function openDocTemplatesModal() {
+  const templates = loadDocTemplates();
+  const listEl = document.getElementById('doc-templates-list-body');
+  if (!listEl) return;
+  if (templates.length === 0) {
+    listEl.innerHTML = `<p class="modal-note-templates-empty">No hay plantillas aún. Abre un documento, rellénalo y pulsa <strong>Guardar como plantilla</strong> en el pie del formulario.</p>`;
+  } else {
+    listEl.innerHTML = templates.map(t => `
+      <div class="doc-template-item">
+        <div class="doc-template-info">
+          <span class="doc-template-title">📄 ${escapeChatHtml(t.title)}</span>
+        </div>
+        <div class="doc-template-actions">
+          <button type="button" class="btn-primary btn-sm" onclick="applyDocTemplate(${t.id})">Usar</button>
+          <button type="button" class="btn-secondary btn-sm" onclick="deleteDocTemplate(${t.id})">Eliminar</button>
+        </div>
+      </div>`).join('');
+  }
+  openModal('doc-templates-modal');
+}
+
+export function openDocVersionsModal(docId) {
+  const doc = docs.find(d => sameId(d.id, docId));
+  if (!doc) return;
+  const versions = loadDocVersions(docId);
+  const listEl = document.getElementById('doc-versions-list');
+  if (!listEl) return;
+  const titleEl = document.getElementById('doc-versions-title');
+  if (titleEl) titleEl.textContent = `Historial: ${doc.title}`;
+  if (versions.length === 0) {
+    listEl.innerHTML = `<p style="color:var(--text-muted);font-size:12px;padding:16px;text-align:center">No hay versiones guardadas aún. Las versiones se crean automáticamente cada vez que editas el documento.</p>`;
+  } else {
+    listEl.innerHTML = versions.map((v, i) => {
+      const date = new Date(v.savedAt).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      const author = USERS.find(u => sameId(u.id, v.savedBy));
+      return `
+        <div class="doc-version-item">
+          <div class="doc-version-meta">
+            <span class="doc-version-num">v${versions.length - i}</span>
+            <span class="doc-version-date">${date}</span>
+            <span class="doc-version-author">${author ? escapeChatHtml(author.name) : '—'}</span>
+          </div>
+          <div class="doc-version-preview">${escapeChatHtml((v.content || '').slice(0, 120))}${(v.content || '').length > 120 ? '…' : ''}</div>
+          <button type="button" class="btn-secondary btn-sm" onclick='restoreDocVersion(${JSON.stringify(docId)}, ${v.id})'>↩ Restaurar</button>
+        </div>`;
+    }).join('');
+  }
+  openModal('doc-versions-modal');
+}
+
+export function restoreDocVersion(docId, versionId) {
+  const versions = loadDocVersions(docId);
+  const v = versions.find(x => x.id === versionId);
+  if (!v) return;
+  showConfirmModal({
+    title: '¿Restaurar esta versión?',
+    message: 'El contenido actual se guardará como nueva versión antes de restaurar.',
+    confirmLabel: 'Restaurar',
+    onConfirm: () => {
+      const idx = docs.findIndex(d => sameId(d.id, docId));
+      if (idx === -1) return;
+      saveDocVersion(docs[idx]);
+      const updated = { ...docs[idx], content: v.content, title: v.title };
+      const newDocs = [...docs];
+      newDocs[idx] = updated;
+      setDocs(newDocs);
+      saveDocData();
+      closeModal('doc-versions-modal');
+      showToast('Versión restaurada', 'success');
+      renderDocs();
+    }
+  });
+}
+
+if (typeof window !== 'undefined') {
+  window.setDocCat = setDocCat;
 }
 

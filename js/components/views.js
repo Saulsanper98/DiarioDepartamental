@@ -68,6 +68,12 @@ function getViewHTML(view) {
           <div class="stat-item"><strong id="stat-morning" style="color:var(--morning)">0</strong> mañana</div>
           <div class="stat-item"><strong id="stat-afternoon" style="color:var(--afternoon)">0</strong> tarde</div>
           <div class="stat-item"><strong id="stat-night" style="color:var(--night)">0</strong> noche</div>
+          <span class="stats-bar-divider">|</span>
+          <div style="position:relative">
+            <button type="button" class="notes-tag-filter-trigger" id="note-tag-filter-btn" onclick="toggleNoteTagDropdown()" title="Filtrar notas por etiqueta">🏷️ Etiquetas</button>
+            <div id="note-tag-dropdown" class="note-tag-dropdown hidden"></div>
+          </div>
+          <div id="note-tag-active-filter" class="note-tag-active-filter hidden"></div>
         </div>
 
         <div class="date-nav">
@@ -110,6 +116,9 @@ function getViewHTML(view) {
           <h2>🗂 Post-it Board</h2>
           <button class="btn-primary" onclick="openNewPostitModal()">+ Nueva Tarjeta</button>
         </div>
+        <div class="postit-user-filter-wrap">
+          <div id="postit-user-filter-bar" class="postit-user-filter-bar"></div>
+        </div>
         <div class="postit-board" id="postit-board"></div>
       `;
     case 'projects':
@@ -146,11 +155,12 @@ function getViewHTML(view) {
             <span class="search-icon">🔍</span>
             <input type="text" placeholder="Buscar en docs..." id="docs-search-input" oninput="filterDocsBySearch(this.value)">
           </div>
+          <button class="btn-secondary" onclick="openDocTemplatesModal()" title="Plantillas de documento">📋 Plantillas</button>
           <button class="btn-action" onclick="openCreateFolderModal()">📁 Nueva Carpeta</button>
           <button class="btn-action" onclick="openNewDocModal()">📝 Nuevo Doc</button>
           <button class="btn-action" onclick="openInsertFileModal()" title="Adjuntar archivo a documento">📎 Insertar Archivo</button>
         </div>
-        <div class="docs-toolbar">
+        <div class="docs-toolbar" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
           <div style="display:flex; gap:8px; align-items:center; padding:0 24px; font-size:11px; color:var(--text-muted)">
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer">
               <input type="checkbox" id="docs-filter-notes" checked onchange="applyDocsFilters()"> 📝 Notas
@@ -161,6 +171,16 @@ function getViewHTML(view) {
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer">
               <input type="checkbox" id="docs-filter-files" checked onchange="applyDocsFilters()"> 📎 Archivos
             </label>
+          </div>
+          <div style="display:flex;gap:4px;margin-left:auto;padding-right:24px">
+            <button type="button" class="docs-view-toggle-btn active" data-mode="grid" onclick="setDocsViewMode('grid')" title="Vista grid">⊞</button>
+            <button type="button" class="docs-view-toggle-btn" data-mode="list" onclick="setDocsViewMode('list')" title="Vista lista">☰</button>
+          </div>
+          <div style="display:flex;gap:4px;padding-right:8px;align-items:center">
+            <span style="font-size:10px;color:var(--text-muted);font-family:'Syne',sans-serif;text-transform:uppercase;letter-spacing:0.08em">Orden</span>
+            <button type="button" class="docs-sort-btn active" data-sort="recent" onclick="setDocsSortOrder('recent')" title="Más recientes">🕐</button>
+            <button type="button" class="docs-sort-btn" data-sort="name" onclick="setDocsSortOrder('name')" title="Nombre A-Z">🔤</button>
+            <button type="button" class="docs-sort-btn" data-sort="type" onclick="setDocsSortOrder('type')" title="Por tipo">🗂</button>
           </div>
         </div>
         <div class="docs-layout">
@@ -585,6 +605,7 @@ export function renderDateNav() {
 export function navigateWeek(dir) {
   setWeekOffset(weekOffset + dir);
   renderDateNav();
+  renderNotes();
 }
 
 // ===== SHIFT FILTERS =====
@@ -632,7 +653,7 @@ export function onNotesSearchHistoryChange(el) {
 export function setNoteView(view, btn) {
   setCurrentNoteView(view);
   showView('notes', btn);
-  const titles = {all:'Todas las Notas',mine:'Mis Notas',mentions:'Menciones a mí',reminders:'Recordatorios'};
+  const titles = {all:'Todas las Notas',mine:'Mis Notas',mentions:'Menciones a mí',reminders:'Recordatorios',weekly:'Resumen Semanal'};
   document.getElementById('view-title').textContent = titles[view] || 'Notas';
   renderNotes();
 }

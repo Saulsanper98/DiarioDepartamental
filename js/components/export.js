@@ -11,6 +11,7 @@ import {
   SHIFTS,
   workGroups,
   sameId,
+  toDateStr,
   setNotes,
   setProjects,
   setDocs,
@@ -22,7 +23,7 @@ import {
 } from './data.js';
 import { chatMessages, reloadChatFromStorage, renderChat, updateChatNavBadge } from './chat.js';
 import { saveData, renderNotes } from './notes.js';
-import { showToast, escapeChatHtml, showConfirmModal } from './modalControl.js';
+import { showToast, escapeChatHtml, showConfirmModal, openModal } from './modalControl.js';
 import { getProjectCustomTemplatesForBackup, replaceProjectCustomTemplatesFromBackup, renderProjects } from './projects.js';
 import { renderPostitBoard } from './postit.js';
 import { renderDocs, refreshCommentIndicators } from './docs.js';
@@ -252,10 +253,6 @@ export function getPublicNoteShareContextsHtml(note) {
   }).filter(Boolean);
   if (!pills.length) return '';
   return `<div class="note-share-context" title="Contexto de visibilidad">${pills.join('')}</div>`;
-}
-
-function toDateStr(date) {
-  return date.toISOString().split('T')[0];
 }
 
 function safeFilename(name) {
@@ -802,4 +799,368 @@ export function openProjectPrintReport(projectId) {
   );
   setTimeout(() => URL.revokeObjectURL(url), 120000);
   showToast('Informe abierto: usa Imprimir para PDF', 'info');
+}
+
+// ══════════════════════════════════════════════════
+// INFORME DEPARTAMENTAL AUTOMÁTICO
+// ══════════════════════════════════════════════════
+
+export function openReportModal() {
+  const modal = document.getElementById('report-modal');
+  if (modal) openModal('report-modal');
+}
+
+export function generateDepartmentReport(period) {
+  if (!currentUser) return;
+
+  const now = new Date();
+  let startDate, endDate, periodLabel;
+
+  if (period === 'week') {
+    const start = new Date(now);
+    const dow = start.getDay();
+    start.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+    startDate = toDateStr(start);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    endDate = toDateStr(end);
+    periodLabel = `Semana del ${start.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} al ${end.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  } else {
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    startDate = toDateStr(new Date(year, month, 1));
+    endDate = toDateStr(new Date(year, month + 1, 0));
+    periodLabel = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    periodLabel = periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1);
+  }
+
+  const group = currentUser.group;
+  const generatedAt = now.toLocaleString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  // ── Datos de notas ──
+  const periodNotes = notes.filter(n => n.date >= startDate && n.date <= endDate && n.group === group);
+
+  const notesByShift = { morning: 0, afternoon: 0, night: 0 };
+  periodNotes.forEach(n => { if (notesByShift[n.shift] !== undefined) notesByShift[n.shift]++; });
+
+  const notesByUser = {};
+  periodNotes.forEach(n => {
+    const u = USERS.find(usr => sameId(usr.id, n.authorId));
+    const name = u ? u.name : 'Desconocido';
+    notesByUser[name] = (notesByUser[name] || 0) + 1;
+  });
+
+  const tagCount = {};
+  periodNotes.forEach(n => (n.tags || []).forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; }));
+  const topTags = Object.entries(tagCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  const highPriorityNotes = periodNotes.filter(n => n.priority === 'alta');
+
+  // Días sin notas
+  const daysInPeriod = [];
+  const cur = new Date(startDate + 'T12:00:00');
+  const endD = new Date(endDate + 'T12:00:00');
+  while (cur <= endD) { daysInPeriod.push(toDateStr(cur)); cur.setDate(cur.getDate() + 1); }
+  const daysWithNotes = new Set(periodNotes.map(n => n.date));
+  const daysWithoutNotes = daysInPeriod.filter(d => !daysWithNotes.has(d));
+
+  // ── Datos de proyectos ──
+  const groupProjects = projects.filter(p => p.group === group && !p.parentProjectId);
+  const projectStats = groupProjects.map(p => {
+    const tasks = p.tasks || [];
+    const total = tasks.length;
+    const done = tasks.filter(t => t.done).length;
+    const inProgress = tasks.filter(t => !t.done && t.status === 'progress').length;
+    const overdue = tasks.filter(t => !t.done && t.dueDate && t.dueDate < toDateStr(now)).length;
+    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+    return { name: p.name, total, done, inProgress, overdue, pct };
+  });
+
+  const allTasks = groupProjects.flatMap(p => (p.tasks || []).map(t => ({ ...t, projectName: p.name })));
+  const overdueTasks = allTasks.filter(t => !t.done && t.dueDate && t.dueDate < toDateStr(now));
+
+  const tasksByUser = {};
+  allTasks.filter(t => !t.done && t.assigneeId != null).forEach(t => {
+    const u = USERS.find(usr => sameId(usr.id, t.assigneeId));
+    const name = u ? u.name : 'Sin asignar';
+    tasksByUser[name] = (tasksByUser[name] || 0) + 1;
+  });
+
+  // ── Datos de traspasos ──
+  let handovers = [];
+  try {
+    const raw = localStorage.getItem('diario_handovers');
+    handovers = raw ? JSON.parse(raw) : [];
+  } catch { handovers = []; }
+  const periodHandovers = handovers.filter(h => h.group === group && h.date >= startDate && h.date <= endDate);
+
+  // ── Métricas resumen ──
+  const totalDoneTasks = allTasks.filter(t => t.done).length;
+
+  // ── Generar HTML del informe ──
+  const accentColor = '#7858f6';
+  const esc = s => escapeChatHtml(String(s ?? ''));
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Informe ${esc(group)} — ${esc(periodLabel)}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; background: #fff; font-size: 13px; line-height: 1.5; }
+  .page { max-width: 900px; margin: 0 auto; padding: 40px 48px; }
+  @media print { .page { padding: 20px; } .no-print { display: none !important; } }
+
+  /* Header */
+  .report-header { border-bottom: 3px solid ${accentColor}; padding-bottom: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .report-brand { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #888; margin-bottom: 6px; }
+  .report-title { font-size: 24px; font-weight: 700; color: #1a1a2e; }
+  .report-period { font-size: 14px; color: ${accentColor}; font-weight: 600; margin-top: 4px; }
+  .report-meta { text-align: right; font-size: 11px; color: #888; line-height: 1.7; }
+
+  /* Secciones */
+  .section { margin-bottom: 40px; }
+  .section-title { font-size: 15px; font-weight: 700; color: ${accentColor}; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #e8e8f0; padding-bottom: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+
+  /* Stats grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: #f8f8ff; border: 1px solid #e8e8f0; border-radius: 12px; padding: 16px; text-align: center; }
+  .stat-card .num { font-size: 28px; font-weight: 700; color: ${accentColor}; line-height: 1; }
+  .stat-card .lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+  .stat-card.danger .num { color: #dc2626; }
+  .stat-card.success .num { color: #16a34a; }
+
+  /* Tablas */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: #f0eeff; color: ${accentColor}; font-weight: 700; padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f0f0f8; color: #333; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+
+  /* Progress bar */
+  .progress-wrap { background: #e8e8f0; border-radius: 4px; height: 6px; width: 100px; display: inline-block; vertical-align: middle; }
+  .progress-fill { height: 100%; border-radius: 4px; background: ${accentColor}; }
+
+  /* Tags */
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; background: #f0eeff; color: ${accentColor}; font-size: 11px; font-family: monospace; }
+  .tag-pill .cnt { background: ${accentColor}; color: #fff; border-radius: 10px; padding: 0 5px; font-size: 10px; }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+  .badge-ok { background: #dcfce7; color: #16a34a; }
+  .badge-warn { background: #fef9c3; color: #854d0e; }
+  .badge-danger { background: #fee2e2; color: #dc2626; }
+  .badge-info { background: #e0f2fe; color: #0369a1; }
+
+  /* Traspasos */
+  .handover-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #f0f0f8; font-size: 12px; }
+  .handover-row:last-child { border-bottom: none; }
+
+  /* Print button */
+  .print-btn { position: fixed; bottom: 24px; right: 24px; background: ${accentColor}; color: #fff; border: none; border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 16px rgba(120,88,246,0.4); }
+  .print-btn:hover { filter: brightness(1.1); }
+
+  /* Days without notes */
+  .days-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .day-chip { padding: 3px 10px; border-radius: 20px; background: #fee2e2; color: #dc2626; font-size: 11px; font-family: monospace; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <button class="print-btn no-print" onclick="window.print()">🖨️ Guardar como PDF</button>
+
+  <!-- CABECERA -->
+  <div class="report-header">
+    <div>
+      <div class="report-brand">Diario Departamental</div>
+      <div class="report-title">Informe de Actividad</div>
+      <div class="report-period">${esc(group)} · ${esc(periodLabel)}</div>
+    </div>
+    <div class="report-meta">
+      Generado por: <strong>${esc(currentUser.name)}</strong><br>
+      Fecha: ${esc(generatedAt)}<br>
+      Período: ${esc(startDate)} / ${esc(endDate)}
+    </div>
+  </div>
+
+  <!-- RESUMEN EJECUTIVO -->
+  <div class="section">
+    <div class="section-title">📊 Resumen Ejecutivo</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="num">${periodNotes.length}</div>
+        <div class="lbl">Notas del período</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">${groupProjects.length}</div>
+        <div class="lbl">Proyectos activos</div>
+      </div>
+      <div class="stat-card success">
+        <div class="num">${totalDoneTasks}</div>
+        <div class="lbl">Tareas completadas</div>
+      </div>
+      <div class="stat-card${overdueTasks.length > 0 ? ' danger' : ''}">
+        <div class="num">${overdueTasks.length}</div>
+        <div class="lbl">Tareas vencidas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVIDAD DE NOTAS -->
+  <div class="section">
+    <div class="section-title">📋 Actividad de Notas</div>
+
+    <table style="margin-bottom:20px">
+      <thead><tr><th>Turno</th><th>Notas</th><th>% del total</th></tr></thead>
+      <tbody>
+        ${['morning', 'afternoon', 'night'].map(s => {
+          const sh = SHIFTS[s];
+          const cnt = notesByShift[s];
+          const pct = periodNotes.length > 0 ? Math.round(cnt / periodNotes.length * 100) : 0;
+          return `<tr>
+            <td>${sh.emoji} ${esc(sh.label)} (${esc(sh.hours)})</td>
+            <td><strong>${cnt}</strong></td>
+            <td>
+              <div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div>
+              <span style="margin-left:8px;color:#888">${pct}%</span>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+
+    <table style="margin-bottom:20px">
+      <thead><tr><th>Técnico</th><th>Notas</th></tr></thead>
+      <tbody>
+        ${Object.entries(notesByUser).sort((a, b) => b[1] - a[1]).map(([name, cnt]) =>
+          `<tr><td>${esc(name)}</td><td><strong>${cnt}</strong></td></tr>`
+        ).join('')}
+      </tbody>
+    </table>
+
+    ${topTags.length > 0 ? `
+    <p style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Etiquetas más usadas</p>
+    <div class="tags-wrap" style="margin-bottom:20px">
+      ${topTags.map(([tag, cnt]) => `<span class="tag-pill">${esc(tag)} <span class="cnt">${cnt}</span></span>`).join('')}
+    </div>` : ''}
+
+    ${highPriorityNotes.length > 0 ? `
+    <p style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Notas de alta prioridad</p>
+    <table style="margin-bottom:20px">
+      <thead><tr><th>Fecha</th><th>Turno</th><th>Título</th><th>Autor</th></tr></thead>
+      <tbody>
+        ${highPriorityNotes.map(n => {
+          const author = USERS.find(usr => sameId(usr.id, n.authorId));
+          const sh = SHIFTS[n.shift];
+          return `<tr>
+            <td>${esc(n.date)}</td>
+            <td>${sh ? esc(sh.emoji + ' ' + sh.label) : esc(n.shift)}</td>
+            <td>${esc(n.title || 'Sin título')}</td>
+            <td>${author ? esc(author.name) : '—'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>` : ''}
+
+    ${daysWithoutNotes.length > 0 ? `
+    <p style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Días sin notas</p>
+    <div class="days-list" style="margin-bottom:16px">
+      ${daysWithoutNotes.map(d => `<span class="day-chip">${esc(d)}</span>`).join('')}
+    </div>` : '<p style="color:#16a34a;font-size:12px;margin-bottom:16px">✅ Sin días sin cobertura en este período.</p>'}
+  </div>
+
+  <!-- ESTADO DE PROYECTOS -->
+  <div class="section">
+    <div class="section-title">🎯 Estado de Proyectos</div>
+
+    ${projectStats.length > 0 ? `
+    <table style="margin-bottom:20px">
+      <thead><tr><th>Proyecto</th><th>Progreso</th><th>Tareas</th><th>En progreso</th><th>Vencidas</th></tr></thead>
+      <tbody>
+        ${projectStats.map(p => `<tr>
+          <td><strong>${esc(p.name)}</strong></td>
+          <td>
+            <div class="progress-wrap"><div class="progress-fill" style="width:${p.pct}%"></div></div>
+            <span style="margin-left:8px;color:#888">${p.pct}%</span>
+          </td>
+          <td>${p.done}/${p.total}</td>
+          <td>${p.inProgress > 0 ? `<span class="badge badge-info">${p.inProgress}</span>` : '—'}</td>
+          <td>${p.overdue > 0 ? `<span class="badge badge-danger">${p.overdue}</span>` : '<span class="badge badge-ok">0</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<p style="color:#888;font-size:12px;margin-bottom:20px">No hay proyectos en este período.</p>'}
+
+    ${overdueTasks.length > 0 ? `
+    <p style="font-size:11px;color:#dc2626;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">⚠️ Tareas vencidas sin completar</p>
+    <table style="margin-bottom:20px">
+      <thead><tr><th>Proyecto</th><th>Tarea</th><th>Vencimiento</th><th>Asignado</th></tr></thead>
+      <tbody>
+        ${overdueTasks.map(t => {
+          const u = USERS.find(usr => sameId(usr.id, t.assigneeId));
+          return `<tr>
+            <td>${esc(t.projectName)}</td>
+            <td>${esc(t.name)}</td>
+            <td><span class="badge badge-danger">${esc(t.dueDate)}</span></td>
+            <td>${u ? esc(u.name) : '—'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>` : ''}
+
+    ${Object.keys(tasksByUser).length > 0 ? `
+    <p style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Carga de trabajo pendiente por técnico</p>
+    <table style="margin-bottom:20px">
+      <thead><tr><th>Técnico</th><th>Tareas pendientes</th></tr></thead>
+      <tbody>
+        ${Object.entries(tasksByUser).sort((a, b) => b[1] - a[1]).map(([name, cnt]) =>
+          `<tr><td>${esc(name)}</td><td><strong>${cnt}</strong></td></tr>`
+        ).join('')}
+      </tbody>
+    </table>` : ''}
+  </div>
+
+  <!-- TRASPASOS -->
+  <div class="section">
+    <div class="section-title">🔄 Traspasos del Período</div>
+    ${periodHandovers.length > 0 ? `
+    <table>
+      <thead><tr><th>Fecha</th><th>De</th><th>A</th><th>Entregado por</th><th>Estado</th></tr></thead>
+      <tbody>
+        ${periodHandovers.map(h => {
+          const from = SHIFTS[h.fromShift];
+          const to = SHIFTS[h.toShift];
+          const status = h.receivedBy
+            ? '<span class="badge badge-ok">✅ Recibido</span>'
+            : '<span class="badge badge-warn">⏳ Sin confirmar</span>';
+          return `<tr>
+            <td>${esc(h.date)}</td>
+            <td>${from ? esc(from.emoji + ' ' + from.label) : esc(h.fromShift)}</td>
+            <td>${to ? esc(to.emoji + ' ' + to.label) : esc(h.toShift)}</td>
+            <td>${esc(h.authorName || '—')}</td>
+            <td>${status}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>` : '<p style="color:#888;font-size:12px">No hay traspasos registrados en este período.</p>'}
+  </div>
+
+  <!-- PIE -->
+  <div style="border-top:1px solid #e8e8f0;padding-top:16px;margin-top:32px;font-size:10px;color:#bbb;text-align:center">
+    Diario Departamental · ${esc(group)} · Informe generado el ${esc(generatedAt)}
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  } else {
+    showToast('Activa las ventanas emergentes para ver el informe', 'error');
+  }
 }
