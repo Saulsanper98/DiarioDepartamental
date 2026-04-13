@@ -6,6 +6,12 @@ import { renderMarkdown, fillCollabTargetSelect, buildSharesFromCollabSelect } f
 import { createCustomSelect } from './auroraCustomSelect.js';
 import { commentIndicators, getLatestCommentPreview } from './docs.js';
 import { sameId } from './data.js';
+import {
+  apiGetProjects,
+  apiCreateProject,
+  apiUpdateProject,
+  apiDeleteProject,
+} from '../api.js';
 
 /** Plantillas al crear proyecto nuevo (id vacío = sin plantilla). */
 export const PROJECT_TASK_TEMPLATES = [
@@ -104,6 +110,27 @@ export function replaceProjectCustomTemplatesFromBackup(list) {
   const capped = valid.slice(0, MAX_CUSTOM_PROJECT_TEMPLATES);
   saveCustomProjectTemplates(capped);
   return capped.length;
+}
+
+export async function loadProjectsFromAPI() {
+  try {
+    const data = await apiGetProjects();
+    const mapped = data.map(p => ({
+      ...p,
+      id: p._id || p.id,
+      group: p.department || p.group,
+    }));
+    setProjects(mapped);
+    console.log('Proyectos seteados:', mapped.length, 'Primer proyecto:', mapped[0]?.name);
+    return mapped;
+  } catch (err) {
+    console.error('Error cargando proyectos desde API:', err);
+    try {
+      const local = localStorage.getItem('diario_projects');
+      if (local) setProjects(JSON.parse(local));
+    } catch {}
+    return [];
+  }
 }
 
 /** Serializa tareas para plantilla: sin asignación, dependencias, imágenes ni compartidos. */
@@ -493,8 +520,9 @@ let _taskSortMode = 'default'; // 'default' | 'priority' | 'dueDate' | 'status'
 let _taskSearchQuery = '';
 let _editingTaskDeps = [];
 
-function toOnclickStringArg(value) {
-  return JSON.stringify(value).replace(/'/g, "\\'");
+function toOnclickStringArg(val) {
+  if (val == null) return '';
+  return String(val).replace(/'/g, "\\'");
 }
 
 function fillTaskDepsSelect(projectId, excludeTaskId, currentDeps) {
@@ -528,7 +556,7 @@ function renderTaskDepsList(projectId, _excludeTaskId, deps) {
         ${escapeChatHtml(depTask?.name || 'Tarea eliminada')}
         ${depTask?.done ? '<span style="color:rgba(52,211,153,0.7);font-size:10px">✓ completada</span>' : ''}
       </span>
-      <button type="button" onclick="removeTaskDep(${toOnclickStringArg(depId)})"
+      <button type="button" onclick="removeTaskDep('${toOnclickStringArg(depId)}')"
         style="background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:12px;
         padding:0 2px">✕</button>
     </div>`;
@@ -729,7 +757,7 @@ export function renderProjectUserFilter() {
     <button class="puf-pill ${allActive ? 'active' : ''}" onclick="setProjectUserFilter(null)">👥 Todos</button>
     ${usersInGroup.map(u => {
       const isActive = projectUserFilter === u.id;
-      return `<button class="puf-pill ${isActive ? 'active' : ''}" onclick="setProjectUserFilter(${u.id})">
+      return `<button class="puf-pill ${isActive ? 'active' : ''}" onclick="setProjectUserFilter('${u.id}')">
         <div class="puf-avatar" style="background:${u.color}">${u.initials}</div>
         ${u.name}
       </button>`;
@@ -743,6 +771,12 @@ export function setProjectUserFilter(userId) {
 }
 
 export function renderProjects() {
+  console.log('renderProjects llamado, proyectos en memoria:', projects.length);
+  console.log('Elemento view-projects existe:', !!document.getElementById('view-projects'));
+  console.log('Filtrando proyectos:');
+  console.log('  currentUser.group:', currentUser?.group);
+  console.log('  currentUser.department:', currentUser?.department);
+  projects.forEach(p => console.log('  proyecto:', p.name, 'group:', p.group, 'department:', p.department));
   renderProjectUserFilter();
   const list = document.getElementById('projects-list');
   const statusLabels = {activo:'✅ Activo',pausa:'⏸ En Pausa',completado:'🏁 Completado'};
@@ -781,9 +815,9 @@ export function renderProjects() {
     const pad = Math.min(depth, 12) * 10;
     const projIdArg = toOnclickStringArg(proj.id);
     const toggleBtn = subCount
-      ? `<button type="button" class="project-tree-toggle" onclick="toggleProjectTreeCollapse(${projIdArg},event)" aria-expanded="${!collapsed}"${commentTooltip} title="${collapsed ? 'Expandir subproyectos' : 'Contraer subproyectos'}${pLast ? ' — ' + escapeChatHtml(pLast.substring(0, 80)) : ''}">${collapsed ? '▸' : '▾'}</button>`
+      ? `<button type="button" class="project-tree-toggle" onclick="toggleProjectTreeCollapse('${projIdArg}',event)" aria-expanded="${!collapsed}"${commentTooltip} title="${collapsed ? 'Expandir subproyectos' : 'Contraer subproyectos'}${pLast ? ' — ' + escapeChatHtml(pLast.substring(0, 80)) : ''}">${collapsed ? '▸' : '▾'}</button>`
       : '<span class="project-tree-toggle-spacer"></span>';
-    const rowInner = `<div class="project-item project-item-depth ${depth > 0 ? 'subproject' : ''} ${sameId(currentProjectId, proj.id) ? 'active' : ''}" style="padding-left:${8 + pad}px;--project-color:${proj.color}" data-project-id="${proj.id}" data-depth="${depth}" data-project-color="${proj.color}" onclick="selectProject(${projIdArg})" oncontextmenu="showProjectTreeContextMenu(event,${projIdArg});return false;">
+    const rowInner = `<div class="project-item project-item-depth ${depth > 0 ? 'subproject' : ''} ${sameId(currentProjectId, proj.id) ? 'active' : ''}" style="padding-left:${8 + pad}px;--project-color:${proj.color}" data-project-id="${proj.id}" data-depth="${depth}" data-project-color="${proj.color}" onclick="selectProject('${projIdArg}')" oncontextmenu="showProjectTreeContextMenu(event,'${projIdArg}');return false;">
       <div class="project-item-row-head">
         ${toggleBtn}
         <div class="project-item-row-body">
@@ -875,9 +909,9 @@ function renderTasksList(p) {
       .filter(dep => dep && !dep.done);
     const isBlocked = blockingDeps.length > 0;
     return `<div class="task-item${isBlocked ? ' task-blocked' : ''}" data-task-id="${t.id}" style="${isFiltered ? 'opacity:0.35;' : ''}">
-      <div class="task-check ${t.done?'done':''}" onclick="quickToggleTask(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)},this)">${t.done?'✓':''}</div>
+      <div class="task-check ${t.done?'done':''}" onclick="quickToggleTask('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}',this)">${t.done?'✓':''}</div>
       <span class="task-name ${t.done?'done':''}" style="cursor:pointer"
-        onclick="openTaskViewer(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})">
+        onclick="openTaskViewer('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')">
         <span>${t.name}${taskComments}${t.desc ? ' <span style="font-size:9px;opacity:0.85">📄</span>' : ''}</span>
         ${isBlocked ? `<span style="font-size:10px;color:rgba(239,68,68,0.7);
     display:flex;align-items:center;gap:3px"
@@ -889,9 +923,9 @@ function renderTasksList(p) {
       ${t.dueDate ? `<span class="task-due ${new Date(t.dueDate+'T12:00:00') < new Date() && !t.done ? 'task-due-overdue' : ''}">${t.dueDate}</span>` : ''}
       ${t.estimatedHours != null ? `<span class="task-hours" title="Estimado: ${t.estimatedHours}h${t.realHours != null ? ' · Real: ' + t.realHours + 'h' : ''}">⏱ ${t.realHours != null ? t.realHours + '/' : ''}${t.estimatedHours}h</span>` : ''}
       ${assignee?`<span class="task-assignee" style="display:flex;align-items:center;gap:4px"><div style="width:14px;height:14px;border-radius:50%;background:${assignee.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:var(--accent-text-on-bg)">${assignee.initials}</div>${assignee.name}</span>`:''}
-      <button type="button" class="task-comment-btn" onclick="event.stopPropagation();openTaskCommentsModal(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})" title="Comentarios">💬</button>
-      <button class="task-edit-btn" onclick="event.stopPropagation();openEditTaskModal(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})" title="Editar">✏️</button>
-      <button class="task-delete-btn" onclick="deleteTask(${toOnclickStringArg(p.id)},${toOnclickStringArg(t.id)})">✕</button>
+      <button type="button" class="task-comment-btn" onclick="event.stopPropagation();openTaskCommentsModal('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')" title="Comentarios">💬</button>
+      <button class="task-edit-btn" onclick="event.stopPropagation();openEditTaskModal('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')" title="Editar">✏️</button>
+      <button class="task-delete-btn" onclick="deleteTask('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')">✕</button>
     </div>`;
   }).join('');
 }
@@ -908,7 +942,7 @@ function renderTasksKanban(p) {
       const tasks = getSortedTasks(p.tasks).filter(col.filter);
       return `<div class="kanban-col" data-col="${col.id}"
         ondragover="event.preventDefault()"
-        ondrop="dropTaskToColumn(event,'${col.id}',${toOnclickStringArg(p.id)})">
+        ondrop="dropTaskToColumn(event,'${col.id}','${toOnclickStringArg(p.id)}')">
         <div class="kanban-col-header">
           <span class="kanban-col-title">${col.label}</span>
           <span class="kanban-col-count">${tasks.length}</span>
@@ -926,8 +960,8 @@ function renderTasksKanban(p) {
                 const isBlocked = blockingDeps.length > 0;
                 return `<div class="kanban-card" 
                   draggable="true"
-                  ondragstart="dragTaskStart(event,${tid},${pid})"
-                  onclick="openTaskViewer(${pid},${tid})">
+                  ondragstart="dragTaskStart(event,'${tid}','${pid}')"
+                  onclick="openTaskViewer('${pid}','${tid}')">
                   <div class="kanban-card-name">${escapeChatHtml(t.name)}</div>
                   ${isBlocked ? `<div style="font-size:10px;color:rgba(239,68,68,0.7);
       display:flex;align-items:center;gap:3px">
@@ -938,7 +972,7 @@ function renderTasksKanban(p) {
                   ${t.estimatedHours != null ? `<div class="kanban-card-hours">⏱ ${t.realHours != null ? t.realHours + '/' : ''}${t.estimatedHours}h</div>` : ''}
                   <div class="kanban-card-footer">
                     ${assignee ? `<div class="kanban-avatar" style="background:${assignee.color}" title="${escapeChatHtml(assignee.name)}">${assignee.initials}</div>` : ''}
-                    <button onclick="event.stopPropagation();quickToggleTask(${pid},${tid},this)" 
+                    <button onclick="event.stopPropagation();quickToggleTask('${pid}','${tid}',this)" 
                       class="kanban-check ${t.done?'done':''}" title="${t.done?'Marcar pendiente':'Marcar completado'}">${t.done?'✓':'○'}</button>
                   </div>
                 </div>`;
@@ -1160,10 +1194,10 @@ export function openMyWorkTasksView() {
             const overdue =
               t.dueDate && new Date(t.dueDate + 'T12:00:00') < new Date();
             return `<div class="my-work-task-row">
-          <div class="task-check ${t.done ? 'done' : ''}" onclick="quickToggleTask(${pid},${tid},this)"></div>
+          <div class="task-check ${t.done ? 'done' : ''}" onclick="quickToggleTask('${pid}','${tid}',this)"></div>
           <div class="my-work-task-main">
-            <span class="my-work-task-name" onclick="openTaskViewer(${pid},${tid})">${escapeChatHtml(t.name)}</span>
-            <button type="button" class="my-work-project-link btn-secondary" style="font-size:10px;padding:2px 8px;margin-top:4px" onclick="selectProject(${pid})">${escapeChatHtml(p.name)}</button>
+            <span class="my-work-task-name" onclick="openTaskViewer('${pid}','${tid}')">${escapeChatHtml(t.name)}</span>
+            <button type="button" class="my-work-project-link btn-secondary" style="font-size:10px;padding:2px 8px;margin-top:4px" onclick="selectProject('${pid}')">${escapeChatHtml(p.name)}</button>
           </div>
           ${
             t.dueDate
@@ -1382,16 +1416,16 @@ export function selectProject(id) {
     walk = projects.find(x => sameId(x.id, walk.parentProjectId));
   }
   const crumbHtml = crumbs.length > 1
-    ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:4px">${crumbs.slice(0, -1).map(c => `<button type="button" class="btn-secondary" style="font-size:10px;padding:3px 8px" onclick="event.stopPropagation();selectProject(${toOnclickStringArg(c.id)})">${escapeChatHtml(c.name)}</button><span style="opacity:0.45;font-size:10px">▸</span>`).join('')}<span style="font-size:10px;font-weight:700;color:var(--accent)">Nivel ${crumbs.length}</span></div>`
+    ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:4px">${crumbs.slice(0, -1).map(c => `<button type="button" class="btn-secondary" style="font-size:10px;padding:3px 8px" onclick="event.stopPropagation();selectProject('${toOnclickStringArg(c.id)}')">${escapeChatHtml(c.name)}</button><span style="opacity:0.45;font-size:10px">▸</span>`).join('')}<span style="font-size:10px;font-weight:700;color:var(--accent)">Nivel ${crumbs.length}</span></div>`
     : '';
   const subprojectsBlock = `<div style="margin-top:var(--space-6)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-2);flex-wrap:wrap;gap:8px">
       <h4 style="font-size:12px;color:var(--text-dim);margin:0">Subproyectos${childProjects.length ? ` (${childProjects.length})` : ''}</h4>
-      <button type="button" class="btn-primary" style="font-size:11px;padding:5px 12px" onclick="event.stopPropagation();openNewProjectModal(${toOnclickStringArg(p.id)})">+ Subproyecto</button>
+      <button type="button" class="btn-primary" style="font-size:11px;padding:5px 12px" onclick="event.stopPropagation();openNewProjectModal('${toOnclickStringArg(p.id)}')">+ Subproyecto</button>
     </div>
     ${childProjects.length === 0
       ? `<p style="font-size:11px;color:var(--text-muted);margin:0">Sin subproyectos. Puedes anidar varios niveles para organizar el trabajo.</p>`
-      : `<div style="display:flex;flex-direction:column;gap:var(--space-1)">${childProjects.map(c => `<button type="button" class="btn-secondary btn-subproject-row" style="text-align:left;font-size:12px" onclick="event.stopPropagation();selectProject(${toOnclickStringArg(c.id)})">${escapeChatHtml(c.name)} <span style="opacity:0.55;font-size:10px">Abrir →</span></button>`).join('')}</div>`}
+      : `<div style="display:flex;flex-direction:column;gap:var(--space-1)">${childProjects.map(c => `<button type="button" class="btn-secondary btn-subproject-row" style="text-align:left;font-size:12px" onclick="event.stopPropagation();selectProject('${toOnclickStringArg(c.id)}')">${escapeChatHtml(c.name)} <span style="opacity:0.55;font-size:10px">Abrir →</span></button>`).join('')}</div>`}
   </div>`;
 
   const brokenDeps = countBrokenDependencyRefs(p);
@@ -1409,12 +1443,12 @@ export function selectProject(id) {
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span class="project-badge project-badge-status" style="--badge-color:${statusColors[p.status]}">${statusLabels[p.status]}</span>
-        <button type="button" class="btn-secondary" onclick="openApplyTemplateToProjectModal(${toOnclickStringArg(p.id)})" style="font-size:12px;padding:6px 12px" title="Añadir tareas desde una plantilla al proyecto actual">⤵ Plantilla</button>
-        <button type="button" class="btn-secondary" onclick="openSaveProjectTemplateModal(${toOnclickStringArg(p.id)})" style="font-size:12px;padding:6px 12px" title="Guardar la lista de tareas como plantilla reutilizable">📋 Guardar plantilla</button>
-        <button type="button" class="btn-secondary" onclick="exportProjectAsText(${toOnclickStringArg(p.id)})" style="font-size:12px;padding:6px 12px" title="Descargar resumen en texto">📥 TXT</button>
-        <button type="button" class="btn-secondary" onclick="openProjectPrintReport(${toOnclickStringArg(p.id)})" style="font-size:12px;padding:6px 12px" title="Informe para imprimir o guardar como PDF">🖨 PDF</button>
-        <button type="button" class="btn-secondary" onclick="openEditProjectModal(${toOnclickStringArg(p.id)})" style="font-size:12px;padding:6px 12px">✏️ Editar</button>
-        <button type="button" class="btn-secondary btn-secondary-danger" onclick="deleteProject(${toOnclickStringArg(p.id)})" style="font-size:12px;padding:6px 12px">🗑</button>
+        <button type="button" class="btn-secondary" onclick="openApplyTemplateToProjectModal('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px" title="Añadir tareas desde una plantilla al proyecto actual">⤵ Plantilla</button>
+        <button type="button" class="btn-secondary" onclick="openSaveProjectTemplateModal('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px" title="Guardar la lista de tareas como plantilla reutilizable">📋 Guardar plantilla</button>
+        <button type="button" class="btn-secondary" onclick="exportProjectAsText('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px" title="Descargar resumen en texto">📥 TXT</button>
+        <button type="button" class="btn-secondary" onclick="openProjectPrintReport('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px" title="Informe para imprimir o guardar como PDF">🖨 PDF</button>
+        <button type="button" class="btn-secondary" onclick="openEditProjectModal('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px">✏️ Editar</button>
+        <button type="button" class="btn-secondary btn-secondary-danger" onclick="deleteProject('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px">🗑</button>
       </div>
     </div>
     ${brokenBanner}
@@ -1430,33 +1464,33 @@ export function selectProject(id) {
               id="task-search-input"
               placeholder="Buscar tarea..."
               value="${escapeChatHtml(_taskSearchQuery)}"
-              oninput="filterTaskSearch(this.value,${toOnclickStringArg(p.id)})">
-            ${_taskSearchQuery ? `<button type="button" class="task-search-clear" onclick="filterTaskSearch('',${toOnclickStringArg(p.id)})" title="Limpiar">✕</button>` : ''}
+              oninput="filterTaskSearch(this.value,'${toOnclickStringArg(p.id)}')">
+            ${_taskSearchQuery ? `<button type="button" class="task-search-clear" onclick="filterTaskSearch('','${toOnclickStringArg(p.id)}')" title="Limpiar">✕</button>` : ''}
           </div>
           <div class="task-sort-btns">
             <button type="button" class="task-sort-btn ${_taskSortMode === 'default' ? 'active' : ''}"
-              onclick="setTaskSort('default',${toOnclickStringArg(p.id)})" title="Orden por defecto">↕</button>
+              onclick="setTaskSort('default','${toOnclickStringArg(p.id)}')" title="Orden por defecto">↕</button>
             <button type="button" class="task-sort-btn ${_taskSortMode === 'priority' ? 'active' : ''}"
-              onclick="setTaskSort('priority',${toOnclickStringArg(p.id)})" title="Por prioridad">⚑</button>
+              onclick="setTaskSort('priority','${toOnclickStringArg(p.id)}')" title="Por prioridad">⚑</button>
             <button type="button" class="task-sort-btn ${_taskSortMode === 'dueDate' ? 'active' : ''}"
-              onclick="setTaskSort('dueDate',${toOnclickStringArg(p.id)})" title="Por fecha límite">📅</button>
+              onclick="setTaskSort('dueDate','${toOnclickStringArg(p.id)}')" title="Por fecha límite">📅</button>
             <button type="button" class="task-sort-btn ${_taskSortMode === 'status' ? 'active' : ''}"
-              onclick="setTaskSort('status',${toOnclickStringArg(p.id)})" title="Por estado">◉</button>
+              onclick="setTaskSort('status','${toOnclickStringArg(p.id)}')" title="Por estado">◉</button>
           </div>
           <div class="view-toggle">
             <button class="view-toggle-btn ${window._projectViewMode !== 'kanban' ? 'active' : ''}" 
-              onclick="setProjectViewMode('list',${toOnclickStringArg(p.id)})" title="Vista lista">≡</button>
+              onclick="setProjectViewMode('list','${toOnclickStringArg(p.id)}')" title="Vista lista">≡</button>
             <button class="view-toggle-btn ${window._projectViewMode === 'kanban' ? 'active' : ''}" 
-              onclick="setProjectViewMode('kanban',${toOnclickStringArg(p.id)})" title="Vista Kanban">⊞</button>
+              onclick="setProjectViewMode('kanban','${toOnclickStringArg(p.id)}')" title="Vista Kanban">⊞</button>
           </div>
-          <button class="btn-primary" onclick="openAddTaskModal(${toOnclickStringArg(p.id)})" style="font-size:11px;padding:5px 12px">+ Tarea</button>
+          <button class="btn-primary" onclick="openAddTaskModal('${toOnclickStringArg(p.id)}')" style="font-size:11px;padding:5px 12px">+ Tarea</button>
         </div>
       </div>
       ${window._projectViewMode === 'kanban' ? renderTasksKanban(p) : renderTasksList(p)}
     </div>
     ${subprojectsBlock}
     <div style="margin-top:var(--space-6)">
-      <button type="button" class="btn-secondary btn-full-width" onclick="openProjectCommentsModal(${toOnclickStringArg(p.id)})">💬 Comentarios del proyecto${comments.filter(c=>c.kind==='project'&&sameId(c.targetId,p.id)).length ? ' ('+comments.filter(c=>c.kind==='project'&&sameId(c.targetId,p.id)).length+')' : ''}</button>
+      <button type="button" class="btn-secondary btn-full-width" onclick="openProjectCommentsModal('${toOnclickStringArg(p.id)}')">💬 Comentarios del proyecto${comments.filter(c=>c.kind==='project'&&sameId(c.targetId,p.id)).length ? ' ('+comments.filter(c=>c.kind==='project'&&sameId(c.targetId,p.id)).length+')' : ''}</button>
     </div>
   `;
 }
@@ -1710,7 +1744,7 @@ export function projectSubtreeHasAssignee(p, userId, seen) {
   return projects.filter(c => sameId(c.parentProjectId, p.id)).some(c => userCanSeeProject(c) && projectSubtreeHasAssignee(c, userId, seen));
 }
 
-export function saveProject() {
+export async function saveProject() {
   const name = document.getElementById('project-name-input').value.trim();
   if (!name) { showToast('El nombre es requerido','error'); return; }
   const desc = document.getElementById('project-desc-input').value.trim();
@@ -1741,7 +1775,7 @@ export function saveProject() {
       if (!par) { showToast('Proyecto padre no encontrado', 'error'); return; }
       newG = par.group;
     }
-    projects[idx] = {
+    const updated = {
       ...projects[idx],
       name,
       desc,
@@ -1752,6 +1786,15 @@ export function saveProject() {
       parentProjectId: newParentId,
       group: newG,
     };
+    try {
+      const mongoId = (prev && (prev._id || prev.id)) || updated._id || updated.id;
+      await apiUpdateProject(mongoId, updated);
+    } catch (err) {
+      console.error('Error actualizando proyecto:', err);
+      showToast('Error al guardar en servidor', 'error');
+      return;
+    }
+    projects[idx] = updated;
     if (oldG !== newG) cascadeProjectGroupToDescendants(editingProjectId, newG);
     saveProjectData();
     closeModal('project-modal');
@@ -1788,6 +1831,15 @@ export function saveProject() {
     createdById: currentUser.id,
     shares: addSh,
   };
+  try {
+    const saved = await apiCreateProject(newProj);
+    newProj._id = saved._id;
+    newProj.id = saved._id || newProj.id;
+  } catch (err) {
+    console.error('Error creando proyecto:', err);
+    showToast('Error al guardar en servidor', 'error');
+    return;
+  }
   projects.push(newProj);
   if (tasksFromTpl.length > 0) {
     pushProjectActivity(newProj, {
@@ -1817,10 +1869,23 @@ export function deleteProject(id) {
   });
 }
 
-export function executeDeleteProjectTree(id) {
+export async function executeDeleteProjectTree(id) {
   const kill = new Set();
   kill.add(id);
   collectDescendantProjectIds(id, kill);
+  try {
+    for (const pid of kill) {
+      const proj = projects.find(p => sameId(p.id, pid));
+      if (proj) {
+        const mongoId = proj._id || proj.id;
+        await apiDeleteProject(mongoId);
+      }
+    }
+  } catch (err) {
+    console.error('Error eliminando proyecto:', err);
+    showToast('Error al eliminar en servidor', 'error');
+    return;
+  }
   setProjects(projects.filter(p => !kill.has(p.id)));
   if (currentProjectId != null && [...kill].some(pid => sameId(pid, currentProjectId))) setCurrentProjectId(null);
   [...kill].forEach(k => getProjectTreeCollapsedSet().delete(String(k)));
@@ -1917,7 +1982,7 @@ export function openEditTaskModal(projectId, taskId) {
   }
 }
 
-export function saveTask() {
+export async function saveTask() {
   const name = document.getElementById('task-name-input').value.trim();
   if (!name) { showToast('El nombre es requerido','error'); return; }
   const p = projects.find(pr => sameId(pr.id, currentProjectId));
@@ -1969,6 +2034,14 @@ export function saveTask() {
     });
     pushProjectActivity(p, { type: 'task_added', taskName: name, taskId: newTaskId });
     showToast('Tarea añadida','success');
+  }
+  try {
+    const mongoId = p._id || p.id;
+    await apiUpdateProject(mongoId, p);
+  } catch (err) {
+    console.error('Error guardando tarea en API:', err);
+    showToast('Error al guardar en servidor', 'error');
+    return;
   }
   saveProjectData();
   closeModal('task-modal');
@@ -2065,5 +2138,5 @@ export function deleteTask(projectId, taskId) {
 }
 
 export function saveProjectData() {
-  localStorage.setItem('diario_projects', JSON.stringify(projects));
+  // Compatibilidad — no hacer nada aquí
 }

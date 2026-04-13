@@ -1,9 +1,15 @@
 // ===== POSTIT MODULE =====
 
-import { postitCards, USERS, currentUser, collectImageMap, editingPostitId, selectedPostitPriority, sameId, comments, editingPostitImages, setEditingPostitId, setEditingPostitImages, setSelectedPostitPriority } from './data.js';
+import { postitCards, USERS, currentUser, collectImageMap, editingPostitId, selectedPostitPriority, sameId, comments, editingPostitImages, setEditingPostitId, setEditingPostitImages, setSelectedPostitPriority, setPostitCards } from './data.js';
 import { showToast, openModal, showConfirmModal } from './modalControl.js';
 import { renderMarkdown } from './notes.js';
 import { commentIndicators } from './docs.js';
+import {
+  apiGetPostits,
+  apiCreatePostit,
+  apiUpdatePostit,
+  apiDeletePostit,
+} from '../api.js';
 
 export const POSTIT_COLS = [
   {id:'pendiente',label:'Pendiente',icon:'📋',color:'var(--text-muted)'},
@@ -15,6 +21,26 @@ let draggingPostitId = null;
 let postitDropPlaceholder = null;
 let postitUserFilter = null;
 
+export async function loadPostitFromAPI() {
+  try {
+    const data = await apiGetPostits();
+    const mapped = data.map(c => ({
+      ...c,
+      id: c._id || c.id,
+      group: c.department || c.group,
+    }));
+    setPostitCards(mapped);
+    return mapped;
+  } catch (err) {
+    console.error('Error cargando post-its desde API:', err);
+    try {
+      const local = localStorage.getItem('diario_postit');
+      if (local) setPostitCards(JSON.parse(local));
+    } catch {}
+    return [];
+  }
+}
+
 function renderPostitUserFilter() {
   const bar = document.getElementById('postit-user-filter-bar');
   if (!bar || !currentUser) return;
@@ -22,7 +48,7 @@ function renderPostitUserFilter() {
   bar.innerHTML = [
     `<button type="button" class="postit-user-filter-btn${!postitUserFilter ? ' active' : ''}" data-uid="" onclick="setPostitUserFilter(null)">Todos</button>`,
     ...usersInBoard.map(u =>
-      `<button type="button" class="postit-user-filter-btn${postitUserFilter != null && sameId(postitUserFilter, u.id) ? ' active' : ''}" data-uid="${u.id}" onclick="setPostitUserFilter(${u.id})">
+      `<button type="button" class="postit-user-filter-btn${postitUserFilter != null && sameId(postitUserFilter, u.id) ? ' active' : ''}" data-uid="${u.id}" onclick="setPostitUserFilter('${u.id}')">
           <span class="postit-filter-av" style="background:${u.color}">${u.initials}</span>${u.name.split(' ')[0]}
         </button>`
     )
@@ -105,11 +131,11 @@ export function renderPostitCard(c) {
     </div>`;
   }
 
-  return `<div class="postit-card ${c.color}${isOverdue ? ' postit-card--overdue' : ''}" draggable="true" data-postit-id="${c.id}" onclick="if(!window._postitDragSuppressClick){editPostitCard(${c.id})}">
+  return `<div class="postit-card ${c.color}${isOverdue ? ' postit-card--overdue' : ''}" draggable="true" data-postit-id="${c.id}" onclick="if(!window._postitDragSuppressClick){editPostitCard('${c.id}')}">
     <div class="postit-card-actions">
-      <button class="postit-card-action" onclick="movePostitCard(event,${c.id},-1)" title="Mover a la izquierda">←</button>
-      <button class="postit-card-action" onclick="movePostitCard(event,${c.id},1)" title="Mover a la derecha">→</button>
-      <button class="postit-card-action" onclick="deletePostitCard(event,${c.id})" style="color:var(--danger)" title="Eliminar">✕</button>
+      <button class="postit-card-action" onclick="movePostitCard(event,'${c.id}',-1)" title="Mover a la izquierda">←</button>
+      <button class="postit-card-action" onclick="movePostitCard(event,'${c.id}',1)" title="Mover a la derecha">→</button>
+      <button class="postit-card-action" onclick="deletePostitCard(event,'${c.id}')" style="color:var(--danger)" title="Eliminar">✕</button>
     </div>
     <div class="postit-card-title-row">
       <div class="postit-card-title">${c.title}</div>
@@ -136,8 +162,8 @@ function setupPostitDragAndDrop() {
   const cards = document.querySelectorAll('#postit-board .postit-card[data-postit-id]');
   cards.forEach(cardEl => {
     cardEl.addEventListener('dragstart', (e) => {
-      const id = Number(cardEl.getAttribute('data-postit-id'));
-      if (Number.isNaN(id)) return;
+      const id = String(cardEl.getAttribute('data-postit-id') || '');
+      if (!id) return;
       draggingPostitId = id;
       cardEl.classList.add('dragging');
       window._postitDragSuppressClick = false;
@@ -205,8 +231,8 @@ function applyPostitOrderFromDOM() {
     const colEl = document.getElementById(`pcol-${col.id}`);
     if (!colEl) return;
     colEl.querySelectorAll('.postit-card[data-postit-id]').forEach((el, idx) => {
-      const id = Number(el.getAttribute('data-postit-id'));
-      if (!Number.isNaN(id)) domOrder.push({ id, column: col.id, idx });
+      const id = String(el.getAttribute('data-postit-id') || '');
+      if (id) domOrder.push({ id, column: col.id, idx });
     });
   });
   if (!domOrder.length) return;
@@ -379,7 +405,7 @@ export function openNewPostitModal(colId) {
 }
 
 export function editPostitCard(id) {
-  const c = postitCards.find(p => p.id === id);
+  const c = postitCards.find(p => sameId(p.id, id));
   if (!c) return;
   setEditingPostitId(id);
   setEditingPostitImages(c.images || {});
@@ -416,7 +442,7 @@ export function selectPostitPriority(el) {
   setSelectedPostitPriority(el.dataset.priority);
 }
 
-export function savePostit() {
+export async function savePostit() {
   const title = document.getElementById('postit-title-input').value.trim();
   if (!title) { showToast('El título es requerido', 'error'); return; }
   const body = document.getElementById('postit-body-input').value.trim();
@@ -428,7 +454,7 @@ export function savePostit() {
     : (Number.isNaN(Number(assignedToRaw)) ? assignedToRaw : Number(assignedToRaw));
   const dueDateRaw = document.getElementById('postit-due-date-input')?.value ?? '';
   const dueDate = dueDateRaw ? dueDateRaw : null;
-  const currentImages = editingPostitId ? postitCards.find(c => c.id === editingPostitId)?.images || {} : {};
+  const currentImages = editingPostitId ? postitCards.find(c => sameId(c.id, editingPostitId))?.images || {} : {};
   const images = collectImageMap(body, currentImages);
   // Recoger checklist
   const checklist = window._postitChecklist || [];
@@ -440,11 +466,60 @@ export function savePostit() {
   const attachments = window._postitAttachments || [];
 
   if (editingPostitId) {
-    const idx = postitCards.findIndex(c => c.id === editingPostitId && c.group === currentUser.group);
-    if (idx !== -1) postitCards[idx] = {...postitCards[idx], title, body, column, color, priority:selectedPostitPriority, assignedTo, dueDate, images, checklist, subtasks, attachments};
-    else { showToast('No autorizado para editar esta tarjeta', 'error'); return; }
+    const idx = postitCards.findIndex(c => sameId(c.id, editingPostitId) && c.group === currentUser.group);
+    if (idx === -1) {
+      showToast('No autorizado para editar esta tarjeta', 'error');
+      return;
+    }
+    try {
+      const mongoId = postitCards[idx]._id || postitCards[idx].id;
+      await apiUpdatePostit(mongoId, {
+        title,
+        body,
+        column,
+        color,
+        priority: selectedPostitPriority,
+        assignedTo,
+        dueDate,
+        images,
+        checklist,
+        subtasks,
+        attachments,
+      });
+    } catch (err) {
+      console.error('Error actualizando post-it:', err);
+      showToast('Error al guardar en servidor', 'error');
+      return;
+    }
+    postitCards[idx] = {...postitCards[idx], title, body, column, color, priority:selectedPostitPriority, assignedTo, dueDate, images, checklist, subtasks, attachments};
   } else {
-    postitCards.push({id:Date.now(), title, body, column, color, priority:selectedPostitPriority, assignedTo, dueDate, authorId:currentUser.id, group:currentUser.group, createdAt:new Date().toISOString(), images, checklist, subtasks, attachments});
+    const newCard = {
+      title,
+      body,
+      column,
+      color,
+      priority: selectedPostitPriority,
+      assignedTo,
+      dueDate,
+      authorId: currentUser.id,
+      group: currentUser.group,
+      department: currentUser.group,
+      createdAt: new Date().toISOString(),
+      images,
+      checklist,
+      subtasks,
+      attachments,
+    };
+    try {
+      const saved = await apiCreatePostit(newCard);
+      newCard._id = saved._id;
+      newCard.id = saved._id || Date.now();
+    } catch (err) {
+      console.error('Error creando post-it:', err);
+      showToast('Error al guardar en servidor', 'error');
+      return;
+    }
+    postitCards.push(newCard);
   }
   savePostitData();
   closeModal('postit-modal');
@@ -452,14 +527,20 @@ export function savePostit() {
   showToast(editingPostitId ? 'Tarjeta actualizada' : 'Tarjeta creada', 'success');
 }
 
-export function movePostitCard(e, id, dir) {
+export async function movePostitCard(e, id, dir) {
   e.stopPropagation();
   const colIds = POSTIT_COLS.map(c => c.id);
-  const card = postitCards.find(c => c.id === id);
+  const card = postitCards.find(c => sameId(c.id, id));
   if (!card) return;
   const idx = colIds.indexOf(card.column);
   const newIdx = Math.max(0, Math.min(colIds.length - 1, idx + dir));
   card.column = colIds[newIdx];
+  try {
+    const mongoId = card._id || card.id;
+    await apiUpdatePostit(mongoId, { column: card.column });
+  } catch (err) {
+    console.error('Error moviendo post-it:', err);
+  }
   applyPostitColorByColumn(card);
   savePostitData();
   renderPostitBoard();
@@ -472,9 +553,17 @@ export function deletePostitCard(e, id) {
     icon: '🗂',
     title: '¿Eliminar esta tarjeta?',
     message: card ? `Se eliminará "${card.title}" y todos sus comentarios.` : 'Se eliminará la tarjeta.',
-    onConfirm: () => {
+    onConfirm: async () => {
       const idx = postitCards.findIndex(c => sameId(c.id, id));
       if (idx !== -1) {
+        try {
+          const mongoId = card._id || card.id;
+          await apiDeletePostit(mongoId);
+        } catch (err) {
+          console.error('Error eliminando post-it:', err);
+          showToast('Error al eliminar en servidor', 'error');
+          return;
+        }
         postitCards.splice(idx, 1);
         savePostitData();
         renderPostitBoard();
@@ -493,9 +582,9 @@ export function renderPostitSubtasks() {
   list.innerHTML = items.map((s, i) => `
     <div class="postit-item-row">
       <input type="checkbox" class="postit-item-check" ${s.done ? 'checked' : ''}
-        onchange="togglePostitSubtask(${i})">
+        onchange="togglePostitSubtask('${i}')">
       <span class="postit-item-text ${s.done ? 'done' : ''}">${s.text}</span>
-      <button type="button" class="postit-item-delete" onclick="deletePostitSubtask(${i})">✕</button>
+      <button type="button" class="postit-item-delete" onclick="deletePostitSubtask('${i}')">✕</button>
     </div>
   `).join('');
 }
@@ -516,9 +605,9 @@ export function renderPostitChecklist() {
     ${items.map((s, i) => `
       <div class="postit-item-row">
         <input type="checkbox" class="postit-item-check" ${s.done ? 'checked' : ''}
-          onchange="togglePostitChecklist(${i})">
+          onchange="togglePostitChecklist('${i}')">
         <span class="postit-item-text ${s.done ? 'done' : ''}">${s.text}</span>
-        <button type="button" class="postit-item-delete" onclick="deletePostitChecklist(${i})">✕</button>
+        <button type="button" class="postit-item-delete" onclick="deletePostitChecklist('${i}')">✕</button>
       </div>
     `).join('')}
   `;
@@ -532,14 +621,14 @@ export function renderPostitAttachments() {
   list.innerHTML = items.map((a, i) => {
     const isImage = a.type.startsWith('image');
     const preview = isImage
-      ? `<img src="${a.dataUrl}" class="postit-attachment-thumb" onclick="openPostitAttachmentPreview(${i})" title="Ver imagen">`
-      : `<span class="postit-attachment-icon" onclick="openPostitAttachmentPreview(${i})" 
+      ? `<img src="${a.dataUrl}" class="postit-attachment-thumb" onclick="openPostitAttachmentPreview('${i}')" title="Ver imagen">`
+      : `<span class="postit-attachment-icon" onclick="openPostitAttachmentPreview('${i}')" 
            style="cursor:pointer" title="Abrir archivo">📄</span>`;
     return `<div class="postit-attachment-row">
       ${preview}
       <span class="postit-attachment-name">${a.name}</span>
       <span class="postit-attachment-size">${Math.round(a.size/1024)}kb</span>
-      <button type="button" class="postit-item-delete" onclick="deletePostitAttachment(${i})">✕</button>
+      <button type="button" class="postit-item-delete" onclick="deletePostitAttachment('${i}')">✕</button>
     </div>`;
   }).join('');
 }
@@ -685,6 +774,6 @@ export function deletePostitAttachment(i) {
 }
 
 export function savePostitData() {
-  localStorage.setItem('diario_postit', JSON.stringify(postitCards));
+  // Ya no guarda en localStorage — operaciones individuales usan API
 }
 

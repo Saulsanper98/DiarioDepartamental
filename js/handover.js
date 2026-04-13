@@ -2,8 +2,33 @@
 
 import { currentUser, notes, postitCards, projects, SHIFTS, toDateStr, sameId } from './components/data.js';
 import { showToast, openModal, closeModal, showConfirmModal } from './components/modalControl.js';
+import {
+  apiGetHandovers,
+  apiCreateHandover,
+  apiReceiveHandover,
+} from './api.js';
 
 const STORAGE_KEY = 'diario_handovers';
+
+export async function loadHandoversFromAPI() {
+  try {
+    const data = await apiGetHandovers();
+    const mapped = data.map(h => ({
+      ...h,
+      id: h._id || h.id,
+      group: h.department || h.group,
+    }));
+    window._handoversCache = mapped;
+    return mapped;
+  } catch (err) {
+    console.error('Error cargando traspasos desde API:', err);
+    try {
+      const local = localStorage.getItem('diario_handovers');
+      window._handoversCache = local ? JSON.parse(local) : [];
+    } catch {}
+    return window._handoversCache || [];
+  }
+}
 
 // ── Utilidades ──────────────────────────────────────────
 
@@ -21,14 +46,12 @@ function getCurrentShift() {
 }
 
 function loadHandovers() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+  return window._handoversCache || [];
 }
 
 function saveHandovers(list) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  window._handoversCache = list;
+  // Ya no guarda en localStorage
 }
 
 // ── Auto-recopilación ────────────────────────────────────
@@ -211,7 +234,7 @@ export function removeHandoverItem(section, idx) {
   if (items[idx]) items[idx].remove();
 }
 
-export function deliverHandover() {
+export async function deliverHandover() {
   if (!currentUser) return;
   const shift = getCurrentShift();
   const nextShift = getNextShift(shift);
@@ -226,28 +249,27 @@ export function deliverHandover() {
 
   const avisos = document.getElementById('ho-avisos')?.value.trim() || '';
 
-  const handover = {
-    id: Date.now(),
-    date: toDateStr(new Date()),
-    deliveredAt: new Date().toISOString(),
-    fromShift: shift,
-    toShift: nextShift,
-    authorId: currentUser.id,
-    authorName: currentUser.name,
-    group: currentUser.group,
-    sections: {
-      incidencias: collectItems('incidencias'),
-      pendientes: collectItems('pendientes'),
-      proyectos: collectItems('proyectos'),
-      avisos
-    },
-    receivedBy: null,
-    receivedAt: null
-  };
-
-  const handovers = loadHandovers();
-  handovers.unshift(handover);
-  saveHandovers(handovers);
+  try {
+    const saved = await apiCreateHandover({
+      date: toDateStr(new Date()),
+      fromShift: getCurrentShift(),
+      toShift: getNextShift(getCurrentShift()),
+      deliveredAt: new Date().toISOString(),
+      sections: {
+        incidencias: collectItems('incidencias'),
+        pendientes: collectItems('pendientes'),
+        proyectos: collectItems('proyectos'),
+        avisos: avisos,
+      }
+    });
+    const list = loadHandovers();
+    list.unshift({ ...saved, id: saved._id || saved.id });
+    saveHandovers(list);
+  } catch (err) {
+    console.error('Error guardando traspaso:', err);
+    showToast('Error al guardar traspaso en servidor', 'error');
+    return;
+  }
 
   closeHandoverPanel();
   showToast('Traspaso entregado y firmado ✅', 'success');
@@ -279,7 +301,7 @@ export function checkPendingHandover() {
     banner.innerHTML = `
       <span class="handover-banner-icon">📨</span>
       <span class="handover-banner-text">Traspaso del turno <strong>${fromShift.label}</strong> de <strong>${pending.authorName}</strong> · ${time}</span>
-      <button type="button" class="handover-banner-btn" onclick="openHandoverReceive(${pending.id})">Ver traspaso</button>
+      <button type="button" class="handover-banner-btn" onclick="openHandoverReceive('${pending.id}')">Ver traspaso</button>
       <button type="button" class="handover-banner-close" onclick="dismissHandoverBanner()">✕</button>`;
     banner.classList.add('visible');
   } else {
@@ -294,7 +316,7 @@ export function dismissHandoverBanner() {
 
 export function openHandoverReceive(handoverId) {
   const handovers = loadHandovers();
-  const h = handovers.find(x => x.id === handoverId);
+  const h = handovers.find(x => sameId(x.id, handoverId));
   if (!h) return;
 
   const fromShift = SHIFTS[h.fromShift];
@@ -332,7 +354,7 @@ export function openHandoverReceive(handoverId) {
 
     ${!h.receivedBy ? `
     <div class="handover-receive-footer">
-      <button type="button" class="handover-deliver-btn" onclick="confirmHandoverReceived(${h.id})">
+      <button type="button" class="handover-deliver-btn" onclick="confirmHandoverReceived('${h.id}')">
         ✅ Confirmar recepción del turno
       </button>
     </div>` : `
@@ -343,15 +365,24 @@ export function openHandoverReceive(handoverId) {
   openModal('handover-receive-modal');
 }
 
-export function confirmHandoverReceived(handoverId) {
+export async function confirmHandoverReceived(handoverId) {
   if (!currentUser) return;
   const handovers = loadHandovers();
-  const idx = handovers.findIndex(h => h.id === handoverId);
+  const idx = handovers.findIndex(h => sameId(h.id, handoverId));
   if (idx === -1) return;
-  handovers[idx].receivedBy = currentUser.id;
-  handovers[idx].receivedByName = currentUser.name;
-  handovers[idx].receivedAt = new Date().toISOString();
-  saveHandovers(handovers);
+  const handover = handovers[idx];
+  try {
+    const mongoId = handover._id || handover.id;
+    await apiReceiveHandover(mongoId);
+    handover.receivedBy = currentUser.id;
+    handover.receivedByName = currentUser.name;
+    handover.receivedAt = new Date().toISOString();
+    saveHandovers(loadHandovers());
+  } catch (err) {
+    console.error('Error confirmando traspaso:', err);
+    showToast('Error al confirmar traspaso', 'error');
+    return;
+  }
   closeModal('handover-receive-modal');
   checkPendingHandover();
   showToast('Turno recibido confirmado ✅', 'success');
@@ -377,7 +408,7 @@ export function openHandoverHistory() {
         ? `<span class="handover-status handover-status--received">✅ Recibido</span>`
         : `<span class="handover-status handover-status--pending">⏳ Sin confirmar</span>`;
       return `
-        <div class="handover-history-item" onclick="openHandoverReceive(${h.id})" style="cursor:pointer">
+        <div class="handover-history-item" onclick="openHandoverReceive('${h.id}')" style="cursor:pointer">
           <div class="handover-history-shifts">
             ${from.emoji} ${from.label} → ${to.emoji} ${to.label}
           </div>

@@ -87,7 +87,10 @@ export let currentProjectId = null;
 export function setCurrentUser(val) { currentUser = val; }
 export function setCurrentGroup(val) { currentGroup = val; }
 export function setNotes(val) { notes = val; }
-export function setProjects(val) { projects = val; }
+export function setProjects(arr) {
+  projects.length = 0;
+  arr.forEach(p => projects.push(p));
+}
 export function setDocs(val) { docs = val; }
 export function setCurrentView(val) { currentView = val; }
 export function setCurrentNoteView(val) { currentNoteView = val; }
@@ -136,9 +139,8 @@ export function toDateStr(date) {
 }
 
 export function sameId(a, b) {
-  const na = Number(a);
-  const nb = Number(b);
-  if (Number.isFinite(na) && Number.isFinite(nb)) return na === nb;
+  if (a == null || b == null) return false;
+  // Comparar como strings para manejar ObjectIds de MongoDB
   return String(a) === String(b);
 }
 

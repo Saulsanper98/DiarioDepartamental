@@ -5,6 +5,12 @@ import { renderMarkdown, renderNotes, handleSlashCommand } from './notes.js';
 import { sameId } from './data.js';
 import { showToast, openModal, closeModal, showConfirmModal, closeConfirmModal, escapeChatHtml } from './modalControl.js';
 import { createCustomSelect } from './auroraCustomSelect.js';
+import {
+  apiGetDocs,
+  apiCreateDoc,
+  apiUpdateDoc,
+  apiDeleteDoc,
+} from '../api.js';
 
 export let currentDocCat = 'all';
 export let currentDocFolderId = null;
@@ -12,6 +18,26 @@ export let currentDocFile = null;
 export let editingDocId = null;
 export let commentDraftImages = {};
 let insertFileData = null;
+
+export async function loadDocsFromAPI() {
+  try {
+    const data = await apiGetDocs();
+    const mapped = data.map(d => ({
+      ...d,
+      id: d._id || d.id,
+      group: d.department || d.group,
+    }));
+    setDocs(mapped);
+    return mapped;
+  } catch (err) {
+    console.error('Error cargando docs desde API:', err);
+    try {
+      const local = localStorage.getItem('diario_docs');
+      if (local) setDocs(JSON.parse(local));
+    } catch {}
+    return [];
+  }
+}
 
 export const DOC_CATS = [
   {id:'all',label:'Todos',icon:'📁'},
@@ -85,7 +111,7 @@ export function renderDocsGrid() {
   const lastDocId = currentUser ? localStorage.getItem(`diario_last_doc_${currentUser.id}`) : null;
   const lastDoc = lastDocId ? docs.find(d => sameId(d.id, lastDocId)) : null;
   const recentBannerHtml = (lastDoc && currentDocFolderId == null && !docsSearchTerm)
-    ? `<div class="docs-recent-banner" onclick="viewDoc(${lastDoc.id})" title="Abrir último documento visto">
+    ? `<div class="docs-recent-banner" onclick="viewDoc('${lastDoc.id}')" title="Abrir último documento visto">
         <span class="docs-recent-icon">${lastDoc.icon || '📄'}</span>
         <div class="docs-recent-info">
           <span class="docs-recent-label">Último visto</span>
@@ -271,7 +297,7 @@ export function renderDocsGrid() {
       ${commentIndicators('doc', d.id)}
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:6px">
         <button class="btn-secondary" type="button" onclick="event.stopPropagation(); selectDocFolder('${d.id}')" style="font-size:11px;padding:6px 12px;flex:1">👁️ Ver</button>
-        <button class="btn-secondary" type="button" onclick="event.stopPropagation(); openDocCommentsModal(${d.id})" style="font-size:11px;padding:6px 12px" title="Comentarios">💬</button>
+        <button class="btn-secondary" type="button" onclick="event.stopPropagation(); openDocCommentsModal('${d.id}')" style="font-size:11px;padding:6px 12px" title="Comentarios">💬</button>
         <button class="btn-secondary" type="button" onclick="event.stopPropagation(); editDocument('${d.id}')" style="font-size:11px;padding:6px 12px">✏️</button>
       </div>
     </div>`;
@@ -334,11 +360,11 @@ export function viewDoc(id) {
       <div class="doc-meta-bar">Por ${author ? author.name : '—'} · ${date}</div>
       <div class="doc-body">${rendered}</div>
       <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border)">
-        <button type="button" class="btn-primary btn-full-width" onclick="openDocCommentsModal(${d.id})">💬 Abrir comentarios</button>
+        <button type="button" class="btn-primary btn-full-width" onclick="openDocCommentsModal('${d.id}')">💬 Abrir comentarios</button>
       </div>
       <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn-secondary" onclick='openEditDocModal(${JSON.stringify(d.id)})'>✏️ Editar</button>
-        <button class="btn-secondary" onclick="openDocVersionsModal(${d.id})">🕐 Historial</button>
+        <button class="btn-secondary" onclick="openDocVersionsModal('${d.id}')">🕐 Historial</button>
         <button class="btn-secondary btn-secondary-danger" onclick='deleteDoc(${JSON.stringify(d.id)})'>🗑 Eliminar</button>
       </div>
     </div>`;
@@ -812,12 +838,12 @@ export function closeDocModalWithCleanup() {
   closeModal('doc-modal');
 }
 
-export function saveDocOrFolder() {
+export async function saveDocOrFolder() {
   const title = document.getElementById('doc-modal-title')?.textContent || '';
   if (title.includes('Carpeta')) {
-    saveFolder();
+    await saveFolder();
   } else {
-    saveDoc();
+    await saveDoc();
   }
 }
 
@@ -847,7 +873,7 @@ function loadDocVersions(docId) {
   } catch { return []; }
 }
 
-export function saveDoc() {
+export async function saveDoc() {
   const title = document.getElementById('doc-title-input')?.value.trim();
   if (!title) {
     showToast('El título es requerido', 'error');
@@ -882,21 +908,37 @@ export function saveDoc() {
     const idx = docs.findIndex(d => sameId(d.id, editingDocId));
     if (idx !== -1) {
       saveDocVersion(docs.find(d => sameId(d.id, editingDocId)));
-      const prev = docs[idx];
-      setDocs(docs.map((d, i) => (i === idx ? { ...prev, ...docPayload } : d)));
+      const existing = docs[idx];
+      const updated = { ...existing, ...docPayload };
+      try {
+        const mongoId = existing._id || existing.id;
+        await apiUpdateDoc(mongoId, updated);
+      } catch (err) {
+        console.error('Error actualizando doc:', err);
+        showToast('Error al guardar en servidor', 'error');
+        return;
+      }
+      setDocs(docs.map((d, i) => (i === idx ? updated : d)));
       showToast('Documento actualizado', 'success');
     }
   } else {
-    setDocs([
-      ...docs,
-      {
-        id: Date.now(),
-        ...docPayload,
-        authorId: currentUser.id,
-        group: currentUser.group,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
+    const newDoc = {
+      id: Date.now(),
+      ...docPayload,
+      authorId: currentUser.id,
+      group: currentUser.group,
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      const saved = await apiCreateDoc(newDoc);
+      newDoc._id = saved._id;
+      newDoc.id = saved._id || newDoc.id;
+    } catch (err) {
+      console.error('Error creando doc:', err);
+      showToast('Error al guardar en servidor', 'error');
+      return;
+    }
+    setDocs([...docs, newDoc]);
     showToast('Documento creado', 'success');
   }
 
@@ -1210,7 +1252,7 @@ export function downloadDocAsMarkdown(docId) {
 }
 
 export function saveDocData() {
-  localStorage.setItem('diario_docs', JSON.stringify(docs));
+  // Ya no guarda en localStorage
 }
 
 export async function downloadFolderAsZip(folderId) {
@@ -1618,7 +1660,7 @@ export function confirmInsertFile() {
   showToast(`Archivo "${displayName}" guardado correctamente`, 'success');
 }
 
-export function deleteDocElement(docId) {
+export async function deleteDocElement(docId) {
   const doc = docs.find(d => sameId(d.id, docId));
   if (!doc) {
     showToast('Elemento no encontrado', 'error');
@@ -1628,7 +1670,7 @@ export function deleteDocElement(docId) {
   showConfirmModal(
     `¿Eliminar ${doc.docType === 'folder' ? 'carpeta' : 'elemento'}?`,
     `¿Estás seguro de que deseas eliminar "${doc.title}"?${doc.docType === 'folder' ? ' Se eliminarán todos sus contenidos.' : ''}`,
-    () => {
+    async () => {
       let itemsToDelete = [docId];
       
       if (doc.docType === 'folder') {
@@ -1644,11 +1686,22 @@ export function deleteDocElement(docId) {
         findDescendants(docId);
       }
       
-      itemsToDelete.forEach(id => {
-        const index = docs.findIndex(d => d.id == id || d.id === id);
-        if (index !== -1) {
-          docs.splice(index, 1);
+      for (const id of itemsToDelete) {
+        const item = docs.find(d => sameId(d.id, id));
+        if (!item) continue;
+        try {
+          const mongoId = item._id || item.id;
+          await apiDeleteDoc(mongoId);
+        } catch (err) {
+          console.error('Error eliminando doc:', err);
+          showToast('Error al eliminar en servidor', 'error');
+          return;
         }
+      }
+
+      itemsToDelete.forEach(id => {
+        const index = docs.findIndex(d => sameId(d.id, id));
+        if (index !== -1) docs.splice(index, 1);
       });
       
       saveDocData();
@@ -1909,8 +1962,8 @@ export function openDocTemplatesModal() {
           <span class="doc-template-title">📄 ${escapeChatHtml(t.title)}</span>
         </div>
         <div class="doc-template-actions">
-          <button type="button" class="btn-primary btn-sm" onclick="applyDocTemplate(${t.id})">Usar</button>
-          <button type="button" class="btn-secondary btn-sm" onclick="deleteDocTemplate(${t.id})">Eliminar</button>
+          <button type="button" class="btn-primary btn-sm" onclick="applyDocTemplate('${t.id}')">Usar</button>
+          <button type="button" class="btn-secondary btn-sm" onclick="deleteDocTemplate('${t.id}')">Eliminar</button>
         </div>
       </div>`).join('');
   }

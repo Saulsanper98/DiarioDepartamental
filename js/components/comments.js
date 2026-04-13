@@ -506,7 +506,7 @@ function openDetail(id) {
       <div class="note-detail-created">Creado el ${new Date(note.createdAt).toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
     </div>
     <div class="note-detail-footer">
-      <button type="button" class="btn-primary btn-full-width" onclick="event.preventDefault();event.stopPropagation();openNoteCommentsModal(${note.id})">💬 Abrir comentarios${comments.filter(c=>c.kind==='note'&&sameId(c.targetId,note.id)).length ? ' ('+comments.filter(c=>c.kind==='note'&&sameId(c.targetId,note.id)).length+')' : ''}</button>
+      <button type="button" class="btn-primary btn-full-width" onclick="event.preventDefault();event.stopPropagation();openNoteCommentsModal('${note.id}')">💬 Abrir comentarios${comments.filter(c=>c.kind==='note'&&sameId(c.targetId,note.id)).length ? ' ('+comments.filter(c=>c.kind==='note'&&sameId(c.targetId,note.id)).length+')' : ''}</button>
     </div>
   `;
   closeModal('detail-modal');
@@ -538,7 +538,7 @@ function renderMentionChips() {
     const groupUsers = USERS.filter(u => u.group === selectedMentionGroup && u.id !== currentUser.id);
     const backBtn = `<div class="mention-chip back-chip" onclick="backToMentionGroups()">← Volver</div>`;
     const usersHtml = groupUsers.map(u => `
-      <div class="mention-chip ${selectedMentions.includes(u.id)?'selected':''}" onclick="toggleMention(${u.id},this)">
+      <div class="mention-chip ${selectedMentions.includes(u.id)?'selected':''}" onclick="toggleMention('${u.id}',this)">
         <div class="chip-avatar" style="background:${u.color}">${u.initials}</div>${u.name}
       </div>`).join('');
     area.innerHTML = backBtn + usersHtml;

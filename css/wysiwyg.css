@@ -8059,3 +8059,99 @@ html.tema-aurora .handover-autocomplete-type--project {
   color: rgba(45,212,191,0.9) !important;
 }
 
+html.tema-aurora .user-selector-card {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora .user-selector-card:hover {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(120,88,246,0.5) !important;
+  box-shadow: 0 8px 24px rgba(120,88,246,0.2) !important;
+}
+
+html.tema-aurora .pin-input {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora .pin-input:focus {
+  border-color: rgba(120,88,246,0.8) !important;
+  box-shadow: 0 0 0 3px rgba(120,88,246,0.2) !important;
+}
+
+html.tema-aurora .login-box {
+  background: rgba(255,255,255,0.06) !important;
+  backdrop-filter: blur(32px) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .login-box h1 {
+  color: rgba(255,255,255,0.92) !important;
+  font-family: 'Syne', sans-serif !important;
+  letter-spacing: 0.05em !important;
+}
+
+html.tema-aurora .login-box p {
+  color: rgba(255,255,255,0.65) !important;
+}
+
+html.tema-aurora .login-box p[style*="warning"],
+html.tema-aurora .login-box p[style*="f4a042"] {
+  color: rgba(244,160,66,0.9) !important;
+}
+
+html.tema-aurora .login-box label {
+  color: rgba(255,255,255,0.35) !important;
+}
+
+html.tema-aurora .pin-input {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1.5px solid rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.9) !important;
+  border-radius: 14px !important;
+}
+
+html.tema-aurora .pin-input:focus {
+  border-color: rgba(120,88,246,0.7) !important;
+  box-shadow: 0 0 0 3px rgba(120,88,246,0.18) !important;
+  background: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .btn-primary {
+  background: linear-gradient(135deg, #7858f6 0%, #5ba3e8 100%) !important;
+  border: none !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+}
+
+html.tema-aurora .btn-secondary {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.6) !important;
+  border-radius: 12px !important;
+}
+
+html.tema-aurora .btn-secondary:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora .pin-box {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora .pin-box:focus {
+  border-color: rgba(120,88,246,0.7) !important;
+  box-shadow: 0 0 0 3px rgba(120,88,246,0.18) !important;
+  background: rgba(255,255,255,0.08) !important;
+}
+

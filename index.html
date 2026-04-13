@@ -8,12 +8,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Fraunces:ital,wght@0,300;0,500;1,300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/wysiwyg.css">
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
+<style>
+.login-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(120,88,246,0.2);
+  border-top-color: rgba(120,88,246,0.9);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 </head>
 <body>
 
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
-  <!-- Selector de Temas Flotante -->
   <div class="login-theme-selector">
     <button class="theme-toggle-btn" onclick="toggleLoginThemePanel()" title="Cambiar tema">🎨</button>
     <div class="theme-panel-mini hidden" id="login-theme-panel">
@@ -26,49 +38,17 @@
     <div class="login-header">
       <span class="logo-mark">D</span>
       <h1>Diario Departamental</h1>
-      <p>Selecciona tu área de trabajo para continuar</p>
+      <p>Inicia sesión con tu cuenta corporativa</p>
     </div>
 
-    <!-- STEP 1: Grupo -->
-    <div id="login-step-1">
-      <div class="step-indicator">
-        <div class="step-dot active"></div>
-        <div class="step-dot"></div>
-        <span class="step-label">— Paso 1: Grupo</span>
-      </div>
-      <div class="group-grid">
-        <button class="group-btn" onclick="selectGroup('Sistemas','💻')">
-          <span class="g-icon">💻</span>
-          Sistemas
-          <span class="g-count" id="g-count-Sistemas"></span>
-        </button>
-        <button class="group-btn" onclick="selectGroup('Redes','🌐')">
-          <span class="g-icon">🌐</span>
-          Redes
-          <span class="g-count" id="g-count-Redes"></span>
-        </button>
-        <button class="group-btn" onclick="selectGroup('Tecnicos de sala','🖥️')">
-          <span class="g-icon">🖥️</span>
-          Técnicos de Sala
-          <span class="g-count" id="g-count-Tecnicos de sala"></span>
-        </button>
-        <button class="group-btn" onclick="selectGroup('Operadores','⚙️')">
-          <span class="g-icon">⚙️</span>
-          Operadores
-          <span class="g-count" id="g-count-Operadores"></span>
-        </button>
-      </div>
+    <div id="login-loading" style="text-align:center;padding:40px 0">
+      <div class="login-spinner"></div>
+      <p style="color:var(--text-muted);font-size:12px;margin-top:16px">Conectando con Microsoft...</p>
     </div>
 
-    <!-- STEP 2: Usuario -->
-    <div id="login-step-2" class="hidden">
-      <div class="step-indicator">
-        <div class="step-dot done"></div>
-        <div class="step-dot active"></div>
-        <span class="step-label" id="step2-label">— Paso 2: Usuario</span>
-      </div>
-      <button class="btn-back" onclick="backToGroups()">← Cambiar grupo</button>
-      <div class="profile-grid" id="profile-grid"></div>
+    <div id="login-error" class="hidden" style="text-align:center;padding:20px 0">
+      <p style="color:var(--danger);font-size:13px;margin-bottom:16px" id="login-error-msg">Error al iniciar sesión</p>
+      <button class="btn-primary" onclick="retryLogin()">🔄 Reintentar</button>
     </div>
   </div>
 </div>

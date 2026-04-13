@@ -1,6 +1,7 @@
 // ===== MAIN APPLICATION MODULE =====
 
-import { setNotes, setProjects, setDocs, setUSERS, setWorkGroups, setWgInvites, setComments, wgInvites, makeImageKey, registerTempImage, collectImageMap, editingNoteImages, setEditingNoteImages, editingPostitImages, setEditingPostitImages, editingDocImages, setEditingDocImages, editingProjectImages, setEditingProjectImages, editingTaskImages, setEditingTaskImages } from './components/data.js';
+import { initMSAL, getCurrentUser, getAuthHeaders, logout as msalLogout } from './auth.js';
+import { setNotes, setProjects, setDocs, setUSERS, setWorkGroups, setWgInvites, setComments, setCurrentUser, wgInvites, makeImageKey, registerTempImage, collectImageMap, editingNoteImages, setEditingNoteImages, editingPostitImages, setEditingPostitImages, editingDocImages, setEditingDocImages, editingProjectImages, setEditingProjectImages, editingTaskImages, setEditingTaskImages } from './components/data.js';
 import {
   showView,
   renderDateNav,
@@ -33,7 +34,7 @@ import {
   proceedAfterPassword,
   backToGroups,
   selectUser as loginSelectUser,
-  logout,
+  logout as appLogout,
   addUser,
   removeUser,
   saveUsers,
@@ -281,6 +282,386 @@ import {
   dismissHandoverBanner, openHandoverReceive, confirmHandoverReceived,
   openHandoverHistory, setupHandoverProjectAutocomplete, selectHandoverSuggestion,
 } from './handover.js';
+
+// Exponer funciones de tema globalmente de inmediato
+import('./components/themes.js').then(m => {
+  window.toggleLoginThemePanel = m.toggleLoginThemePanel;
+  window.renderLoginThemeButtons = m.renderLoginThemeButtons;
+  window.applyStoredTheme = m.applyStoredTheme;
+  window.applyUserThemeLogin = m.applyUserThemeLogin;
+  m.applyStoredTheme();
+  setTimeout(() => m.renderLoginThemeButtons(), 100);
+});
+
+function generateColorFromId(id) {
+  const colors = ['#7858f6', '#5ba3e8', '#f4a042', '#5aaa7a', '#e05a5a', '#c47b3a', '#8b6fd4', '#14b8a6'];
+  const idx = String(id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % colors.length;
+  return colors[idx];
+}
+
+function logout() {
+  msalLogout();
+  appLogout();
+}
+
+async function bootApp() {
+  window.onerror = (msg, src, line, col, err) => {
+    console.error('Error global:', msg, 'en', src, 'linea', line);
+  };
+
+  try {
+    const account = await initMSAL();
+    if (!account) return;
+
+    const msUser = await getCurrentUser();
+    const headers = await getAuthHeaders();
+    const meRes = await fetch('http://localhost:3001/api/users/me', { headers });
+    const meData = await meRes.json();
+
+    if (!msUser || !msUser.userId || !msUser.name) {
+      throw new Error('No se pudo obtener el perfil del usuario en Microsoft Graph');
+    }
+
+    window._msAuthUser = {
+      id: msUser.userId,
+      name: msUser.name,
+      email: msUser.email,
+      group: meData.department,
+      role: msUser.jobTitle || 'Técnico',
+      initials: msUser.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase(),
+      color: generateColorFromId(msUser.userId),
+    };
+
+    await showUserSelector(meData.department, headers);
+  } catch (err) {
+    console.error('Error en bootApp:', err);
+    document.getElementById('login-loading').classList.add('hidden');
+    document.getElementById('login-error').classList.remove('hidden');
+    document.getElementById('login-error-msg').textContent =
+      err.message || 'Error al conectar';
+  }
+}
+
+async function showUserSelector(department, headers) {
+  // Aplicar tema guardado
+  if (typeof window.applyStoredTheme === 'function') {
+    window.applyStoredTheme();
+  } else {
+    import('./components/themes.js').then(m => m.applyStoredTheme());
+  }
+
+  const res = await fetch('http://localhost:3001/api/users/department', { headers });
+  const deptUsers = await res.json();
+
+  const loginScreen = document.getElementById('login-screen');
+  loginScreen.innerHTML = `
+    <div class="login-theme-selector">
+      <button class="theme-toggle-btn" onclick="toggleLoginThemePanel()" title="Cambiar tema">🎨</button>
+      <div class="theme-panel-mini hidden" id="login-theme-panel">
+        <div class="theme-panel-label">Selecciona tema</div>
+        <div class="theme-buttons-row" id="login-theme-buttons"></div>
+      </div>
+    </div>
+    <div class="login-box login-user-selector">
+      <div class="login-header">
+        <span class="logo-mark">D</span>
+        <h1>Diario Departamental</h1>
+        <p>${department} · ¿Quién eres?</p>
+      </div>
+      <div class="user-selector-grid" id="user-selector-grid">
+        ${deptUsers.map(u => `
+          <button class="user-selector-card" onclick="selectAppUser('${u._id}')">
+            <div class="user-selector-avatar" style="background:${u.color}">${u.initials}</div>
+            <div class="user-selector-name">${u.name}</div>
+            <div class="user-selector-role">${u.role}</div>
+            ${u.pin ? '<div class="user-selector-pin-badge">🔒</div>' : ''}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  window._deptUsers = deptUsers;
+  setTimeout(() => {
+    if (typeof window.renderLoginThemeButtons === 'function') {
+      window.renderLoginThemeButtons();
+    }
+  }, 50);
+}
+
+window.selectAppUser = async function(userId) {
+  const user = window._deptUsers.find(u => u._id === userId);
+  if (!user) return;
+
+  if (user.pin) {
+    showPinInput(user);
+  } else {
+    showCreatePin(user);
+  }
+};
+
+function showCreatePin(user) {
+  if (typeof window.applyStoredTheme === 'function') window.applyStoredTheme();
+  const loginScreen = document.getElementById('login-screen');
+  loginScreen.innerHTML = `
+    <div class="login-box pin-screen-box">
+      <div class="login-header">
+        <div class="pin-user-avatar" style="background:${user.color}">${user.initials}</div>
+        <h2 class="pin-user-name">${user.name}</h2>
+        <p class="pin-warning">⚠️ No tienes PIN configurado</p>
+        <p class="pin-hint">Crea un PIN de 4 dígitos para proteger tu perfil</p>
+      </div>
+
+      <div class="pin-section">
+        <label class="pin-label">Nuevo PIN</label>
+        <div class="pin-boxes" id="pin-new-boxes">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        </div>
+      </div>
+
+      <div class="pin-section">
+        <label class="pin-label">Repite el PIN</label>
+        <div class="pin-boxes" id="pin-confirm-boxes">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        </div>
+        <p id="pin-create-error" class="pin-box-error hidden">Los PINs no coinciden</p>
+      </div>
+
+      <div class="pin-actions">
+        <button class="btn-primary pin-btn" onclick="saveNewPinBoxes('${user._id}')">
+          Guardar PIN y entrar
+        </button>
+        <button class="btn-secondary pin-btn" onclick="bootApp()">
+          ← Volver
+        </button>
+      </div>
+    </div>
+  `;
+  setupPinBoxes('pin-new-boxes', 'pin-confirm-boxes');
+  setTimeout(() => document.querySelector('#pin-new-boxes .pin-box')?.focus(), 100);
+}
+
+function showPinInput(user) {
+  if (typeof window.applyStoredTheme === 'function') window.applyStoredTheme();
+
+  const loginScreen = document.getElementById('login-screen');
+  loginScreen.innerHTML = `
+    <div class="login-box pin-screen-box">
+      <div class="login-header">
+        <div class="pin-user-avatar" style="background:${user.color}">${user.initials}</div>
+        <h2 class="pin-user-name">${user.name}</h2>
+        <p class="pin-hint">Introduce tu PIN para entrar</p>
+      </div>
+
+      <div class="pin-section">
+        <div class="pin-boxes" id="pin-verify-boxes">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input class="pin-box" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        </div>
+        <p id="pin-verify-error" class="pin-box-error hidden">PIN incorrecto</p>
+      </div>
+
+      <div class="pin-actions">
+        <button class="btn-secondary pin-btn" onclick="enterAppWithoutPin('${user._id}')">
+          Entrar sin PIN
+        </button>
+        <button class="btn-secondary pin-btn" onclick="bootApp()">
+          ← Volver
+        </button>
+      </div>
+    </div>
+  `;
+  const uid = user._id;
+  console.log('setupPinBoxes con uid:', uid);
+  setupPinBoxes('pin-verify-boxes', null, () => {
+    console.log('onDone llamado, verificando PIN para uid:', uid);
+    verifyPinBoxes(uid);
+  });
+  setTimeout(() => document.querySelector('#pin-verify-boxes .pin-box')?.focus(), 100);
+}
+
+function setupPinBoxes(firstGroupId, secondGroupId, onComplete) {
+  console.log('setupPinBoxes args:', firstGroupId, secondGroupId, typeof onComplete);
+
+  function setupGroup(groupId, nextGroupId, doneCb) {
+    const boxes = document.querySelectorAll('#' + groupId + ' .pin-box');
+
+    function handleInput(e) {
+      const val = e.target.value.replace(/[^0-9]/g, '');
+      e.target.value = val;
+      const i = Array.from(boxes).indexOf(e.target);
+      console.log('Pin box', i, 'valor:', val, 'doneCb:', typeof doneCb);
+      if (val && i < boxes.length - 1) {
+        boxes[i + 1].focus();
+      } else if (val && i === boxes.length - 1) {
+        console.log('Último dígito, doneCb:', typeof doneCb);
+        if (nextGroupId) {
+          document.querySelector('#' + nextGroupId + ' .pin-box')?.focus();
+        } else if (doneCb) {
+          console.log('Llamando doneCb...');
+          setTimeout(doneCb, 100);
+        }
+      }
+    }
+
+    boxes.forEach((box) => {
+      box.addEventListener('input', handleInput);
+      box.addEventListener('keydown', (e) => {
+        const i = Array.from(boxes).indexOf(e.target);
+        if (e.key === 'Backspace' && !box.value && i > 0) {
+          boxes[i - 1].focus();
+          boxes[i - 1].value = '';
+        }
+      });
+    });
+  }
+
+  setupGroup(firstGroupId, secondGroupId, secondGroupId ? null : onComplete);
+  if (secondGroupId) setupGroup(secondGroupId, null, onComplete);
+}
+
+function getPinFromBoxes(groupId) {
+  return [...document.querySelectorAll('#' + groupId + ' .pin-box')]
+    .map(b => b.value).join('');
+}
+
+window.verifyPinBoxes = function(userId) {
+  const user = window._deptUsers.find(u => u._id === userId);
+  const input = getPinFromBoxes('pin-verify-boxes');
+  if (!user || !input) return;
+
+  if (input === user.pin) {
+    enterApp(user);
+  } else {
+    document.querySelectorAll('#pin-verify-boxes .pin-box').forEach(b => b.value = '');
+    document.querySelector('#pin-verify-boxes .pin-box')?.focus();
+    const err = document.getElementById('pin-verify-error');
+    if (err) {
+      err.classList.remove('hidden');
+      setTimeout(() => err.classList.add('hidden'), 2000);
+    }
+  }
+};
+
+window.enterAppWithoutPin = function(userId) {
+  const user = window._deptUsers.find(u => u._id === userId);
+  if (user) enterApp(user);
+};
+
+window.saveNewPinBoxes = async function(userId) {
+  const user = window._deptUsers.find(u => u._id === userId);
+  const pinNew = getPinFromBoxes('pin-new-boxes');
+  const pinConfirm = getPinFromBoxes('pin-confirm-boxes');
+  const errEl = document.getElementById('pin-create-error');
+
+  if (pinNew.length < 4) {
+    if (errEl) {
+      errEl.textContent = 'Introduce 4 dígitos';
+      errEl.classList.remove('hidden');
+    }
+    return;
+  }
+  if (pinNew !== pinConfirm) {
+    if (errEl) {
+      errEl.textContent = 'Los PINs no coinciden';
+      errEl.classList.remove('hidden');
+    }
+    document.querySelectorAll('#pin-confirm-boxes .pin-box').forEach(b => b.value = '');
+    document.querySelector('#pin-confirm-boxes .pin-box')?.focus();
+    return;
+  }
+
+  try {
+    const headers = await getAuthHeaders();
+    await fetch(`http://localhost:3001/api/users/${userId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ pin: pinNew }),
+    });
+
+    user.pin = pinNew;
+    enterApp(user);
+  } catch (err) {
+    console.error('Error guardando PIN:', err);
+  }
+};
+
+function enterApp(dbUser) {
+  const msAuth = window._msAuthUser;
+
+  const appUser = {
+    id: dbUser._id,
+    name: dbUser.name,
+    initials: dbUser.initials,
+    color: dbUser.color,
+    role: dbUser.role,
+    group: dbUser.department,
+    department: dbUser.department,
+    email: msAuth?.email || '',
+    msId: msAuth?.id || '',
+  };
+
+  setCurrentUser(appUser);
+  window._msUser = appUser;
+
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  // Actualizar header con datos del usuario
+  const avatarEl = document.getElementById('sidebar-avatar');
+  const nameEl = document.getElementById('sidebar-name');
+  const shiftEl = document.getElementById('sidebar-shift');
+  const brandEl = document.getElementById('brand-group-badge');
+
+  if (avatarEl) {
+    avatarEl.style.background = appUser.color;
+    avatarEl.textContent = appUser.initials;
+  }
+  if (nameEl) nameEl.textContent = appUser.name;
+  if (shiftEl) shiftEl.textContent = appUser.group + ' · ' + (appUser.role || 'Técnico');
+  if (brandEl) brandEl.textContent = appUser.group;
+
+  initApp(appUser);
+}
+
+function retryLogin() {
+  document.getElementById('login-error')?.classList.add('hidden');
+  document.getElementById('login-loading')?.classList.remove('hidden');
+  bootApp();
+}
+
+function initApp(msUser) {
+  setCurrentUser(msUser);
+  // Cargar datos desde API
+  import('./components/notes.js').then(m => m.loadNotesFromAPI()).then(() => {
+    renderNotes();
+    if (typeof window.showView === 'function') {
+      window.showView('notes', document.getElementById('nav-all'));
+    }
+    if (typeof window.renderDateNav === 'function') {
+      window.renderDateNav();
+    }
+    if (typeof window.updateBadges === 'function') {
+      window.updateBadges();
+    }
+  });
+  import('./components/projects.js').then(m => m.loadProjectsFromAPI());
+  import('./components/postit.js').then(m => m.loadPostitFromAPI());
+  import('./components/docs.js').then(m => m.loadDocsFromAPI());
+  import('./handover.js').then(m => m.loadHandoversFromAPI());
+  if (msUser) {
+    window._msUser = msUser;
+  }
+  initializeApp();
+}
 
 function selectUser(id) {
   loginSelectUser(id);
@@ -639,6 +1020,9 @@ async function initializeApp() {
       setWeekMode,
     });
 
+    window.toggleLoginThemePanel = toggleLoginThemePanel;
+    window.renderLoginThemeButtons = renderLoginThemeButtons;
+
     window.editDocFolder = editDocFolder;
     window.editDocument = editDocument;
     window.openEditDocModal = openEditDocModal;
@@ -684,6 +1068,9 @@ async function initializeApp() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', initializeApp);
+document.addEventListener('DOMContentLoaded', bootApp);
+
+window.retryLogin = retryLogin;
+window.bootApp = bootApp;
 
 export { initializeApp };

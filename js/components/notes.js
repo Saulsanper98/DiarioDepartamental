@@ -7,6 +7,7 @@ import { renderMentionChips } from './comments.js';
 import { showToast, openModal, closeModal, showConfirmModal } from './modalControl.js';
 import { updateMarkdownPreview } from './docs.js';
 import { createCustomSelect } from './auroraCustomSelect.js';
+import { apiGetAllNotes } from '../api.js';
 
 export { createCustomSelect };
 
@@ -37,6 +38,27 @@ export const SLASH_COMMANDS = [
  */
 export function saveData() {
   localStorage.setItem('diario_notes', JSON.stringify(notes));
+}
+
+export async function loadNotesFromAPI() {
+  try {
+    const data = await apiGetAllNotes();
+    const mapped = data.map(n => ({
+      ...n,
+      id: n._id || n.id,
+      authorId: n.authorId,
+      group: n.department || n.group,
+    }));
+    setNotes(mapped);
+    return mapped;
+  } catch (err) {
+    console.error('Error cargando notas desde API:', err);
+    try {
+      const local = localStorage.getItem('diario_notes');
+      if (local) setNotes(JSON.parse(local));
+    } catch {}
+    return [];
+  }
 }
 
 function userIsActiveWorkGroupMemberForCollab(wg) {
@@ -498,13 +520,13 @@ export function renderNoteCard(note, cardOpts = {}) {
   let footerHtml = '<div class="note-footer">';
   footerHtml += reminderHtml;
   footerHtml += '<div class="note-actions">';
-  footerHtml += `<button type="button" class="note-action-btn" onclick="duplicateNote(event, ${note.id})" title="Copia en el día actual como tu nota">📄 Duplicar</button>`;
+  footerHtml += `<button type="button" class="note-action-btn" onclick="duplicateNote(event, '${note.id}')" title="Copia en el día actual como tu nota">📄 Duplicar</button>`;
   if (canEdit) {
-    footerHtml += `<button type="button" class="note-action-btn" onclick="toggleNotePinnedQuick(event, ${note.id})" title="Mostrar primero en el turno">${pinned ? '📌 Quitar fijación' : '📌 Fijar'}</button>`;
-    footerHtml += `<button type="button" class="note-action-btn" onclick="editNote(event, ${note.id})">✏️ Editar</button>`;
+    footerHtml += `<button type="button" class="note-action-btn" onclick="toggleNotePinnedQuick(event, '${note.id}')" title="Mostrar primero en el turno">${pinned ? '📌 Quitar fijación' : '📌 Fijar'}</button>`;
+    footerHtml += `<button type="button" class="note-action-btn" onclick="editNote(event, '${note.id}')">✏️ Editar</button>`;
   }
   if (sameId(note.authorId, currentUser.id)) {
-    footerHtml += `<button type="button" class="note-action-btn delete" onclick="deleteNote(event, ${note.id})">🗑 Borrar</button>`;
+    footerHtml += `<button type="button" class="note-action-btn delete" onclick="deleteNote(event, '${note.id}')">🗑 Borrar</button>`;
   }
   footerHtml += '</div></div>';
 
@@ -518,7 +540,7 @@ export function renderNoteCard(note, cardOpts = {}) {
   ].join('');
 
   const cardClass = pinned ? 'note-card note-card--pinned' : 'note-card';
-  return `<div class="${cardClass}" data-id="${note.id}" data-note-id="${note.id}" onclick="openDetail(${note.id})">${innerHtml}</div>`;
+  return `<div class="${cardClass}" data-id="${note.id}" data-note-id="${note.id}" onclick="openDetail('${note.id}')">${innerHtml}</div>`;
 }
 
 /**
@@ -647,8 +669,8 @@ export function renderMentionsView() {
           const indText = unread ? 'Sin leer' : '✓ Leída';
           return `
         <article class="mention-inbox-row ${unreadClass}" data-note-id="${n.id}" role="button" tabindex="0"
-          onclick="openDetail(${n.id})"
-          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDetail(${n.id});}">
+          onclick="openDetail('${n.id}')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDetail('${n.id}');}">
           <span class="mention-read-dot" style="background:${unread ? 'var(--accent)' : 'var(--success)'}"></span>
           <div class="mention-inbox-main">
             <div class="mention-inbox-top">
@@ -660,7 +682,7 @@ export function renderMentionsView() {
             <div class="mention-inbox-snippet">${snippetHtml || '<em class="mention-inbox-muted">Sin vista previa</em>'}</div>
           </div>
           <div class="mention-inbox-actions">
-            <button type="button" class="btn-secondary btn-sm" onclick="event.stopPropagation();goToNoteInDiary(${n.id})">📅 Ver en diario</button>
+            <button type="button" class="btn-secondary btn-sm" onclick="event.stopPropagation();goToNoteInDiary('${n.id}')">📅 Ver en diario</button>
           </div>
         </article>`;
         })
@@ -1499,8 +1521,8 @@ function renderNoteTemplatesListBody() {
         <span>${escapeHtml((t.title || '').slice(0, 80))}${(t.title || '').length > 80 ? '…' : ''}</span>
       </div>
       <div class="note-template-row-actions">
-        <button type="button" class="btn-primary btn-sm" onclick="applyNoteTemplate(${t.id})">Usar</button>
-        <button type="button" class="btn-secondary btn-sm" onclick="deleteNoteTemplate(${t.id})">Eliminar</button>
+        <button type="button" class="btn-primary btn-sm" onclick="applyNoteTemplate('${t.id}')">Usar</button>
+        <button type="button" class="btn-secondary btn-sm" onclick="deleteNoteTemplate('${t.id}')">Eliminar</button>
       </div>
     </div>`
     )
