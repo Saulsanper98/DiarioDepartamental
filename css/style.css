@@ -5414,3 +5414,120 @@ html.tema-aurora .notes-empty-state {
 .docs-grid-item:hover .doc-delete-btn {
   opacity: 1;
 }
+
+.note-comment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--surface3, var(--surface2));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-family: 'DM Mono', monospace;
+}
+
+.note-new-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 20px;
+  padding: 2px 7px;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.postit-overdue-count {
+  font-size: 10px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  color: #e05a5a;
+  background: rgba(224,90,90,0.12);
+  border: 1px solid rgba(224,90,90,0.25);
+  border-radius: 20px;
+  padding: 2px 7px;
+  margin-left: 6px;
+}
+
+.doc-file-thumb {
+  width: 100%;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  background: var(--surface3, var(--surface2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doc-file-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.doc-file-thumb--icon {
+  font-size: 32px;
+}
+
+#app-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app-loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(120,88,246,0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.app-loading-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.api-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin: 0 auto 8px;
+  transition: background 0.3s;
+}
+
+.api-status.online { background: #5aaa7a; box-shadow: 0 0 6px rgba(90,170,122,0.5); }
+.api-status.offline { background: #e05a5a; box-shadow: 0 0 6px rgba(224,90,90,0.5); }
+.api-status.checking { background: #f4a042; animation: pulse-badge 1.5s infinite; }

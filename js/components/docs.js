@@ -316,10 +316,15 @@ export function renderDocsGrid() {
     const date = new Date(d.createdAt).toLocaleDateString('es-ES', {day:'numeric', month:'short', year:'numeric'});
     const fileSize = d.file?.size ? (d.file.size / 1024).toFixed(2) + ' KB' : 'N/A';
     const author = USERS.find(u => u.id === d.authorId);
+    const isImage = d.file?.type?.startsWith('image/');
+    const thumbUrl = d.file?.sharepointUrl || d.file?.url || '';
+    const thumbHtml = isImage && thumbUrl
+      ? `<div class="doc-file-thumb"><img src="${escapeHtmlAttr(thumbUrl)}" alt="${escapeHtmlAttr(d.title || 'Archivo')}" loading="lazy"></div>`
+      : `<div class="doc-file-thumb doc-file-thumb--icon">${d.icon || '📎'}</div>`;
     html += `<div class="docs-grid-item${docsViewMode === 'list' ? ' docs-list-item' : ''}" onclick="selectDocFolder('${d.id}')" style="cursor:pointer">
-      <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px">
-        <span style="font-size:24px">${d.icon || '📎'}</span>
-        <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocElement('${d.id}')" title="Eliminar">🗑</button>
+      <div style="position:relative;margin-bottom:8px">
+        ${thumbHtml}
+        <button class="doc-delete-btn" style="position:absolute;top:6px;right:6px" onclick="event.stopPropagation(); deleteDocElement('${d.id}')" title="Eliminar">🗑</button>
       </div>
       <div class="doc-card-title" style="font-size:14px;font-weight:600;margin-bottom:4px">${d.title}</div>
       <div class="doc-card-meta" style="font-size:11px;color:var(--text-muted);margin-bottom:auto">
@@ -848,7 +853,6 @@ export function closeDocModalWithCleanup() {
 
 export async function saveDocOrFolder() {
   const titleEl = document.getElementById('doc-modal-title');
-  console.log('saveDocOrFolder llamado, título:', titleEl?.textContent);
   const title = titleEl?.textContent || '';
   if (title.includes('Carpeta')) {
     await saveFolder();
@@ -899,16 +903,13 @@ export async function saveDoc() {
   const selectedOption = document.querySelector('#doc-modal .custom-select-option.selected');
   if (selectedOption) {
     parentVal = selectedOption.dataset.value || 'null';
-    console.log('Valor del custom select Aurora:', parentVal);
   } else {
     // Fallback al select nativo
     const nativeSelect = document.getElementById('doc-parent-input');
     parentVal = nativeSelect?.value || 'null';
-    console.log('Valor del select nativo:', parentVal);
   }
 
   const parentFolderId = parentVal === 'null' || parentVal === '' ? null : parentVal;
-  console.log('parentFolderId final:', parentFolderId);
 
   const catEl = document.getElementById('doc-category-input');
   const category = catEl && catEl.value ? catEl.value : 'manual';
@@ -1094,8 +1095,6 @@ export function deleteDoc(id) {
 }
 
 export function renderDocsFolderTree() {
-  console.log('renderDocsFolderTree, total docs:', docs.length);
-  console.log('currentUser.group:', currentUser?.group);
   const container = document.getElementById('docs-categories');
   if (!container) return;
 
@@ -1112,9 +1111,6 @@ export function renderDocsFolderTree() {
   const userDocs = docs.filter(d =>
     d.group === currentUser.group || d.department === currentUser.group
   );
-  console.log('userDocs filtrados:', userDocs.length);
-  userDocs.forEach(d => console.log(' -', d.title, 'group:', d.group, 'dept:', d.department, 'type:', d.docType));
-
   let html = filterHtml + '<div style="padding:4px 0">';
   html += `<div class="doc-tree-item ${currentDocFolderId==null?'active':''}" onclick="selectDocFolder(null)" style="padding:10px 12px;font-weight:500">
     <span style="font-size:14px">📁</span> <span>Todos</span>
@@ -1126,7 +1122,6 @@ export function renderDocsFolderTree() {
   }
 
   function renderTreeRecursive(parentId, depth = 0) {
-    console.log('renderTreeRecursive parentId:', parentId, 'depth:', depth);
     const folders = (parentId === null
       ? userDocs.filter(d => d.docType === 'folder' && isRootItem(d))
       : userDocs.filter(d => d.docType === 'folder' && sameId(d.parentFolderId, parentId))
@@ -1136,7 +1131,6 @@ export function renderDocsFolderTree() {
       ? userDocs.filter(d => (d.docType === 'document' || d.docType === 'file') && isRootItem(d))
       : userDocs.filter(d => (d.docType === 'document' || d.docType === 'file') && sameId(d.parentFolderId, parentId))
     ).sort((a, b) => a.title.localeCompare(b.title));
-    console.log('folders encontradas:', folders.length, 'items:', items.length);
     
     const indent = depth * 20;
     
@@ -1698,7 +1692,6 @@ export async function confirmInsertFile() {
   }
 
   const parentFolderId = folderId === 'null' || folderId === '' ? null : folderId;
-  console.log('parentFolderId final:', parentFolderId);
   const displayName = document.getElementById('insert-file-display-name').value.trim();
   const customName = document.getElementById('insert-file-name-input').value.trim();
   const selectedIcon = document.getElementById('insert-file-icon-input')?.value || document.getElementById('insert-file-icon-selected')?.value || '📎';
@@ -1744,7 +1737,6 @@ export async function confirmInsertFile() {
     }
   }
 
-  console.log('Guardando doc en API...', newFile.title, newFile.docType);
   const docToSave = {
     ...newFile,
     department: currentUser.group,
@@ -1757,7 +1749,6 @@ export async function confirmInsertFile() {
   };
   try {
     const saved = await apiCreateDoc(docToSave);
-    console.log('Doc guardado en API:', saved._id);
     newFile._id = saved._id;
     newFile.id = saved._id || newFile.id;
   } catch (err) {
@@ -1801,8 +1792,6 @@ export function deleteDocElement(id) {
 }
 
 export function openCreateFolderModal() {
-  console.log('[openCreateFolderModal] Iniciando apertura de modal Nueva Carpeta');
-  
   try {
     editingDocId = null;
     setEditingDocImages({});
@@ -1821,8 +1810,6 @@ export function openCreateFolderModal() {
       return;
     }
     
-    console.log('[openCreateFolderModal] Configurando modal');
-    
     modalTitle.textContent = 'Nueva Carpeta';
     titleInput.value = '';
     iconInput.value = '📁';
@@ -1836,7 +1823,6 @@ export function openCreateFolderModal() {
     if (contentArea) contentArea.style.display = 'none';
     if (previewArea) previewArea.style.display = 'none';
     
-    console.log('[openCreateFolderModal] Abriendo modal');
     openModal('doc-modal');
   } catch (err) {
     console.error('[openCreateFolderModal] Error:', err.message);
@@ -1912,12 +1898,8 @@ export function selectDocForFileAttach(docId) {
 }
 
 export async function saveFolder() {
-  console.log('saveFolder ejecutándose...');
   try {
     const titleInput = document.getElementById('doc-title-input');
-    console.log('titleInput:', titleInput?.value);
-    console.log('parentSelect:', document.getElementById('doc-parent-input'));
-    console.log('doc-parent-input valor:', document.getElementById('doc-parent-input')?.value);
     const title = titleInput?.value?.trim() || '';
     if (!title) { showToast('El nombre de la carpeta es requerido','error'); return; }
     
@@ -1928,10 +1910,8 @@ export async function saveFolder() {
     const auroraSelect = document.querySelector('#doc-modal .aurora-select-trigger, #doc-modal [data-select-id="doc-parent-input"]');
     if (auroraSelect) {
       parentVal = auroraSelect.dataset.value || auroraSelect.getAttribute('data-value') || 'null';
-      console.log('Valor leído del Aurora custom select:', parentVal);
     } else if (nativeSelect) {
       parentVal = nativeSelect.value || 'null';
-      console.log('Valor leído del select nativo:', parentVal);
     }
     const parentFolderId = parentVal === 'null' || parentVal === '' ? null : parentVal;
     
@@ -1970,7 +1950,6 @@ export async function saveFolder() {
         const saved = await apiCreateDoc(newFolder);
         newFolder._id = saved._id;
         newFolder.id = saved._id || newFolder.id;
-        console.log('Carpeta guardada en API:', saved._id);
       } catch (err) {
         console.error('Error guardando carpeta en API:', err);
         showToast('Error al guardar en servidor', 'error');

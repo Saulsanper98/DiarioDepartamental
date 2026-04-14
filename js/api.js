@@ -276,3 +276,40 @@ export async function apiDeleteFile(fileId) {
   if (!res.ok) throw new Error('Error al eliminar archivo');
   return res.json();
 }
+
+export async function apiGetWorkGroups() {
+  const res = await fetch(`${API_URL}/workgroups`, {
+    headers: await getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Error al obtener grupos');
+  return res.json();
+}
+
+export async function apiCreateWorkGroup(wg) {
+  const res = await fetch(`${API_URL}/workgroups`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(wg)
+  });
+  if (!res.ok) throw new Error('Error al crear grupo');
+  return res.json();
+}
+
+export async function apiUpdateWorkGroup(id, wg) {
+  const res = await fetch(`${API_URL}/workgroups/${id}`, {
+    method: 'PUT',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(wg)
+  });
+  if (!res.ok) throw new Error('Error al actualizar grupo');
+  return res.json();
+}
+
+export async function apiDeleteWorkGroup(id) {
+  const res = await fetch(`${API_URL}/workgroups/${id}`, {
+    method: 'DELETE',
+    headers: await getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Error al eliminar grupo');
+  return res.json();
+}

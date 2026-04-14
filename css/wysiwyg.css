@@ -8234,3 +8234,16 @@ html.tema-aurora .docs-grid-item:hover .doc-delete-btn {
   opacity: 1 !important;
 }
 
+html.tema-aurora .note-comment-badge {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.45) !important;
+}
+
+html.tema-aurora #app-loading-overlay {
+  background: linear-gradient(135deg,
+    rgba(26,16,64,0.97) 0%,
+    rgba(13,42,74,0.97) 50%,
+    rgba(10,61,46,0.97) 100%) !important;
+}
+

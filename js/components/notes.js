@@ -37,7 +37,7 @@ export const SLASH_COMMANDS = [
  * Save notes data to localStorage
  */
 export function saveData() {
-  localStorage.setItem('diario_notes', JSON.stringify(notes));
+  // Ya no guarda en localStorage — las notas se guardan via API
 }
 
 export async function loadNotesFromAPI() {
@@ -467,6 +467,16 @@ export function renderNoteCard(note, cardOpts = {}) {
     note.visibility === 'department'
       ? `<span class="note-tag note-tag-dept">🏢 ${escapeHtml(note.group || 'Departamento')}</span>`
       : '';
+  const isNew = (() => {
+    if (sameId(note.authorId, currentUser?.id)) return false;
+    const created = new Date(note.createdAt);
+    const now = new Date();
+    const diffHours = (now - created) / (1000 * 60 * 60);
+    return diffHours < 2;
+  })();
+  const newBadge = isNew
+    ? `<span class="note-new-badge">Nuevo</span>`
+    : '';
 
   const bg = escapeHtmlAttr(author?.color || '#888');
   const initials = escapeHtml(author?.initials || '?');
@@ -480,7 +490,7 @@ export function renderNoteCard(note, cardOpts = {}) {
     `<span class="note-author-name">${authorName}</span>`,
     `<span class="note-timestamp">${safeDate}</span>`,
     '</div>',
-    `<div class="note-tags">${pinTag}${priorityTag}${deptTag}${publicTag}${tagsHtml}</div>`,
+    `<div class="note-tags">${newBadge}${pinTag}${priorityTag}${deptTag}${publicTag}${tagsHtml}</div>`,
     '</div>',
   ].join('');
 
@@ -516,9 +526,22 @@ export function renderNoteCard(note, cardOpts = {}) {
   const reminderHtml = note.reminder
     ? `<div class="note-reminder">🔔 ${typeof note.reminder === 'string' ? escapeHtml(note.reminder) : 'Recordatorio activo'}</div>`
     : '';
+  let _comments = [];
+  try {
+    // Acceder via window para evitar problemas de módulo
+    _comments = window._appComments || [];
+  } catch {}
+  const noteComments = _comments.filter(c =>
+    c.kind === 'note' && sameId(c.targetId, note.id || note._id)
+  );
+  const commentCount = noteComments.length;
+  const commentBadge = commentCount > 0
+    ? `<span class="note-comment-badge">💬 ${commentCount}</span>`
+    : '';
 
   let footerHtml = '<div class="note-footer">';
   footerHtml += reminderHtml;
+  footerHtml += commentBadge;
   footerHtml += '<div class="note-actions">';
   footerHtml += `<button type="button" class="note-action-btn" onclick="duplicateNote(event, '${note.id}')" title="Copia en el día actual como tu nota">📄 Duplicar</button>`;
   if (canEdit) {
@@ -933,7 +956,6 @@ export function editNote(e, id) {
  * Save note from modal
  */
 export async function saveNote() {
-  console.log('saveNote llamado, editingNoteId:', editingNoteId);
   const title = document.getElementById('note-title-input')?.value.trim() || '';
   const noteEditor = document.getElementById('note-body-editor');
   if (noteEditor) syncMdChecklistDom(noteEditor, true);
@@ -994,7 +1016,6 @@ export async function saveNote() {
     try {
       const mongoId = prev._id || prev.id;
       const saved = await apiUpdateNote(mongoId, updated);
-      console.log('Nota actualizada en API:', saved);
     } catch (err) {
       console.error('Error actualizando nota en API:', err);
       showToast('Error al guardar en servidor', 'error');
@@ -1003,7 +1024,6 @@ export async function saveNote() {
     setNotes(notes.map((n, i) => (i === idx ? updated : n)));
     showToast('Nota actualizada', 'success');
   } else {
-    console.log('Llamando a apiCreateNote con nota:', {title, shift: selectedShift});
     const newNote = {
       id: Date.now(),
       authorId: currentUser.id,
@@ -1041,7 +1061,6 @@ export async function saveNote() {
         group: currentUser.group,
         department: currentUser.group,
       });
-      console.log('Nota creada en API:', saved);
       newNote._id = saved._id;
       newNote.id = saved._id || newNote.id;
     } catch (err) {

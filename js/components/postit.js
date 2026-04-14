@@ -1,6 +1,6 @@
 // ===== POSTIT MODULE =====
 
-import { postitCards, USERS, currentUser, collectImageMap, editingPostitId, selectedPostitPriority, sameId, comments, editingPostitImages, setEditingPostitId, setEditingPostitImages, setSelectedPostitPriority, setPostitCards } from './data.js';
+import { postitCards, USERS, currentUser, collectImageMap, editingPostitId, selectedPostitPriority, sameId, comments, toDateStr, editingPostitImages, setEditingPostitId, setEditingPostitImages, setSelectedPostitPriority, setPostitCards } from './data.js';
 import { showToast, openModal, showConfirmModal } from './modalControl.js';
 import { renderMarkdown } from './notes.js';
 import { commentIndicators } from './docs.js';
@@ -73,15 +73,23 @@ function applyPostitColorByColumn(card) {
 export function renderPostitBoard() {
   const board = document.getElementById('postit-board');
   if (!board) return;
+  const todayStr = toDateStr(new Date());
   const visibleCards = (col) => postitCards
     .filter(c => c.column === col.id && c.group === currentUser.group)
     .filter(c => !postitUserFilter || sameId(c.assignedTo, postitUserFilter));
   board.innerHTML = POSTIT_COLS.map(col => {
     const cards = visibleCards(col);
+    const overdueCount = cards.filter(c =>
+      c.dueDate && c.dueDate < todayStr && c.column !== 'hecho'
+    ).length;
+    const overdueIndicator = overdueCount > 0
+      ? `<span class="postit-overdue-count" title="${overdueCount} vencidas">⚠️ ${overdueCount}</span>`
+      : '';
     return `<div class="postit-col">
       <div class="postit-col-header">
         <h4 style="color:${col.color}">${col.icon} ${col.label}</h4>
         <span class="postit-col-count">${cards.length}</span>
+        ${overdueIndicator}
       </div>
       <div class="postit-cards" id="pcol-${col.id}">
         ${cards.map(c => renderPostitCard(c)).join('')}

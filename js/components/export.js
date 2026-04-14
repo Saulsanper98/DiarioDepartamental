@@ -118,61 +118,78 @@ export function exportAllData() {
   showToast('Backup exportado correctamente', 'success');
 }
 
-function applyDiarioBackupData(data) {
+async function applyDiarioBackupData(data) {
   if (!data || typeof data !== 'object') {
     showToast('Backup vacío o inválido', 'error');
     return;
   }
   try {
-    const notesArr = Array.isArray(data.notes) ? data.notes : [];
-    const projArr = Array.isArray(data.projects) ? data.projects : [];
-    const docsArr = Array.isArray(data.docs) ? data.docs : [];
-    const postitArr = Array.isArray(data.postitCards) ? data.postitCards : [];
-    const chatArr = Array.isArray(data.chatMessages) ? data.chatMessages : [];
-    const wgArr = Array.isArray(data.workGroups) ? data.workGroups : [];
+    showToast('Restaurando backup...', 'info');
+    
+    const { apiCreateNote, apiCreateProject, apiCreateDoc, apiCreatePostit, apiCreateComment } = 
+      await import('../api.js');
+    const { getAuthHeaders } = await import('../auth.js');
+    
+    let count = 0;
 
-    setNotes(notesArr);
-    localStorage.setItem('diario_notes', JSON.stringify(notesArr));
-
-    setProjects(projArr);
-    localStorage.setItem('diario_projects', JSON.stringify(projArr));
-
-    setDocs(docsArr);
-    localStorage.setItem('diario_docs', JSON.stringify(docsArr));
-
-    if (Array.isArray(data.users) && data.users.length) {
-      setUSERS(data.users);
-      localStorage.setItem('diario_users', JSON.stringify(data.users));
+    // Restaurar notas
+    if (Array.isArray(data.notes)) {
+      for (const note of data.notes) {
+        try {
+          await apiCreateNote({...note, _id: undefined, id: undefined});
+          count++;
+        } catch {}
+      }
     }
 
-    setWorkGroups(wgArr);
-    localStorage.setItem('diario_workgroups', JSON.stringify(wgArr));
-
-    setPostitCards(postitArr);
-    localStorage.setItem('diario_postit', JSON.stringify(postitArr));
-
-    localStorage.setItem('diario_chat', JSON.stringify(chatArr));
-    reloadChatFromStorage();
-
-    replaceProjectCustomTemplatesFromBackup(data.projectCustomTemplates);
-
-    if (data.comments !== undefined) {
-      const commArr = Array.isArray(data.comments) ? data.comments : [];
-      setComments(commArr);
-      localStorage.setItem('diario_comments', JSON.stringify(commArr));
+    // Restaurar proyectos
+    if (Array.isArray(data.projects)) {
+      for (const project of data.projects) {
+        try {
+          await apiCreateProject({...project, _id: undefined, id: undefined});
+          count++;
+        } catch {}
+      }
     }
 
-    saveData();
-    renderNotes();
-    renderProjects();
-    renderPostitBoard();
-    renderDocs();
-    renderChat();
-    if (typeof refreshCommentIndicators === 'function') refreshCommentIndicators();
-    if (currentUser && typeof updateChatNavBadge === 'function') updateChatNavBadge();
-    if (typeof window !== 'undefined' && typeof window.updateBadges === 'function') window.updateBadges();
+    // Restaurar docs
+    if (Array.isArray(data.docs)) {
+      for (const doc of data.docs) {
+        try {
+          await apiCreateDoc({...doc, _id: undefined, id: undefined, 
+            file: doc.file ? {...doc.file, data: null} : null});
+          count++;
+        } catch {}
+      }
+    }
 
-    showToast('Backup restaurado correctamente', 'success');
+    // Restaurar post-its
+    if (Array.isArray(data.postitCards)) {
+      for (const card of data.postitCards) {
+        try {
+          await apiCreatePostit({...card, _id: undefined, id: undefined});
+          count++;
+        } catch {}
+      }
+    }
+
+    showToast(`Backup restaurado: ${count} elementos importados`, 'success');
+    
+    // Recargar datos desde API
+    const notesModule = await import('./notes.js');
+    const projectsModule = await import('./projects.js');
+    const postitModule = await import('./postit.js');
+    const docsModule = await import('./docs.js');
+    
+    await notesModule.loadNotesFromAPI();
+    await projectsModule.loadProjectsFromAPI();
+    await postitModule.loadPostitFromAPI();
+    await docsModule.loadDocsFromAPI();
+    
+    notesModule.renderNotes();
+    projectsModule.renderProjects();
+    postitModule.renderPostitBoard();
+    docsModule.renderDocs();
   } catch (e) {
     console.error(e);
     showToast('Error al aplicar el backup', 'error');

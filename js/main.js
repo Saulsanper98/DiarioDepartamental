@@ -284,6 +284,10 @@ import {
   openHandoverHistory, setupHandoverProjectAutocomplete, selectHandoverSuggestion,
 } from './handover.js';
 
+// Exponer navegación principal desde el arranque del módulo
+window.showView = showView;
+window.renderDateNav = renderDateNav;
+
 // Exponer funciones de tema globalmente de inmediato
 import('./components/themes.js').then(m => {
   window.toggleLoginThemePanel = m.toggleLoginThemePanel;
@@ -609,6 +613,8 @@ function enterApp(dbUser) {
 
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  // Inicializar la app (expone funciones en window)
+  initializeApp();
 
   // Actualizar header con datos del usuario
   const avatarEl = document.getElementById('sidebar-avatar');
@@ -619,6 +625,12 @@ function enterApp(dbUser) {
   if (avatarEl) {
     avatarEl.style.background = appUser.color;
     avatarEl.textContent = appUser.initials;
+  }
+  if (window._msAuthUser?.photo && avatarEl) {
+    avatarEl.style.backgroundImage = `url(${window._msAuthUser.photo})`;
+    avatarEl.style.backgroundSize = 'cover';
+    avatarEl.style.backgroundPosition = 'center';
+    avatarEl.textContent = '';
   }
   if (nameEl) nameEl.textContent = appUser.name;
   if (shiftEl) shiftEl.textContent = appUser.group + ' · ' + (appUser.role || 'Técnico');
@@ -728,29 +740,58 @@ function retryLogin() {
   bootApp();
 }
 
-function initApp(msUser) {
-  setCurrentUser(msUser);
-  import('./components/data.js').then(async ({ setUSERS }) => {
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch('http://localhost:3001/api/users/department', { headers });
-      const deptUsers = await res.json();
-      const mapped = deptUsers.map(u => ({
-        id: u._id,
-        name: u.name,
-        initials: u.initials,
-        color: u.color,
-        role: u.role,
-        group: u.department,
-      }));
-      setUSERS(mapped);
-    } catch (err) {
-      console.error('Error cargando usuarios:', err);
+async function checkApiStatus() {
+  const indicator = document.getElementById('api-status-indicator');
+  if (!indicator) return;
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch('http://localhost:3001/api/users/me', { headers });
+    if (res.ok) {
+      indicator.className = 'api-status online';
+      indicator.title = 'Servidor conectado';
+    } else {
+      indicator.className = 'api-status offline';
+      indicator.title = 'Error de servidor';
     }
-  });
-  // Cargar datos desde API
-  import('./components/notes.js').then(m => m.loadNotesFromAPI()).then(() => {
-    renderNotes();
+  } catch {
+    indicator.className = 'api-status offline';
+    indicator.title = 'Servidor desconectado';
+  }
+}
+
+async function initApp(appUser) {
+  setCurrentUser(appUser);
+
+  // Cargar datos en paralelo
+  await Promise.all([
+    import('./components/notes.js').then(m => m.loadNotesFromAPI()),
+    import('./components/projects.js').then(m => m.loadProjectsFromAPI()),
+    import('./components/postit.js').then(m => m.loadPostitFromAPI()),
+    import('./components/docs.js').then(m => m.loadDocsFromAPI()),
+    import('./components/comments.js').then(m => m.loadCommentsFromAPI()),
+    import('./handover.js').then(m => m.loadHandoversFromAPI()),
+  ]);
+
+  // Cargar usuarios
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch('http://localhost:3001/api/users/department', { headers });
+    const deptUsers = await res.json();
+    setUSERS(deptUsers.map(u => ({
+      id: u._id, name: u.name, initials: u.initials,
+      color: u.color, role: u.role, group: u.department,
+    })));
+  } catch (err) {
+    console.error('Error cargando usuarios:', err);
+  }
+
+  // Quitar overlay de carga
+  const overlay = document.getElementById('app-loading-overlay');
+  if (overlay) overlay.remove();
+
+  // Esperar a que window.showView esté disponible
+  // (se define en el Object.assign posterior)
+  setTimeout(() => {
     if (typeof window.showView === 'function') {
       window.showView('notes', document.getElementById('nav-all'));
     }
@@ -760,16 +801,7 @@ function initApp(msUser) {
     if (typeof window.updateBadges === 'function') {
       window.updateBadges();
     }
-  });
-  import('./components/projects.js').then(m => m.loadProjectsFromAPI());
-  import('./components/postit.js').then(m => m.loadPostitFromAPI());
-  import('./components/docs.js').then(m => m.loadDocsFromAPI());
-  import('./handover.js').then(m => m.loadHandoversFromAPI());
-  import('./components/comments.js').then(m => m.loadCommentsFromAPI());
-  if (msUser) {
-    window._msUser = msUser;
-  }
-  initializeApp();
+  }, 500);
 }
 
 function selectUser(id) {
