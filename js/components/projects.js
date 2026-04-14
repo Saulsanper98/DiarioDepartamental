@@ -793,10 +793,20 @@ export function renderProjects() {
     const subCount = childs.length;
     const collapsed = subCount > 0 && getProjectTreeCollapsedSet().has(String(proj.id));
     const tasksToShow = projectUserFilter !== null
-      ? proj.tasks.filter(t => sameId(t.assigneeId, projectUserFilter))
-      : proj.tasks;
-    const done = tasksToShow.filter(t => t.done).length;
+      ? (proj.tasks || []).filter(t =>
+          sameId(t.assignedTo, projectUserFilter) ||
+          sameId(t.assigneeId, projectUserFilter)
+        )
+      : (proj.tasks || []);
+    const done = tasksToShow.filter(t =>
+      t.done === true || t.done === 'true' || t.status === 'done'
+    ).length;
     const total = tasksToShow.length;
+    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+    const progressBar = total > 0 ? `
+  <div class="project-tree-progress">
+    <div class="project-tree-progress-fill" style="width:${pct}%"></div>
+  </div>` : '';
     const overdueTasks = tasksToShow.filter(t =>
       !t.done &&
       t.dueDate &&
@@ -826,6 +836,7 @@ export function renderProjects() {
               ? `<span style="color:rgba(239,68,68,0.85);font-size:10px;font-weight:600">⚠ ${overdueTasks} vencida${overdueTasks !== 1 ? 's' : ''}</span>`
               : ''}
           </div>
+          ${total > 0 ? `<div class="project-tree-progress"><div class="project-tree-progress-fill" style="width:${Math.round(done/total*100)}%"></div></div>` : ''}
         </div>
       </div>
     </div>`;
@@ -1224,7 +1235,7 @@ export function dragTaskStart(event, taskId, projectId) {
   event.dataTransfer.effectAllowed = 'move';
 }
 
-export function dropTaskToColumn(event, colId, projectId) {
+export async function dropTaskToColumn(event, colId, projectId) {
   event.preventDefault();
   if (!_dragTaskId || !_dragProjectId) return;
   const p = projects.find(pr => sameId(pr.id, _dragProjectId));
@@ -1243,7 +1254,6 @@ export function dropTaskToColumn(event, colId, projectId) {
   } else {
     task.done = false;
     task.status = 'pending';
-    delete task.status;
   }
 
   if (task.done && !wasDone) {
@@ -1254,6 +1264,12 @@ export function dropTaskToColumn(event, colId, projectId) {
 
   _dragTaskId = null;
   _dragProjectId = null;
+  try {
+    const mongoId = p._id || p.id;
+    await apiUpdateProject(mongoId, { tasks: p.tasks });
+  } catch (err) {
+    console.error('Error guardando tarea en API:', err);
+  }
   saveProjectData();
   renderProjects();
   selectProject(projectId);
@@ -1398,6 +1414,7 @@ export function selectProject(id) {
 
   const statusColors = {activo:'var(--success)',pausa:'var(--accent2)',completado:'var(--accent)'};
   const statusLabels = {activo:'✅ Activo',pausa:'⏸ En Pausa',completado:'🏁 Completado'};
+  const viewMode = window._projectViewMode || 'list';
 
   const childProjects = projects.filter(c => sameId(c.parentProjectId, p.id) && userCanSeeProject(c)).sort((a, b) => a.name.localeCompare(b.name, 'es'));
   const crumbs = [];
@@ -1471,15 +1488,53 @@ export function selectProject(id) {
               onclick="setTaskSort('status','${toOnclickStringArg(p.id)}')" title="Por estado">◉</button>
           </div>
           <div class="view-toggle">
-            <button class="view-toggle-btn ${window._projectViewMode !== 'kanban' ? 'active' : ''}" 
+            <button class="view-toggle-btn ${viewMode !== 'kanban' && viewMode !== 'calendar' ? 'active' : ''}" 
               onclick="setProjectViewMode('list','${toOnclickStringArg(p.id)}')" title="Vista lista">≡</button>
-            <button class="view-toggle-btn ${window._projectViewMode === 'kanban' ? 'active' : ''}" 
+            <button class="view-toggle-btn ${viewMode === 'kanban' ? 'active' : ''}" 
               onclick="setProjectViewMode('kanban','${toOnclickStringArg(p.id)}')" title="Vista Kanban">⊞</button>
+            <button class="view-toggle-btn ${viewMode === 'calendar' ? 'active' : ''}" 
+              onclick="setProjectViewMode('calendar','${toOnclickStringArg(p.id)}')" 
+              title="Vista Calendario">📅</button>
           </div>
           <button class="btn-primary" onclick="openAddTaskModal('${toOnclickStringArg(p.id)}')" style="font-size:11px;padding:5px 12px">+ Tarea</button>
         </div>
       </div>
-      ${window._projectViewMode === 'kanban' ? renderTasksKanban(p) : renderTasksList(p)}
+      ${(() => {
+        if (viewMode === 'calendar') {
+          const tasksWithDate = p.tasks.filter(t => t.dueDate && !t.done);
+          if (tasksWithDate.length === 0) {
+            return `<div class="empty-state"><div>Sin tareas con fecha de vencimiento</div></div>`;
+          }
+
+          const byMonth = {};
+          tasksWithDate.forEach(t => {
+            const d = new Date(t.dueDate + 'T12:00:00');
+            const key = d.toLocaleDateString('es-ES', {month:'long', year:'numeric'});
+            if (!byMonth[key]) byMonth[key] = [];
+            byMonth[key].push(t);
+          });
+
+          return Object.entries(byMonth).map(([month, tasks]) => `
+            <div class="cal-month-block">
+              <div class="cal-month-header">${month}</div>
+              ${tasks.sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)).map(t => {
+                const assignee = USERS.find(u => sameId(u.id, t.assignedTo || t.assigneeId));
+                const isOverdue = new Date(t.dueDate + 'T12:00:00') < new Date();
+                const d = new Date(t.dueDate + 'T12:00:00');
+                const dayLabel = d.toLocaleDateString('es-ES', {weekday:'short', day:'numeric'});
+                return `<div class="cal-task-row ${isOverdue ? 'cal-task-overdue' : ''}"
+                  onclick="openTaskViewer('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')">
+                  <div class="cal-task-date">${dayLabel}</div>
+                  <div class="cal-task-name">${escapeChatHtml(t.name)}</div>
+                  ${assignee ? `<div class="cal-task-assignee" style="background:${assignee.color}">${assignee.initials}</div>` : ''}
+                </div>`;
+              }).join('')}
+            </div>
+          `).join('');
+        }
+        if (viewMode === 'kanban') return renderTasksKanban(p);
+        return renderTasksList(p);
+      })()}
     </div>
     ${subprojectsBlock}
     <div style="margin-top:var(--space-6)">
@@ -2043,15 +2098,15 @@ export async function saveTask() {
   renderProjects();
 }
 
-export function quickToggleTask(projectId, taskId, el) {
-  const p = projects.find(pr => sameId(pr.id, projectId));
-  if (!p) return;
-  const t = p.tasks.find(x => sameId(x.id, taskId));
+export async function quickToggleTask(projectId, taskId, el) {
+  const proj = projects.find(pr => sameId(pr.id, projectId));
+  if (!proj) return;
+  const t = proj.tasks.find(x => sameId(x.id, taskId));
   if (!t) return;
 
   if (!t.done && t.blockedBy && t.blockedBy.length > 0) {
     const blocking = t.blockedBy
-      .map(id => p.tasks.find(x => sameId(x.id, id)))
+      .map(id => proj.tasks.find(x => sameId(x.id, id)))
       .filter(dep => dep && !dep.done);
     if (blocking.length > 0) {
       showToast(`Bloqueada por: ${blocking.map(d => d.name).join(', ')}`, 'error');
@@ -2061,10 +2116,21 @@ export function quickToggleTask(projectId, taskId, el) {
 
   const wasDone = t.done;
   t.done = !t.done;
+  if (t.done) {
+    t.status = 'done';
+  } else {
+    t.status = 'pending';
+  }
   if (t.done && !wasDone) {
-    pushProjectActivity(p, { type: 'task_completed', taskName: t.name, taskId: t.id });
+    pushProjectActivity(proj, { type: 'task_completed', taskName: t.name, taskId: t.id });
   } else if (!t.done && wasDone) {
-    pushProjectActivity(p, { type: 'task_reopened', taskName: t.name, taskId: t.id });
+    pushProjectActivity(proj, { type: 'task_reopened', taskName: t.name, taskId: t.id });
+  }
+  try {
+    const mongoId = proj._id || proj.id;
+    await apiUpdateProject(mongoId, { tasks: proj.tasks });
+  } catch (err) {
+    console.error('Error guardando tarea en API:', err);
   }
   saveProjectData();
 
@@ -2085,11 +2151,18 @@ export function quickToggleTask(projectId, taskId, el) {
   const card = el.closest('.kanban-card');
   const nameEl = card ? card.querySelector('.kanban-card-name') : el.nextElementSibling;
   if (nameEl) nameEl.classList.toggle('done', t.done);
-  const allTasks = p.tasks;
-  const done = allTasks.filter(tk => tk.done).length;
+  const allTasks = proj.tasks;
+  const done = allTasks.filter(tk =>
+    tk.done === true || tk.done === 'true' || tk.status === 'done'
+  ).length;
   const total = allTasks.length;
   const projItem = document.querySelector(`.project-item[data-project-id="${projectId}"] .project-item-meta span:nth-child(2)`);
   if (projItem) projItem.textContent = `${done}/${total} tareas${projectUserFilter !== null ? ' asignadas' : ''}`;
+  const progressFill = document.querySelector(`.project-item[data-project-id="${projectId}"] .project-tree-progress-fill`);
+  if (progressFill) {
+    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+    progressFill.style.width = `${pct}%`;
+  }
   selectProject(projectId);
 }
 

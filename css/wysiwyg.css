@@ -8247,3 +8247,32 @@ html.tema-aurora #app-loading-overlay {
     rgba(10,61,46,0.97) 100%) !important;
 }
 
+html.tema-aurora .cal-task-row:hover {
+  background: rgba(255,255,255,0.05) !important;
+}
+
+html.tema-aurora .cal-month-header {
+  color: rgba(255,255,255,0.3) !important;
+  border-bottom-color: rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora .project-tree-progress {
+  background: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .project-view-tab {
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.5) !important;
+}
+
+html.tema-aurora .project-view-tab:hover {
+  background: rgba(255,255,255,0.06) !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+html.tema-aurora .project-view-tab.active {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+}
+
