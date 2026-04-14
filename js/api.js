@@ -16,8 +16,6 @@ export async function apiGetNotes(date, shift) {
 
 export async function apiGetAllNotes() {
   const headers = await getAuthHeaders();
-  console.log('Headers enviados:', headers);
-  console.log('Token:', headers['Authorization']?.slice(0, 50) + '...');
   const res = await fetch(`${API_URL}/notes/all`, {
     headers: {
       ...headers,
@@ -204,7 +202,9 @@ export async function apiReceiveHandover(id) {
 
 // ── COMENTARIOS ──
 export async function apiGetComments(kind, targetId, extraId) {
-  const params = new URLSearchParams({ kind, targetId });
+  const params = new URLSearchParams();
+  if (kind) params.append("kind", kind);
+  if (targetId) params.append("targetId", targetId);
   if (extraId) params.append("extraId", extraId);
   const res = await fetch(`${API_URL}/comments?${params}`, {
     headers: await getAuthHeaders(),

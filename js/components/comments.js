@@ -8,6 +8,11 @@ import { getPublicNoteShareContextsHtml } from './export.js';
 import { renderPostitBoard } from './postit.js';
 import { renderProjects, selectProject } from './projects.js';
 import { renderDocsGrid, commentDraftImages } from './docs.js';
+import {
+  apiGetComments,
+  apiCreateComment,
+  apiDeleteComment,
+} from '../api.js';
 // Importar funciones compartidas desde docs.js para evitar duplicación
 import { sameMaybeId, commentTargetKey, getCommentReadMap, saveCommentReadMap, getCommentMeta, hasUnreadComments, markCommentsAsRead, commentIndicators, getLatestCommentPreview, refreshCommentIndicators, insertImageIntoCommentTextarea, insertMentionIntoCommentTextarea, normalizeForSearch, getMentionQueryAtCaret, replaceMentionQueryAtCaret } from './docs.js';
 
@@ -402,7 +407,7 @@ function renderCommentsPanel(kind, targetId, containerId, extraId = null) {
   if (sendBtn) {
     sendBtn.addEventListener('click', () => {
       const rawExtraId = sendBtn.getAttribute('data-c-eid');
-      submitComment(
+      void submitComment(
         sendBtn.getAttribute('data-c-kind'),
         sendBtn.getAttribute('data-c-tid'),
         rawExtraId === '' ? null : rawExtraId,
@@ -414,7 +419,7 @@ function renderCommentsPanel(kind, targetId, containerId, extraId = null) {
   refreshCommentIndicators();
 }
 
-function submitComment(kind, targetId, extraId, containerId) {
+async function submitComment(kind, targetId, extraId, containerId) {
   if (!currentUser) return;
   const textareaId = containerId + '-input';
   const input = document.getElementById(textareaId);
@@ -428,17 +433,30 @@ function submitComment(kind, targetId, extraId, containerId) {
 
   const normalizedTargetId = Number.isFinite(Number(targetId)) ? Number(targetId) : String(targetId);
   const normalizedExtraId = extraId == null ? null : (Number.isFinite(Number(extraId)) ? Number(extraId) : String(extraId));
-  comments.push({
+  const newComment = {
     id: Date.now(),
     kind,
     targetId: normalizedTargetId,
     extraId: normalizedExtraId,
     authorId: currentUser.id,
+    authorName: currentUser.name,
     body,
     images,
+    mentions: [],
+    department: currentUser.group,
     createdAt: new Date().toISOString(),
-  });
-  saveComments();
+  };
+
+  try {
+    const saved = await apiCreateComment(newComment);
+    newComment._id = saved._id;
+    newComment.id = saved._id || newComment.id;
+  } catch (err) {
+    console.error('Error creando comentario:', err);
+    showToast('Error al guardar comentario', 'error');
+    return;
+  }
+  comments.push(newComment);
 
   commentDraftImages[textareaId] = {};
   input.value = '';
@@ -465,7 +483,28 @@ function reloadCommentsFromStorage() {
 }
 
 function saveComments() {
-  localStorage.setItem('diario_comments', JSON.stringify(comments));
+  // Ya no guarda en localStorage
+}
+
+export async function loadCommentsFromAPI() {
+  try {
+    const data = await apiGetComments(null, null);
+    const mapped = data.map(c => ({
+      ...c,
+      id: c._id || c.id,
+      targetId: c.targetId,
+      extraId: c.extraId || null,
+    }));
+    setComments(mapped);
+    return mapped;
+  } catch (err) {
+    console.error('Error cargando comentarios desde API:', err);
+    try {
+      const local = localStorage.getItem('diario_comments');
+      if (local) setComments(JSON.parse(local));
+    } catch {}
+    return [];
+  }
 }
 
 function inlinePlain(text, query) {

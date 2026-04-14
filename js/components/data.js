@@ -114,7 +114,10 @@ export function setEditingPostitImages(val) { editingPostitImages = val; }
 export function setEditingDocImages(val) { editingDocImages = val; }
 export function setEditingProjectImages(val) { editingProjectImages = val; }
 export function setEditingTaskImages(val) { editingTaskImages = val; }
-export function setComments(val) { comments = val; }
+export function setComments(arr) {
+  comments.length = 0;
+  arr.forEach(c => comments.push(c));
+}
 export function setEditingUserId(val) { editingUserId = val; }
 export function setShortcuts(val) { shortcuts = val; }
 export function setShortcutsScope(val) { shortcutsScope = val; }

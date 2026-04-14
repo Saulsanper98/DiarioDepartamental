@@ -242,6 +242,7 @@ import {
   executeConfirm,
   closeConfirmModal,
   showConfirmModal,
+  showToast,
 } from './components/modalControl.js';
 import {
   openDetail,
@@ -480,17 +481,13 @@ function showPinInput(user) {
     </div>
   `;
   const uid = user._id;
-  console.log('setupPinBoxes con uid:', uid);
   setupPinBoxes('pin-verify-boxes', null, () => {
-    console.log('onDone llamado, verificando PIN para uid:', uid);
     verifyPinBoxes(uid);
   });
   setTimeout(() => document.querySelector('#pin-verify-boxes .pin-box')?.focus(), 100);
 }
 
 function setupPinBoxes(firstGroupId, secondGroupId, onComplete) {
-  console.log('setupPinBoxes args:', firstGroupId, secondGroupId, typeof onComplete);
-
   function setupGroup(groupId, nextGroupId, doneCb) {
     const boxes = document.querySelectorAll('#' + groupId + ' .pin-box');
 
@@ -498,15 +495,12 @@ function setupPinBoxes(firstGroupId, secondGroupId, onComplete) {
       const val = e.target.value.replace(/[^0-9]/g, '');
       e.target.value = val;
       const i = Array.from(boxes).indexOf(e.target);
-      console.log('Pin box', i, 'valor:', val, 'doneCb:', typeof doneCb);
       if (val && i < boxes.length - 1) {
         boxes[i + 1].focus();
       } else if (val && i === boxes.length - 1) {
-        console.log('Último dígito, doneCb:', typeof doneCb);
         if (nextGroupId) {
           document.querySelector('#' + nextGroupId + ' .pin-box')?.focus();
         } else if (doneCb) {
-          console.log('Llamando doneCb...');
           setTimeout(doneCb, 100);
         }
       }
@@ -611,6 +605,7 @@ function enterApp(dbUser) {
 
   setCurrentUser(appUser);
   window._msUser = appUser;
+  window._currentDbUser = dbUser;
 
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -632,6 +627,101 @@ function enterApp(dbUser) {
   initApp(appUser);
 }
 
+window.openChangePinModal = function() {
+  const user = window._currentDbUser;
+  if (!user) return;
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'change-pin-modal';
+  modal.innerHTML = `
+    <div class="modal-overlay open" style="background:rgba(0,0,0,0.6);backdrop-filter:blur(8px)">
+      <div class="modal tema-aware" style="max-width:340px">
+        <div class="modal-header">
+          <h3>🔒 Cambiar PIN</h3>
+          <button class="modal-close" onclick="document.getElementById('change-pin-modal').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="pin-section">
+            <label class="pin-label">PIN actual</label>
+            <div class="pin-boxes" id="pin-current-boxes">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+            </div>
+          </div>
+          <div class="pin-section" style="margin-top:16px">
+            <label class="pin-label">Nuevo PIN</label>
+            <div class="pin-boxes" id="pin-change-new-boxes">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+            </div>
+          </div>
+          <div class="pin-section" style="margin-top:16px">
+            <label class="pin-label">Repite el nuevo PIN</label>
+            <div class="pin-boxes" id="pin-change-confirm-boxes">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+              <input class="pin-box" type="password" maxlength="1" inputmode="numeric">
+            </div>
+          </div>
+          <p id="change-pin-error" class="pin-box-error hidden"></p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="document.getElementById('change-pin-modal').remove()">Cancelar</button>
+          <button class="btn-primary" onclick="submitChangePin()">Guardar PIN</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  setupPinBoxes('pin-current-boxes', 'pin-change-new-boxes');
+  setupPinBoxes('pin-change-new-boxes', 'pin-change-confirm-boxes');
+  setupPinBoxes('pin-change-confirm-boxes', null, null);
+  setTimeout(() => document.querySelector('#pin-current-boxes .pin-box')?.focus(), 100);
+};
+
+window.submitChangePin = async function() {
+  const user = window._currentDbUser;
+  if (!user) return;
+
+  const current = getPinFromBoxes('pin-current-boxes');
+  const newPin = getPinFromBoxes('pin-change-new-boxes');
+  const confirm = getPinFromBoxes('pin-change-confirm-boxes');
+  const errEl = document.getElementById('change-pin-error');
+
+  if (user.pin && current !== user.pin) {
+    errEl.textContent = 'PIN actual incorrecto'; errEl.classList.remove('hidden'); return;
+  }
+  if (newPin.length < 4) {
+    errEl.textContent = 'El nuevo PIN debe tener 4 dígitos'; errEl.classList.remove('hidden'); return;
+  }
+  if (newPin !== confirm) {
+    errEl.textContent = 'Los PINs no coinciden'; errEl.classList.remove('hidden'); return;
+  }
+
+  try {
+    const headers = await getAuthHeaders();
+    await fetch(`http://localhost:3001/api/users/${user._id}`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ pin: newPin }),
+    });
+    user.pin = newPin;
+    if (window._deptUsers) {
+      const u = window._deptUsers.find((deptUser) => deptUser._id === user._id);
+      if (u) u.pin = newPin;
+    }
+    document.getElementById('change-pin-modal').remove();
+    if (typeof showToast === 'function') showToast('PIN actualizado correctamente', 'success');
+  } catch (err) {
+    errEl.textContent = 'Error al guardar PIN'; errEl.classList.remove('hidden');
+  }
+};
+
 function retryLogin() {
   document.getElementById('login-error')?.classList.add('hidden');
   document.getElementById('login-loading')?.classList.remove('hidden');
@@ -640,6 +730,24 @@ function retryLogin() {
 
 function initApp(msUser) {
   setCurrentUser(msUser);
+  import('./components/data.js').then(async ({ setUSERS }) => {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('http://localhost:3001/api/users/department', { headers });
+      const deptUsers = await res.json();
+      const mapped = deptUsers.map(u => ({
+        id: u._id,
+        name: u.name,
+        initials: u.initials,
+        color: u.color,
+        role: u.role,
+        group: u.department,
+      }));
+      setUSERS(mapped);
+    } catch (err) {
+      console.error('Error cargando usuarios:', err);
+    }
+  });
   // Cargar datos desde API
   import('./components/notes.js').then(m => m.loadNotesFromAPI()).then(() => {
     renderNotes();
@@ -657,6 +765,7 @@ function initApp(msUser) {
   import('./components/postit.js').then(m => m.loadPostitFromAPI());
   import('./components/docs.js').then(m => m.loadDocsFromAPI());
   import('./handover.js').then(m => m.loadHandoversFromAPI());
+  import('./components/comments.js').then(m => m.loadCommentsFromAPI());
   if (msUser) {
     window._msUser = msUser;
   }

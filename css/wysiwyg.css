@@ -8155,3 +8155,73 @@ html.tema-aurora .pin-box:focus {
   background: rgba(255,255,255,0.08) !important;
 }
 
+html.tema-aurora #change-pin-modal > .modal-overlay > .modal,
+html.tema-aurora #change-pin-modal .modal {
+  background: rgba(255,255,255,0.06) !important;
+  backdrop-filter: blur(32px) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #change-pin-modal .modal-header {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #change-pin-modal .modal-header h3 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora #change-pin-modal .modal-footer {
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #change-pin-modal .modal-overlay {
+  background: linear-gradient(135deg, rgba(26,16,64,0.85) 0%, rgba(13,42,74,0.85) 40%, rgba(10,61,46,0.85) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+html.tema-aurora .settings-section {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 16px !important;
+}
+
+html.tema-aurora .settings-section-title {
+  color: rgba(255,255,255,0.7) !important;
+}
+
+html.tema-aurora .settings-label {
+  color: rgba(255,255,255,0.8) !important;
+}
+
+html.tema-aurora .settings-hint {
+  color: rgba(255,255,255,0.35) !important;
+}
+
+html.tema-aurora .security-block {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora .settings-block-header {
+  border-bottom-color: rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora .settings-block-title {
+  color: rgba(255,255,255,0.88) !important;
+}
+
+html.tema-aurora .settings-block-desc {
+  color: rgba(255,255,255,0.35) !important;
+}
+
+html.tema-aurora .security-row-label {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+html.tema-aurora .security-row-hint {
+  color: rgba(255,255,255,0.3) !important;
+}
+

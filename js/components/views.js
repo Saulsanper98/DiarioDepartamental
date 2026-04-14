@@ -391,6 +391,25 @@ function getViewHTML(view) {
             </div>
           </div>
 
+          <div class="settings-block security-block">
+            <div class="settings-block-header">
+              <span class="settings-block-icon">🔒</span>
+              <div>
+                <div class="settings-block-title">Seguridad</div>
+                <div class="settings-block-desc">Gestiona el acceso a tu perfil</div>
+              </div>
+            </div>
+            <div class="security-row">
+              <div class="security-row-info">
+                <div class="security-row-label">PIN de acceso</div>
+                <div class="security-row-hint">Protege tu perfil con un PIN de 4 dígitos</div>
+              </div>
+              <button class="btn-secondary security-btn" onclick="openChangePinModal()">
+                🔑 Cambiar PIN
+              </button>
+            </div>
+          </div>
+
           <div class="settings-section">
             <h3>👥 Usuarios y Perfiles</h3>
             <div class="users-editor-list" id="users-editor-list"></div>

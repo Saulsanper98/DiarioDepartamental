@@ -121,7 +121,6 @@ export async function loadProjectsFromAPI() {
       group: p.department || p.group,
     }));
     setProjects(mapped);
-    console.log('Proyectos seteados:', mapped.length, 'Primer proyecto:', mapped[0]?.name);
     return mapped;
   } catch (err) {
     console.error('Error cargando proyectos desde API:', err);
@@ -771,12 +770,6 @@ export function setProjectUserFilter(userId) {
 }
 
 export function renderProjects() {
-  console.log('renderProjects llamado, proyectos en memoria:', projects.length);
-  console.log('Elemento view-projects existe:', !!document.getElementById('view-projects'));
-  console.log('Filtrando proyectos:');
-  console.log('  currentUser.group:', currentUser?.group);
-  console.log('  currentUser.department:', currentUser?.department);
-  projects.forEach(p => console.log('  proyecto:', p.name, 'group:', p.group, 'department:', p.department));
   renderProjectUserFilter();
   const list = document.getElementById('projects-list');
   const statusLabels = {activo:'✅ Activo',pausa:'⏸ En Pausa',completado:'🏁 Completado'};

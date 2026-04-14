@@ -235,6 +235,7 @@ export function removeHandoverItem(section, idx) {
 }
 
 export async function deliverHandover() {
+  console.log('deliverHandover llamado');
   if (!currentUser) return;
   const shift = getCurrentShift();
   const nextShift = getNextShift(shift);
@@ -249,6 +250,7 @@ export async function deliverHandover() {
 
   const avisos = document.getElementById('ho-avisos')?.value.trim() || '';
 
+  console.log('Llamando a apiCreateHandover...');
   try {
     const saved = await apiCreateHandover({
       date: toDateStr(new Date()),
@@ -262,10 +264,12 @@ export async function deliverHandover() {
         avisos: avisos,
       }
     });
+    console.log('Traspaso guardado en API:', saved);
     const list = loadHandovers();
     list.unshift({ ...saved, id: saved._id || saved.id });
     saveHandovers(list);
   } catch (err) {
+    console.error('Error en apiCreateHandover:', err);
     console.error('Error guardando traspaso:', err);
     showToast('Error al guardar traspaso en servidor', 'error');
     return;

@@ -111,14 +111,12 @@ export function cancelPasswordModal() {
  */
 export function submitPassword() {
   const input = document.getElementById('pwd-modal-input').value;
-  console.log('submitPassword called, _pwdGroup:', _pwdGroup, 'input:', input);
   // TODO: reactivar validación antes de producción
   // if (!input) {
   //   document.getElementById('pwd-error').textContent = 'Por favor introduce la contraseña.';
   //   return;
   // }
 
-  console.log('Verifying password...');
   // TODO: reactivar validación antes de producción
   // (equivalente a comprobar contraseña del grupo en GROUP_PASSWORDS; aquí se usa verifyGroupPassword)
   // if (input !== GROUP_PASSWORDS[_pwdGroup]) { ... return; }
@@ -171,18 +169,14 @@ export function openPasswordModal(group, icon) {
  * @param {string} icon - Group icon
  */
 export function selectGroup(group, icon) {
-  console.log('selectGroup called with:', group, icon);
   setCurrentGroup(group);
   const hasPassword = !!GROUP_PASSWORDS[group];
-  console.log('hasPassword:', hasPassword, 'GROUP_PASSWORDS:', GROUP_PASSWORDS);
 
   if (!hasPassword) {
-    console.log('No password required, proceeding...');
     proceedAfterPassword(group, icon);
     return;
   }
 
-  console.log('Opening password modal...');
   openPasswordModal(group, icon);
 }
 
@@ -192,7 +186,6 @@ export function selectGroup(group, icon) {
  * @param {string} icon - Group icon
  */
 export function proceedAfterPassword(group, icon) {
-  console.log('proceedAfterPassword called with:', group, icon, 'USERS:', USERS);
   setCurrentGroup(group);
 
   document.getElementById('login-step-1').classList.add('hidden');
@@ -230,30 +223,22 @@ export function backToGroups() {
  * @param {number} id - User ID
  */
 export function selectUser(id) {
-  console.log('selectUser called with id:', id, 'USERS:', USERS);
   const user = USERS.find(u => u.id === id);
-  console.log('Found user:', user);
   if (!user) {
     console.error('User not found with id:', id);
     return;
   }
   setCurrentUser(user);
-  console.log('currentUser set to:', currentUser);
 
   // CRÍTICO: Aplicar tema guardado (desde login o guardado en localStorage global)
-  console.log('Applying stored theme...');
   applyStoredTheme();
 
   // LUEGO mostrar la app
-  console.log('Hiding login screen, showing app...');
   const loginScreen = document.getElementById('login-screen');
   const appDiv = document.getElementById('app');
-  console.log('login-screen element:', loginScreen, 'app element:', appDiv);
   if (loginScreen) loginScreen.style.display = 'none';
   if (appDiv) appDiv.style.display = 'block';
-  console.log('Calling initApp...');
   initApp();
-  console.log('initApp completed');
 }
 
 // ===== LOGOUT =====
