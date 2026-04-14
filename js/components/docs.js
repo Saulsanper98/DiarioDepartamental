@@ -10,6 +10,8 @@ import {
   apiCreateDoc,
   apiUpdateDoc,
   apiDeleteDoc,
+  apiUploadFile,
+  apiDeleteFile,
 } from '../api.js';
 
 export let currentDocCat = 'all';
@@ -26,6 +28,7 @@ export async function loadDocsFromAPI() {
       ...d,
       id: d._id || d.id,
       group: d.department || d.group,
+      parentFolderId: d.parentFolderId || null,
     }));
     setDocs(mapped);
     return mapped;
@@ -156,6 +159,7 @@ export function renderDocsGrid() {
         const fileSize = selectedItem.file?.size ? (selectedItem.file.size / 1024).toFixed(2) + ' KB' : 'Desconocido';
         const isPDF = fileType.includes('pdf');
         const isImage = fileType.startsWith('image');
+        const sharepointUrl = selectedItem.file?.sharepointUrl || selectedItem.file?.url || '';
         
         let fileHtml = `
           <div class="file-viewer-container">
@@ -169,7 +173,11 @@ export function renderDocsGrid() {
             </div>
         `;
         
-        if (isPDF && selectedItem.file?.data) {
+        if (sharepointUrl && fileType?.startsWith('image/')) {
+          fileHtml += `<img src="${sharepointUrl}" style="max-width:100%;border-radius:8px" alt="${fileNameEscapeHtml(fileName)}">`;
+        } else if (sharepointUrl && fileType === 'application/pdf') {
+          fileHtml += `<iframe src="${sharepointUrl}" style="width:100%;height:600px;border:none;border-radius:8px"></iframe>`;
+        } else if (isPDF && selectedItem.file?.data) {
           fileHtml += `<iframe class="file-preview-iframe" src="data:application/pdf;base64,${selectedItem.file.data.split(',')[1] || ''}" frameborder="0"></iframe>`;
         } else if (isImage && selectedItem.file?.data) {
           fileHtml += `<img class="file-image-preview" src="${selectedItem.file.data}" alt="${fileName}">`;
@@ -268,7 +276,7 @@ export function renderDocsGrid() {
     html += `<div class="docs-grid-item${docsViewMode === 'list' ? ' docs-list-item' : ''}" onclick="selectDocFolder('${folder.id}')" style="cursor:pointer">
       <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px">
         <span style="font-size:24px">📁</span>
-        <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocElement('${folder.id}')" style="opacity:0;transition:opacity 0.2s;z-index:10" title="Eliminar">🗑</button>
+        <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocElement('${folder.id}')" title="Eliminar">🗑</button>
       </div>
       <div class="doc-card-title" style="font-size:14px;font-weight:600;margin-bottom:4px">${folder.title}</div>
       <div class="doc-card-meta" style="font-size:11px;color:var(--text-muted);margin-bottom:auto">
@@ -288,7 +296,7 @@ export function renderDocsGrid() {
     html += `<div class="docs-grid-item${docsViewMode === 'list' ? ' docs-list-item' : ''}" onclick="selectDocFolder('${d.id}')" style="cursor:pointer">
       <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px">
         <span style="font-size:24px">${d.icon || '📄'}</span>
-        <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocElement('${d.id}')" style="opacity:0;transition:opacity 0.2s;z-index:10" title="Eliminar">🗑</button>
+        <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocElement('${d.id}')" title="Eliminar">🗑</button>
       </div>
       <div class="doc-card-title" style="font-size:14px;font-weight:600;margin-bottom:4px">${d.title}</div>
       <div class="doc-card-meta" style="font-size:11px;color:var(--text-muted);margin-bottom:auto">
@@ -311,7 +319,7 @@ export function renderDocsGrid() {
     html += `<div class="docs-grid-item${docsViewMode === 'list' ? ' docs-list-item' : ''}" onclick="selectDocFolder('${d.id}')" style="cursor:pointer">
       <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px">
         <span style="font-size:24px">${d.icon || '📎'}</span>
-        <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocElement('${d.id}')" style="opacity:0;transition:opacity 0.2s;z-index:10" title="Eliminar">🗑</button>
+        <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocElement('${d.id}')" title="Eliminar">🗑</button>
       </div>
       <div class="doc-card-title" style="font-size:14px;font-weight:600;margin-bottom:4px">${d.title}</div>
       <div class="doc-card-meta" style="font-size:11px;color:var(--text-muted);margin-bottom:auto">
@@ -839,7 +847,9 @@ export function closeDocModalWithCleanup() {
 }
 
 export async function saveDocOrFolder() {
-  const title = document.getElementById('doc-modal-title')?.textContent || '';
+  const titleEl = document.getElementById('doc-modal-title');
+  console.log('saveDocOrFolder llamado, título:', titleEl?.textContent);
+  const title = titleEl?.textContent || '';
   if (title.includes('Carpeta')) {
     await saveFolder();
   } else {
@@ -883,10 +893,22 @@ export async function saveDoc() {
   const existingImages = editingDocId ? docs.find(d => sameId(d.id, editingDocId))?.images || {} : {};
   const images = collectImageMap(content, { ...existingImages, ...editingDocImages });
 
-  const parentSelect = document.getElementById('doc-parent-input');
-  const parentVal = parentSelect ? parentSelect.value : 'null';
-  let parentFolderId = parentVal === 'null' || parentVal === '' ? null : Number(parentVal);
-  if (parentFolderId != null && Number.isNaN(parentFolderId)) parentFolderId = null;
+  let parentVal = 'null';
+
+  // Leer del custom select Aurora — buscar la opción seleccionada
+  const selectedOption = document.querySelector('#doc-modal .custom-select-option.selected');
+  if (selectedOption) {
+    parentVal = selectedOption.dataset.value || 'null';
+    console.log('Valor del custom select Aurora:', parentVal);
+  } else {
+    // Fallback al select nativo
+    const nativeSelect = document.getElementById('doc-parent-input');
+    parentVal = nativeSelect?.value || 'null';
+    console.log('Valor del select nativo:', parentVal);
+  }
+
+  const parentFolderId = parentVal === 'null' || parentVal === '' ? null : parentVal;
+  console.log('parentFolderId final:', parentFolderId);
 
   const catEl = document.getElementById('doc-category-input');
   const category = catEl && catEl.value ? catEl.value : 'manual';
@@ -909,7 +931,7 @@ export async function saveDoc() {
     if (idx !== -1) {
       saveDocVersion(docs.find(d => sameId(d.id, editingDocId)));
       const existing = docs[idx];
-      const updated = { ...existing, ...docPayload };
+        const updated = { ...existing, ...docPayload, department: currentUser.group };
       try {
         const mongoId = existing._id || existing.id;
         await apiUpdateDoc(mongoId, updated);
@@ -927,6 +949,7 @@ export async function saveDoc() {
       ...docPayload,
       authorId: currentUser.id,
       group: currentUser.group,
+        department: currentUser.group,
       createdAt: new Date().toISOString(),
     };
     try {
@@ -1071,6 +1094,8 @@ export function deleteDoc(id) {
 }
 
 export function renderDocsFolderTree() {
+  console.log('renderDocsFolderTree, total docs:', docs.length);
+  console.log('currentUser.group:', currentUser?.group);
   const container = document.getElementById('docs-categories');
   if (!container) return;
 
@@ -1084,23 +1109,34 @@ export function renderDocsFolderTree() {
       <button type="button" class="docs-type-btn" data-cat="otro" onclick="setDocCat('otro')">📄 Otros</button>
     </div>`;
 
-  const userDocs = docs.filter(d => d.group === currentUser.group);
+  const userDocs = docs.filter(d =>
+    d.group === currentUser.group || d.department === currentUser.group
+  );
+  console.log('userDocs filtrados:', userDocs.length);
+  userDocs.forEach(d => console.log(' -', d.title, 'group:', d.group, 'dept:', d.department, 'type:', d.docType));
 
   let html = filterHtml + '<div style="padding:4px 0">';
   html += `<div class="doc-tree-item ${currentDocFolderId==null?'active':''}" onclick="selectDocFolder(null)" style="padding:10px 12px;font-weight:500">
     <span style="font-size:14px">📁</span> <span>Todos</span>
   </div>`;
   
+  function isRootItem(d) {
+    const pid = d.parentFolderId;
+    return pid === null || pid === undefined || pid === '' || pid === 'null';
+  }
+
   function renderTreeRecursive(parentId, depth = 0) {
-    // Get folders at this level
-    const folders = userDocs.filter(d => d.docType === 'folder' && sameId(d.parentFolderId, parentId))
-      .sort((a, b) => a.title.localeCompare(b.title));
-    
-    // Get documents and files at this level
-    const items = userDocs.filter(d => 
-      (d.docType === 'document' || d.docType === 'file') && 
-      sameId(d.parentFolderId, parentId)
+    console.log('renderTreeRecursive parentId:', parentId, 'depth:', depth);
+    const folders = (parentId === null
+      ? userDocs.filter(d => d.docType === 'folder' && isRootItem(d))
+      : userDocs.filter(d => d.docType === 'folder' && sameId(d.parentFolderId, parentId))
     ).sort((a, b) => a.title.localeCompare(b.title));
+
+    const items = (parentId === null
+      ? userDocs.filter(d => (d.docType === 'document' || d.docType === 'file') && isRootItem(d))
+      : userDocs.filter(d => (d.docType === 'document' || d.docType === 'file') && sameId(d.parentFolderId, parentId))
+    ).sort((a, b) => a.title.localeCompare(b.title));
+    console.log('folders encontradas:', folders.length, 'items:', items.length);
     
     const indent = depth * 20;
     
@@ -1213,23 +1249,22 @@ export function downloadItem(id) {
 }
 
 export function downloadFile(fileId) {
-  const file = docs.find(d => sameId(d.id, fileId));
-  if (!file || !file.file) {
-    showToast('Archivo no encontrado', 'error');
+  const doc = docs.find(d => sameId(d.id, fileId));
+  if (!doc || !doc.file) return;
+  
+  const url = doc.file.sharepointUrl || doc.file.url;
+  if (url) {
+    window.open(url, '_blank', 'noopener,noreferrer');
     return;
   }
-  const data = file.file.data;
-  if (!data) {
-    showToast('No hay datos para descargar', 'error');
-    return;
+  
+  // Fallback para archivos sin SharePoint URL
+  if (doc.file.data) {
+    const a = document.createElement('a');
+    a.href = doc.file.data;
+    a.download = doc.file.customName || doc.file.name || 'archivo';
+    a.click();
   }
-  const link = document.createElement('a');
-  link.href = data;
-  link.download = file.file.name || file.title;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  showToast(`Descargando ${file.file.name || file.title}...`, 'success');
 }
 
 export function downloadDocAsMarkdown(docId) {
@@ -1466,7 +1501,7 @@ export function selectDocIcon(icon, buttonEl) {
 
 export function buildFolderSelectHtml(excludeFolderId = null) {
   const userFolders = docs.filter(d => 
-    d.group === currentUser.group && 
+    (d.group === currentUser.group || d.department === currentUser.group) && 
     d.docType === 'folder' &&
     (!excludeFolderId || !sameId(d.id, excludeFolderId))
   );
@@ -1570,6 +1605,7 @@ export function setupInsertFileIconPicker() {
 }
 
 export function handleInsertFileSelect(event) {
+  console.log('handleInsertFileSelect llamado', event?.target?.files?.[0]?.name);
   const file = event.target.files[0];
   if (!file) return;
   
@@ -1578,8 +1614,15 @@ export function handleInsertFileSelect(event) {
     type: file.type,
     size: file.size,
     lastModified: file.lastModified,
-    data: null
+    data: null,
+    rawFile: file
   };
+  console.log('insertFileData creado:', {
+    name: insertFileData.name,
+    size: insertFileData.size,
+    hasRawFile: !!insertFileData.rawFile,
+    rawFileType: insertFileData.rawFile?.constructor?.name
+  });
   
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -1587,6 +1630,24 @@ export function handleInsertFileSelect(event) {
     updateInsertFilePreview();
   };
   reader.readAsDataURL(file);
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function fileNameEscapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export function updateInsertFilePreview() {
@@ -1620,8 +1681,24 @@ export function clearInsertFile() {
   document.getElementById('insert-file-name-input').value = '';
 }
 
-export function confirmInsertFile() {
-  const folderId = document.getElementById('insert-file-folder-select').value;
+export async function confirmInsertFile() {
+  console.log('confirmInsertFile llamado, insertFileData:', insertFileData?.name, 'rawFile:', !!insertFileData?.rawFile);
+  let folderId = 'null';
+
+  // Leer del custom select Aurora — buscar la opción seleccionada
+  const selectedOption = document.querySelector('#insert-file-modal .custom-select-option.selected');
+  if (selectedOption) {
+    folderId = selectedOption.dataset.value || 'null';
+    console.log('Valor del custom select Aurora:', folderId);
+  } else {
+    // Fallback al select nativo
+    const nativeSelect = document.getElementById('insert-file-folder-select');
+    folderId = nativeSelect?.value || 'null';
+    console.log('Valor del select nativo:', folderId);
+  }
+
+  const parentFolderId = folderId === 'null' || folderId === '' ? null : folderId;
+  console.log('parentFolderId final:', parentFolderId);
   const displayName = document.getElementById('insert-file-display-name').value.trim();
   const customName = document.getElementById('insert-file-name-input').value.trim();
   const selectedIcon = document.getElementById('insert-file-icon-input')?.value || document.getElementById('insert-file-icon-selected')?.value || '📎';
@@ -1642,7 +1719,7 @@ export function confirmInsertFile() {
     docType: 'file',
     icon: selectedIcon,
     group: currentUser.group,
-    parentFolderId: folderId === 'null' ? null : Number(folderId),
+    parentFolderId: parentFolderId,
     file: {
       ...insertFileData,
       displayName: displayName,
@@ -1652,6 +1729,42 @@ export function confirmInsertFile() {
     createdAt: new Date().toLocaleString(),
     images: {}
   };
+
+  console.log('Verificando rawFile antes de subir:', !!insertFileData?.rawFile);
+  if (insertFileData?.rawFile) {
+    try {
+      const uploaded = await apiUploadFile(insertFileData.rawFile, currentUser.group);
+      newFile.file.sharepointUrl = uploaded.url || uploaded.webUrl || uploaded.sharepointUrl || '';
+      newFile.file.sharepointId = uploaded.fileId || uploaded.id || uploaded._id || null;
+      newFile.file.url = newFile.file.sharepointUrl || newFile.file.url || '';
+      showToast('Archivo subido a SharePoint', 'success');
+    } catch (err) {
+      console.error('Error al subir archivo:', err);
+      showToast('Error al subir archivo', 'error');
+    }
+  }
+
+  console.log('Guardando doc en API...', newFile.title, newFile.docType);
+  const docToSave = {
+    ...newFile,
+    department: currentUser.group,
+    authorId: currentUser.id,
+    createdAt: new Date().toISOString(),
+    file: newFile.file ? {
+      ...newFile.file,
+      data: null, // No guardar base64 en MongoDB — está en SharePoint
+    } : null,
+  };
+  try {
+    const saved = await apiCreateDoc(docToSave);
+    console.log('Doc guardado en API:', saved._id);
+    newFile._id = saved._id;
+    newFile.id = saved._id || newFile.id;
+  } catch (err) {
+    console.error('Error guardando doc en API:', err);
+    showToast('Error al guardar en servidor', 'error');
+    return;
+  }
   
   docs.push(newFile);
   saveDocData();
@@ -1660,55 +1773,31 @@ export function confirmInsertFile() {
   showToast(`Archivo "${displayName}" guardado correctamente`, 'success');
 }
 
-export async function deleteDocElement(docId) {
-  const doc = docs.find(d => sameId(d.id, docId));
-  if (!doc) {
-    showToast('Elemento no encontrado', 'error');
-    return;
-  }
+export function deleteDocElement(id) {
+  const item = docs.find(d => sameId(d.id, id) || sameId(d._id, id));
+  if (!item) { showToast('Elemento no encontrado', 'error'); return; }
   
-  showConfirmModal(
-    `¿Eliminar ${doc.docType === 'folder' ? 'carpeta' : 'elemento'}?`,
-    `¿Estás seguro de que deseas eliminar "${doc.title}"?${doc.docType === 'folder' ? ' Se eliminarán todos sus contenidos.' : ''}`,
-    async () => {
-      let itemsToDelete = [docId];
-      
-      if (doc.docType === 'folder') {
-        function findDescendants(parentId) {
-          const children = docs.filter(d => sameId(d.parentFolderId, parentId));
-          children.forEach(child => {
-            itemsToDelete.push(child.id);
-            if (child.docType === 'folder') {
-              findDescendants(child.id);
-            }
-          });
-        }
-        findDescendants(docId);
+  showConfirmModal({
+    icon: item.docType === 'folder' ? '📁' : '📄',
+    title: `¿Eliminar "${item.title}"?`,
+    message: item.docType === 'folder' 
+      ? 'Se eliminará la carpeta y todo su contenido.' 
+      : 'Se eliminará este documento permanentemente.',
+    destructive: true,
+    onConfirm: async () => {
+      try {
+        const mongoId = item._id || item.id;
+        await apiDeleteDoc(mongoId);
+        const idx = docs.findIndex(d => sameId(d.id, id) || sameId(d._id, id));
+        if (idx !== -1) docs.splice(idx, 1);
+        renderDocs();
+        showToast('Eliminado correctamente', 'info');
+      } catch (err) {
+        console.error('Error eliminando:', err);
+        showToast('Error al eliminar', 'error');
       }
-      
-      for (const id of itemsToDelete) {
-        const item = docs.find(d => sameId(d.id, id));
-        if (!item) continue;
-        try {
-          const mongoId = item._id || item.id;
-          await apiDeleteDoc(mongoId);
-        } catch (err) {
-          console.error('Error eliminando doc:', err);
-          showToast('Error al eliminar en servidor', 'error');
-          return;
-        }
-      }
-
-      itemsToDelete.forEach(id => {
-        const index = docs.findIndex(d => sameId(d.id, id));
-        if (index !== -1) docs.splice(index, 1);
-      });
-      
-      saveDocData();
-      renderDocs();
-      showToast(`"${doc.title}" eliminado correctamente`, 'success');
     }
-  );
+  });
 }
 
 export function openCreateFolderModal() {
@@ -1822,52 +1911,90 @@ export function selectDocForFileAttach(docId) {
   openModal('doc-modal');
 }
 
-export function saveFolder() {
-  const title = document.getElementById('doc-title-input').value.trim();
-  if (!title) { showToast('El nombre de la carpeta es requerido','error'); return; }
-  
-  const parentSelect = document.getElementById('doc-parent-input');
-  const parentVal = parentSelect ? parentSelect.value : 'null';
-  const parentFolderId = parentVal === 'null' ? null : Number(parentVal);
-  
-  const folder = {
-    title,
-    icon: document.getElementById('doc-icon-input').value || '📁',
-    docType: 'folder',
-    parentFolderId: parentFolderId,
-    category: 'folder',
-    content: '',
-  };
-  
-  if (editingDocId) {
-    const idx = docs.findIndex(d => sameId(d.id, editingDocId));
-    if (idx !== -1) {
-      docs[idx] = {...docs[idx], ...folder};
-      showToast('Carpeta actualizada','success');
+export async function saveFolder() {
+  console.log('saveFolder ejecutándose...');
+  try {
+    const titleInput = document.getElementById('doc-title-input');
+    console.log('titleInput:', titleInput?.value);
+    console.log('parentSelect:', document.getElementById('doc-parent-input'));
+    console.log('doc-parent-input valor:', document.getElementById('doc-parent-input')?.value);
+    const title = titleInput?.value?.trim() || '';
+    if (!title) { showToast('El nombre de la carpeta es requerido','error'); return; }
+    
+    // Intentar leer del custom select de Aurora primero
+    let parentVal = 'null';
+    const nativeSelect = document.getElementById('doc-parent-input');
+    // El custom select Aurora guarda el valor en data-value del trigger
+    const auroraSelect = document.querySelector('#doc-modal .aurora-select-trigger, #doc-modal [data-select-id="doc-parent-input"]');
+    if (auroraSelect) {
+      parentVal = auroraSelect.dataset.value || auroraSelect.getAttribute('data-value') || 'null';
+      console.log('Valor leído del Aurora custom select:', parentVal);
+    } else if (nativeSelect) {
+      parentVal = nativeSelect.value || 'null';
+      console.log('Valor leído del select nativo:', parentVal);
     }
-  } else {
-    docs.push({
-      id: Date.now(),
-      ...folder,
-      authorId: currentUser.id,
-      group: currentUser.group,
-      createdAt: new Date().toISOString()
-    });
-    showToast('Carpeta creada','success');
+    const parentFolderId = parentVal === 'null' || parentVal === '' ? null : parentVal;
+    
+    const folder = {
+      title,
+      icon: document.getElementById('doc-icon-input').value || '📁',
+      docType: 'folder',
+      parentFolderId: parentFolderId,
+      category: 'folder',
+      content: '',
+    };
+    
+    if (editingDocId) {
+      const idx = docs.findIndex(d => sameId(d.id, editingDocId));
+      if (idx !== -1) {
+        const updated = {...docs[idx], ...folder};
+        try {
+          const mongoId = docs[idx]._id || docs[idx].id;
+          await apiUpdateDoc(mongoId, updated);
+        } catch (err) {
+          console.error('Error actualizando carpeta:', err);
+        }
+        docs[idx] = updated;
+        showToast('Carpeta actualizada','success');
+      }
+    } else {
+      const newFolder = {
+        id: Date.now(),
+        ...folder,
+        authorId: currentUser.id,
+        group: currentUser.group,
+        department: currentUser.group,
+        createdAt: new Date().toISOString(),
+      };
+      try {
+        const saved = await apiCreateDoc(newFolder);
+        newFolder._id = saved._id;
+        newFolder.id = saved._id || newFolder.id;
+        console.log('Carpeta guardada en API:', saved._id);
+      } catch (err) {
+        console.error('Error guardando carpeta en API:', err);
+        showToast('Error al guardar en servidor', 'error');
+        return;
+      }
+      docs.push(newFolder);
+      showToast('Carpeta creada','success');
+    }
+    
+    currentDocFile = null;
+    
+    saveDocData();
+    
+    const contentArea = document.getElementById('doc-content-input')?.parentElement;
+    const previewArea = document.getElementById('doc-content-preview')?.parentElement;
+    if (contentArea) contentArea.style.display = '';
+    if (previewArea) previewArea.style.display = '';
+    
+    closeModal('doc-modal');
+    renderDocsFolderTree();
+    renderDocsGrid();
+  } catch(err) {
+    console.error('Error en saveFolder:', err);
   }
-  
-  currentDocFile = null;
-  
-  saveDocData();
-  
-  const contentArea = document.getElementById('doc-content-input')?.parentElement;
-  const previewArea = document.getElementById('doc-content-preview')?.parentElement;
-  if (contentArea) contentArea.style.display = '';
-  if (previewArea) previewArea.style.display = '';
-  
-  closeModal('doc-modal');
-  renderDocsFolderTree();
-  renderDocsGrid();
 }
 
 function buildFolderBreadcrumb(folderId) {

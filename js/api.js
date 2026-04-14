@@ -248,3 +248,31 @@ export async function apiGetDepartmentUsers() {
   if (!res.ok) throw new Error("Error al obtener usuarios del departamento");
   return res.json();
 }
+
+export async function apiUploadFile(file, subfolder) {
+  const headers = await getAuthHeaders();
+  // Para multipart/form-data no enviamos Content-Type manualmente
+  delete headers['Content-Type'];
+
+  const formData = new FormData();
+  formData.append('file', file);
+  if (subfolder) formData.append('subfolder', subfolder);
+
+  const res = await fetch(`${API_URL}/files/upload`, {
+    method: 'POST',
+    headers: { 'Authorization': headers['Authorization'] },
+    body: formData,
+  });
+
+  if (!res.ok) throw new Error('Error al subir archivo');
+  return res.json();
+}
+
+export async function apiDeleteFile(fileId) {
+  const res = await fetch(`${API_URL}/files/${fileId}`, {
+    method: 'DELETE',
+    headers: await getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Error al eliminar archivo');
+  return res.json();
+}

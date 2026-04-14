@@ -8225,3 +8225,12 @@ html.tema-aurora .security-row-hint {
   color: rgba(255,255,255,0.3) !important;
 }
 
+html.tema-aurora .doc-delete-btn {
+  opacity: 0 !important;
+  transition: opacity 0.2s !important;
+}
+
+html.tema-aurora .docs-grid-item:hover .doc-delete-btn {
+  opacity: 1 !important;
+}
+

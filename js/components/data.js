@@ -91,7 +91,10 @@ export function setProjects(arr) {
   projects.length = 0;
   arr.forEach(p => projects.push(p));
 }
-export function setDocs(val) { docs = val; }
+export function setDocs(arr) {
+  docs.length = 0;
+  arr.forEach(d => docs.push(d));
+}
 export function setCurrentView(val) { currentView = val; }
 export function setCurrentNoteView(val) { currentNoteView = val; }
 export function setCurrentDate(val) { currentDate = val; }
@@ -142,8 +145,10 @@ export function toDateStr(date) {
 }
 
 export function sameId(a, b) {
-  if (a == null || b == null) return false;
-  // Comparar como strings para manejar ObjectIds de MongoDB
+  // Normalizar valores "vacios" como equivalentes
+  const isEmpty = v => v === null || v === undefined || v === '' || v === 'null';
+  if (isEmpty(a) && isEmpty(b)) return true;
+  if (isEmpty(a) || isEmpty(b)) return false;
   return String(a) === String(b);
 }
 

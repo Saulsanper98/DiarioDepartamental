@@ -7,7 +7,7 @@ import { renderMentionChips } from './comments.js';
 import { showToast, openModal, closeModal, showConfirmModal } from './modalControl.js';
 import { updateMarkdownPreview } from './docs.js';
 import { createCustomSelect } from './auroraCustomSelect.js';
-import { apiGetAllNotes } from '../api.js';
+import { apiGetAllNotes, apiCreateNote, apiUpdateNote, apiDeleteNote } from '../api.js';
 
 export { createCustomSelect };
 
@@ -932,7 +932,8 @@ export function editNote(e, id) {
 /**
  * Save note from modal
  */
-export function saveNote() {
+export async function saveNote() {
+  console.log('saveNote llamado, editingNoteId:', editingNoteId);
   const title = document.getElementById('note-title-input')?.value.trim() || '';
   const noteEditor = document.getElementById('note-body-editor');
   if (noteEditor) syncMdChecklistDom(noteEditor, true);
@@ -990,30 +991,67 @@ export function saveNote() {
       shares: [...rest, ...addSh],
     };
     delete updated.reminderTime;
+    try {
+      const mongoId = prev._id || prev.id;
+      const saved = await apiUpdateNote(mongoId, updated);
+      console.log('Nota actualizada en API:', saved);
+    } catch (err) {
+      console.error('Error actualizando nota en API:', err);
+      showToast('Error al guardar en servidor', 'error');
+      return;
+    }
     setNotes(notes.map((n, i) => (i === idx ? updated : n)));
     showToast('Nota actualizada', 'success');
   } else {
-    setNotes([
-      ...notes,
-      {
-        id: Date.now(),
-        authorId: currentUser.id,
-        group: currentUser.group,
-        date: currentDate,
-        shift: selectedShift,
+    console.log('Llamando a apiCreateNote con nota:', {title, shift: selectedShift});
+    const newNote = {
+      id: Date.now(),
+      authorId: currentUser.id,
+      group: currentUser.group,
+      date: currentDate,
+      shift: selectedShift,
+      title,
+      body,
+      priority: selectedPriority,
+      mentions: selectedMentions,
+      mentionGroup: selectedMentionGroup,
+      reminder,
+      createdAt: new Date().toISOString(),
+      images,
+      visibility: vis,
+      pinned,
+      tags,
+      shares: addSh,
+    };
+    try {
+      const saved = await apiCreateNote({
         title,
         body,
+        shift: selectedShift,
         priority: selectedPriority,
         mentions: selectedMentions,
         mentionGroup: selectedMentionGroup,
         reminder,
-        createdAt: new Date().toISOString(),
         images,
         visibility: vis,
         pinned,
         tags,
         shares: addSh,
-      },
+        date: currentDate,
+        group: currentUser.group,
+        department: currentUser.group,
+      });
+      console.log('Nota creada en API:', saved);
+      newNote._id = saved._id;
+      newNote.id = saved._id || newNote.id;
+    } catch (err) {
+      console.error('Error creando nota en API:', err);
+      showToast('Error al guardar en servidor', 'error');
+      return;
+    }
+    setNotes([
+      ...notes,
+      newNote,
     ]);
     showToast('Nota creada', 'success');
   }
