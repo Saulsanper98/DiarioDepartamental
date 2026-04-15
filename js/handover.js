@@ -236,7 +236,11 @@ export function removeHandoverItem(section, idx) {
 
 export async function deliverHandover() {
   console.log('deliverHandover llamado');
-  if (!currentUser) return;
+  const selectedUser = currentUser;
+  if (!selectedUser || !selectedUser.id) {
+    showToast('No se pudo determinar el técnico seleccionado.', 'error');
+    return;
+  }
   const shift = getCurrentShift();
   const nextShift = getNextShift(shift);
 
@@ -257,6 +261,8 @@ export async function deliverHandover() {
       fromShift: getCurrentShift(),
       toShift: getNextShift(getCurrentShift()),
       deliveredAt: new Date().toISOString(),
+      authorId: selectedUser.id,
+      authorName: selectedUser.name,
       sections: {
         incidencias: collectItems('incidencias'),
         pendientes: collectItems('pendientes'),
@@ -370,16 +376,23 @@ export function openHandoverReceive(handoverId) {
 }
 
 export async function confirmHandoverReceived(handoverId) {
-  if (!currentUser) return;
+  const selectedUser = currentUser;
+  if (!selectedUser || !selectedUser.id) {
+    showToast('No se pudo determinar el técnico seleccionado.', 'error');
+    return;
+  }
   const handovers = loadHandovers();
   const idx = handovers.findIndex(h => sameId(h.id, handoverId));
   if (idx === -1) return;
   const handover = handovers[idx];
   try {
     const mongoId = handover._id || handover.id;
-    await apiReceiveHandover(mongoId);
-    handover.receivedBy = currentUser.id;
-    handover.receivedByName = currentUser.name;
+    await apiReceiveHandover(mongoId, {
+      receivedBy: selectedUser.id,
+      receivedByName: selectedUser.name,
+    });
+    handover.receivedBy = selectedUser.id;
+    handover.receivedByName = selectedUser.name;
     handover.receivedAt = new Date().toISOString();
     saveHandovers(loadHandovers());
   } catch (err) {

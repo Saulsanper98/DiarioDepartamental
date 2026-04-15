@@ -191,9 +191,14 @@ export function proceedAfterPassword(group, icon) {
   document.getElementById('login-step-1').classList.add('hidden');
   document.getElementById('login-step-2').classList.remove('hidden');
   document.getElementById('step2-label').textContent = '— Paso 2: ' + icon + ' ' + group;
+  renderLoginUserList(group);
+  ensureMicrosoftLogoutButton();
+}
 
+export function renderLoginUserList(group = currentGroup) {
   const usersInGroup = USERS.filter(u => u.group === group);
   const grid = document.getElementById('profile-grid');
+  if (!grid) return;
   grid.innerHTML = usersInGroup.length === 0
     ? `<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:13px;padding:20px">No hay usuarios en este grupo.<br><small>Puedes añadirlos desde Configuración.</small></div>`
     : usersInGroup.map(u => `
@@ -246,27 +251,31 @@ export function selectUser(id) {
 /**
  * Logout current user
  */
-export function logout() {
-  // Restaurar tema por defecto al salir
-  const defaultTheme = USER_THEMES[0];
-  const root = document.documentElement;
-
-  // Restaurar clase de tema
-  root.className = root.className.replace(/tema-\w+/g, '');
-  root.classList.add(`tema-${defaultTheme.id}`);
-
-  // Restaurar variables
-  Object.entries(defaultTheme.vars).forEach(([k,v]) => root.style.setProperty(k, v));
-
-  removeAuroraOrbsFromDom();
-
+export function logoutMicrosoft() {
+  localStorage.removeItem('diario_last_user');
   setCurrentUser(null);
   setCurrentGroup(null);
-  document.getElementById('login-screen').style.display = 'flex';
+  import('../auth.js').then(m => m.logout());
+}
+
+export function logout() {
+  const defaultTheme = USER_THEMES[0];
+  const root = document.documentElement;
+  root.className = root.className.replace(/tema-\w+/g, '');
+  root.classList.add(`tema-${defaultTheme.id}`);
+  Object.entries(defaultTheme.vars).forEach(([k,v]) => root.style.setProperty(k, v));
+  removeAuroraOrbsFromDom();
+  localStorage.removeItem('diario_last_user');
+  setCurrentUser(null);
   document.getElementById('app').style.display = 'none';
-  document.getElementById('login-step-1').classList.remove('hidden');
-  document.getElementById('login-step-2').classList.add('hidden');
-  renderLoginGroupCounts();
+  document.getElementById('login-screen').style.display = 'flex';
+
+  // Mostrar selector de usuarios directamente sin re-autenticar con Microsoft
+  if (window.showUserSelectorDirect) {
+    window.showUserSelectorDirect();
+  } else {
+    window.bootApp();
+  }
 }
 
 // ===== APP INITIALIZATION =====
@@ -437,6 +446,26 @@ export function renderLoginGroupCounts() {
       el.textContent = count + ' usuario' + (count !== 1 ? 's' : '');
     }
   });
+  ensureMicrosoftLogoutButton();
+}
+
+function ensureMicrosoftLogoutButton() {
+  const step2 = document.getElementById('login-step-2');
+  if (!step2) return;
+  let wrap = document.getElementById('logout-microsoft-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'logout-microsoft-wrap';
+    wrap.style.marginTop = '24px';
+    wrap.style.textAlign = 'center';
+    wrap.innerHTML = `
+      <button class="btn-secondary" onclick="logoutMicrosoft()"
+        style="font-size:11px;opacity:0.6;padding:6px 14px">
+        🔓 Cerrar sesión de Microsoft
+      </button>
+    `;
+    step2.appendChild(wrap);
+  }
 }
 
 // ===== USER MANAGEMENT =====

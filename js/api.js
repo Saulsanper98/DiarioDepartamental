@@ -1,6 +1,21 @@
-import { getAuthHeaders } from "./auth.js";
+import { getAuthHeaders as getBaseAuthHeaders } from "./auth.js";
 
 const API_URL = "http://localhost:3001/api";
+
+export async function getAuthHeaders() {
+  const headers = await getBaseAuthHeaders();
+
+  // Añadir el ID del usuario seleccionado para que el backend
+  // sepa qué usuario está operando dentro del departamento
+  try {
+    const { currentUser } = await import('./components/data.js');
+    if (currentUser?.id) {
+      headers['x-selected-user-id'] = currentUser.id;
+    }
+  } catch {}
+
+  return headers;
+}
 
 // ── NOTAS ──
 export async function apiGetNotes(date, shift) {
@@ -191,10 +206,11 @@ export async function apiCreateHandover(handover) {
   return res.json();
 }
 
-export async function apiReceiveHandover(id) {
+export async function apiReceiveHandover(id, payload = {}) {
   const res = await fetch(`${API_URL}/handovers/${id}/receive`, {
     method: "PUT",
     headers: await getAuthHeaders(),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error("Error al confirmar traspaso");
   return res.json();
@@ -311,5 +327,58 @@ export async function apiDeleteWorkGroup(id) {
     headers: await getAuthHeaders()
   });
   if (!res.ok) throw new Error('Error al eliminar grupo');
+  return res.json();
+}
+
+export async function apiGetMyWorkGroups() {
+  const res = await fetch(`${API_URL}/workgroups/mine`, {
+    headers: await getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Error al obtener mis grupos');
+  return res.json();
+}
+
+export async function apiCreateWorkGroupInvite(wgId, toUserId) {
+  const res = await fetch(`${API_URL}/workgroups/${wgId}/invites`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify({ toUserId })
+  });
+  if (!res.ok) {
+    let msg = 'Error al crear invitación';
+    try {
+      const j = await res.json();
+      if (j?.error) msg = j.error;
+    } catch {}
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+export async function apiGetPendingWorkGroupInvites() {
+  const res = await fetch(`${API_URL}/workgroups/invites/pending`, {
+    headers: await getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Error al obtener invitaciones pendientes');
+  return res.json();
+}
+
+export async function apiAcceptWorkGroupInvite(inviteId) {
+  const res = await fetch(`${API_URL}/workgroups/invites/${inviteId}/accept`, {
+    method: 'PUT',
+    headers: await getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Error al aceptar invitación');
+  return res.json();
+}
+
+export async function apiDeclineWorkGroupInvite(inviteId) {
+  const res = await fetch(`${API_URL}/workgroups/invites/${inviteId}/decline`, {
+    method: 'PUT',
+    headers: await getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Error al rechazar invitación');
   return res.json();
 }

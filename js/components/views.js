@@ -13,6 +13,16 @@ import { renderChat, updateChatNavBadge } from './chat.js';
 import { renderShortcuts, onShortcutIconModeChange } from './shortcuts.js';
 import { renderWhiteboard } from './whiteboard.js';
 import { renderSettingsEditor, updateWorkGroupInviteNavBadge } from './login.js';
+import {
+  apiGetMyWorkGroups,
+  apiCreateWorkGroup,
+  apiUpdateWorkGroup,
+  apiDeleteWorkGroup,
+  apiCreateWorkGroupInvite,
+  apiGetPendingWorkGroupInvites,
+  apiAcceptWorkGroupInvite,
+  apiDeclineWorkGroupInvite,
+} from '../api.js';
 
 export { loadReadMentions, saveReadMentions };
 
@@ -74,6 +84,18 @@ function getViewHTML(view) {
             <div id="note-tag-dropdown" class="note-tag-dropdown hidden"></div>
           </div>
           <div id="note-tag-active-filter" class="note-tag-active-filter hidden"></div>
+          <div class="notes-view-switcher" style="margin-left:auto;display:flex;align-items:center;gap:4px">
+            <button class="notes-view-btn ${currentNoteView !== 'calendar' ? 'active' : ''}" 
+              onclick="setNoteView('all', document.getElementById('nav-all'))"
+              title="Vista Lista">
+              ☰ Lista
+            </button>
+            <button class="notes-view-btn ${currentNoteView === 'calendar' ? 'active' : ''}"
+              onclick="setNoteViewCalendar()"
+              title="Vista Calendario">
+              📅 Calendario
+            </button>
+          </div>
         </div>
 
         <div class="date-nav">
@@ -93,6 +115,9 @@ function getViewHTML(view) {
         <div class="notes-area" id="public-notes-area" style="flex:1"></div>
       `;
     case 'my-groups':
+      const pendingCount = wgInvites.filter(i =>
+        i.status === 'pending' && sameId(i.toUserId, currentUser?.id)
+      ).length;
       return `
         <div class="topbar">
           <h2>👥 Mis Grupos de Trabajo</h2>
@@ -101,11 +126,14 @@ function getViewHTML(view) {
         <div style="padding:0 24px 16px;border-bottom:1px solid var(--border);background:var(--surface)">
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;max-width:720px">
             <div class="form-group" style="flex:1;min-width:200px;margin:0">
-              <label class="form-label">Nombre del grupo</label>
+              <label class="form-label" style="margin-top:20px">Nombre del grupo</label>
               <input type="text" class="form-input" id="wg-new-name" placeholder="Ej. Proyecto transversal Q2">
             </div>
             <button type="button" class="btn-primary" onclick="createWorkGroup()">+ Crear grupo</button>
-            <button type="button" class="btn-secondary" onclick="openWorkGroupInvitesModal()" title="Invitaciones pendientes a grupos">📩 Invitaciones</button>
+            <button type="button" class="btn-secondary" id="wg-invites-btn" onclick="openWorkGroupInvitesModal()">
+              📩 Invitaciones
+              ${pendingCount > 0 ? `<span class="nav-badge" style="margin-left:6px">${pendingCount}</span>` : ''}
+            </button>
           </div>
         </div>
         <div class="my-groups-grid" id="my-groups-root"></div>
@@ -534,7 +562,10 @@ export function showView(view, btn) {
   if (view === 'notes') renderNotes();
   if (view === 'postit') renderPostitBoard();
   if (view === 'public-notes') renderPublicNotes();
-  if (view === 'my-groups') { renderMyGroupsView(); updateWorkGroupInviteNavBadge(); }
+  if (view === 'my-groups') {
+    renderMyGroupsView();
+    refreshPendingInvitesFromAPI().then(() => updateWorkGroupInviteNavBadge());
+  }
   if (view === 'projects') { setProjectUserFilter(null); renderProjects(); }
   if (view === 'docs') renderDocs();
   if (view === 'shortcuts') { renderShortcuts(); onShortcutIconModeChange(); }
@@ -672,23 +703,87 @@ export function onNotesSearchHistoryChange(el) {
 export function setNoteView(view, btn) {
   setCurrentNoteView(view);
   showView('notes', btn);
-  const titles = {all:'Todas las Notas',mine:'Mis Notas',mentions:'Menciones a mí',reminders:'Recordatorios',weekly:'Resumen Semanal'};
+  const titles = {
+    all:'Todas las Notas',
+    mine:'Mis Notas', 
+    mentions:'Menciones a mí',
+    reminders:'Recordatorios',
+    weekly:'Resumen Semanal',
+    calendar:'Calendario'
+  };
   document.getElementById('view-title').textContent = titles[view] || 'Notas';
   renderNotes();
 }
 
+export function setNoteViewCalendar() {
+  setCurrentNoteView('calendar');
+  const container = document.getElementById('notes-area');
+  if (container) {
+    import('./notes.js').then(m => {
+      m.renderNotesCalendarView();
+    }).catch(err => console.error('Error:', err));
+  }
+  document.getElementById('view-title').textContent = 'Calendario';
+}
+
 // ===== UTILITY FUNCTIONS =====
 
-function renderMyGroupsView() {
+async function refreshMyWorkGroupsFromAPI() {
+  try {
+    const groups = await apiGetMyWorkGroups();
+    setWorkGroups(Array.isArray(groups) ? groups.map(wg => ({
+      ...wg,
+      id: wg._id || wg.id,
+    })) : []);
+    return true;
+  } catch (err) {
+    console.error('Error cargando mis grupos desde API:', err);
+    setWorkGroups([]);
+    return false;
+  }
+}
+
+export async function refreshPendingInvitesFromAPI() {
+  try {
+    const invites = await apiGetPendingWorkGroupInvites();
+    setWgInvites(Array.isArray(invites) ? invites.map(inv => ({
+      ...inv,
+      id: inv._id || inv.id,
+      wgId: inv.wgId?._id || inv.wgId,
+      fromUserId: inv.fromUserId?._id || inv.fromUserId,
+      toUserId: inv.toUserId?._id || inv.toUserId,
+    })) : []);
+    return true;
+  } catch (err) {
+    console.error('Error cargando invitaciones pendientes desde API:', err);
+    setWgInvites([]);
+    return false;
+  }
+}
+
+function syncWorkGroupInviteBadge() {
+  refreshPendingInvitesFromAPI().then(() => updateWorkGroupInviteNavBadge());
+}
+
+async function renderMyGroupsView() {
   const root = document.getElementById('my-groups-root');
   if (!root || !currentUser) return;
+  await refreshMyWorkGroupsFromAPI();
+  const pendingCount = wgInvites.filter(i =>
+    i.status === 'pending' && sameId(i.toUserId, currentUser?.id)
+  ).length;
+  const invitesBtn = document.getElementById('wg-invites-btn');
+  if (invitesBtn) {
+    invitesBtn.innerHTML = `📩 Invitaciones${pendingCount > 0 ? ` <span class="nav-badge" style="margin-left:6px">${pendingCount}</span>` : ''}`;
+  }
   const myGroups = workGroups.filter(wg => userIsActiveWorkGroupMember(wg));
   if (myGroups.length === 0) {
     root.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">👥</div><div>Aún no tienes grupos de trabajo</div><div style="font-size:11px;color:var(--text-muted)">Crea uno arriba o acepta una invitación en 📩 Invitaciones. Los grupos no aparecen aquí hasta que aceptes la invitación.</div></div>`;
-    updateWorkGroupInviteNavBadge();
+    syncWorkGroupInviteBadge();
     return;
   }
   root.innerHTML = myGroups.map(wg => {
+    const wgIdArg = String(wg.id).replace(/'/g, "\\'");
     const isOwner = sameId(wg.ownerId, currentUser.id);
     const isAdmin = isWorkGroupAdmin(wg, currentUser.id);
     const owner = USERS.find(u => sameId(u.id, wg.ownerId));
@@ -711,7 +806,7 @@ function renderMyGroupsView() {
     } else {
       descBlock = `<div class="wg-card-v2-desc wg-card-v2-desc--empty">Sin descripción u objetivos · clic en la tarjeta para la ficha.</div>`;
     }
-    return `<div class="wg-card-v2 wg-card-v2--clickable" role="button" tabindex="0" data-wg-id="${wg.id}" title="Clic para ver ficha del grupo" onclick="onWorkGroupCardClick(event,${wg.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();onWorkGroupCardClick(event,${wg.id});}">
+    return `<div class="wg-card-v2 wg-card-v2--clickable" role="button" tabindex="0" data-wg-id="${wg.id}" title="Clic para ver ficha del grupo" onclick="onWorkGroupCardClick(event,'${wgIdArg}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();onWorkGroupCardClick(event,'${wgIdArg}');}">
       <div class="wg-card-v2-head">
         <h4>${escapeChatHtml(wg.name)}</h4>
         <div class="wg-card-v2-meta">Equipo híbrido${isAdmin ? ' · <span style="color:var(--accent)">Administras este grupo</span>' : ''}</div>
@@ -726,12 +821,12 @@ function renderMyGroupsView() {
       </div>
       ${descBlock}
       <div class="wg-card-v2-actions-foot">
-        ${isAdmin ? `<button type="button" class="btn-primary" onclick="event.stopPropagation();openEditWorkGroupModal(${wg.id})">Editar grupo</button>` : '<span style="font-size:11px;color:var(--text-muted)">Solo administradores pueden editar el grupo.</span>'}
-        ${isOwner ? `<button type="button" class="btn-secondary btn-secondary-danger" onclick="event.stopPropagation();deleteWorkGroup(${wg.id})">Eliminar grupo</button>` : ''}
+        ${isAdmin ? `<button type="button" class="btn-primary" onclick="event.stopPropagation();openEditWorkGroupModal('${wgIdArg}')">Editar grupo</button>` : '<span style="font-size:11px;color:var(--text-muted)">Solo administradores pueden editar el grupo.</span>'}
+        ${isOwner ? `<button type="button" class="btn-secondary btn-secondary-danger" onclick="event.stopPropagation();deleteWorkGroup('${wgIdArg}')">Eliminar grupo</button>` : ''}
       </div>
     </div>`;
   }).join('');
-  updateWorkGroupInviteNavBadge();
+  syncWorkGroupInviteBadge();
 }
 
 // ===== MENTION MANAGEMENT =====
@@ -794,6 +889,7 @@ export function updateBadges() {
   }
   renderDateNav();
   updateChatNavBadge();
+  updateWorkGroupInviteNavBadge();
 }
 
 export function createWorkGroup() {
@@ -804,7 +900,9 @@ export function createWorkGroup() {
   if (descEl) descEl.value = '';
 }
 
-export function openWorkGroupInvitesModal() {
+export async function openWorkGroupInvitesModal() {
+  await refreshPendingInvitesFromAPI();
+  updateWorkGroupInviteNavBadge();
   const pending = wgInvites.filter(i =>
     i.status === 'pending' && sameId(i.toUserId, currentUser.id)
   );
@@ -816,18 +914,31 @@ export function openWorkGroupInvitesModal() {
     el.innerHTML = pending.map(inv => {
       const wg = workGroups.find(w => sameId(w.id, inv.wgId));
       const from = USERS.find(u => sameId(u.id, inv.fromUserId));
-      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-weight:600;font-size:13px">${wg ? escapeChatHtml(wg.name) : 'Grupo desconocido'}</div>
-          <div style="font-size:11px;color:var(--text-muted)">Invitado por ${from ? escapeChatHtml(from.name) : '?'}</div>
+      const wgName = wg ? escapeChatHtml(wg.name) : (inv.wgName ? escapeChatHtml(inv.wgName) : 'Grupo desconocido');
+      const fromName = from ? escapeChatHtml(from.name) : '?';
+      const initials = fromName.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+      const color = from?.color || '#7858f6';
+      return `
+    <div class="wg-invite-card">
+      <div class="wg-invite-card-left">
+        <div class="wg-invite-avatar" style="background:${color}">${initials}</div>
+        <div class="wg-invite-info">
+          <div class="wg-invite-wgname">👥 ${wgName}</div>
+          <div class="wg-invite-from">Invitado por <strong>${fromName}</strong></div>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn-primary" style="font-size:11px;padding:5px 12px"
-            onclick="acceptWgInvite(${inv.id})">Aceptar</button>
-          <button class="btn-secondary" style="font-size:11px;padding:5px 12px"
-            onclick="declineWgInvite(${inv.id})">Rechazar</button>
-        </div>
-      </div>`;
+      </div>
+      <div class="wg-invite-actions">
+        <button class="btn-primary wg-invite-accept"
+          onclick="acceptWgInvite('${String(inv.id).replace(/'/g, "\\'")}')">
+          ✓ Aceptar
+        </button>
+        <button class="btn-secondary wg-invite-decline"
+          onclick="declineWgInvite('${String(inv.id).replace(/'/g, "\\'")}')">
+          ✕ Rechazar
+        </button>
+      </div>
+    </div>
+  `;
     }).join('');
   }
   openModal('workgroup-invites-modal');
@@ -852,11 +963,15 @@ export function onWorkGroupCardClick(ev, wgId) {
 export function openEditWorkGroupModal(wgId) {
   const wg = workGroups.find(w => sameId(w.id, wgId));
   if (!wg) return;
-  window._editingWgId = wgId;
+  window._editingWgId = wg.id;
+  window._editingWgMongoId = wg._id || wg.id;
   const nameEl = document.getElementById('wg-edit-name-display');
   const descEl = document.getElementById('wg-edit-desc');
   const objectivesEl = document.getElementById('wg-edit-objectives');
-  if (nameEl) nameEl.textContent = wg.name;
+  if (nameEl) {
+    nameEl.textContent = wg.name;
+    nameEl.setAttribute('contenteditable', 'true');
+  }
   if (descEl) descEl.value = wg.description || '';
   if (objectivesEl) objectivesEl.value = wg.objectives || '';
 
@@ -870,7 +985,7 @@ export function openEditWorkGroupModal(wgId) {
         <div style="width:24px;height:24px;border-radius:50%;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0f0e0c">${u.initials}</div>
         <span style="font-size:12px;flex:1">${escapeChatHtml(u.name)}</span>
         <span style="font-size:10px;color:var(--text-muted)">${sameId(u.id, wg.ownerId) ? 'Propietario' : 'Miembro'}</span>
-        ${!sameId(u.id, wg.ownerId) ? `<button type="button" style="font-size:10px;color:var(--danger);background:none;border:none;cursor:pointer" onclick="removeWgMember(${wg.id},${u.id})">✕</button>` : ''}
+        ${!sameId(u.id, wg.ownerId) ? `<button type="button" style="font-size:10px;color:var(--danger);background:none;border:none;cursor:pointer" onclick="removeWgMember('${String(wg.id).replace(/'/g, "\\'")}','${String(u.id).replace(/'/g, "\\'")}')">✕</button>` : ''}
       </div>
     `).join('');
   }
@@ -884,73 +999,90 @@ export function deleteWorkGroup(wgId) {
     icon: '👥',
     title: '¿Eliminar este grupo?',
     message: `Se eliminará "${wg.name}" y todos sus datos. Esta acción no se puede deshacer.`,
-    onConfirm: () => {
-      const idx = workGroups.findIndex(w => sameId(w.id, wgId));
-      if (idx !== -1) workGroups.splice(idx, 1);
-      saveWorkGroups();
-      renderMyGroupsView();
-      showToast('Grupo eliminado', 'info');
+    onConfirm: async () => {
+      try {
+        const mongoId = wg._id || wg.id;
+        await apiDeleteWorkGroup(mongoId);
+        await renderMyGroupsView();
+        showToast('Grupo eliminado', 'info');
+      } catch (err) {
+        console.error('Error eliminando grupo:', err);
+        showToast('No se pudo eliminar el grupo', 'error');
+      }
     }
   });
-}
-
-function saveWorkGroups() {
-  localStorage.setItem('diario_workgroups', JSON.stringify(workGroups));
-}
-
-function saveWgInvites() {
-  localStorage.setItem('diario_wginvites', JSON.stringify(wgInvites));
 }
 
 export function saveWorkGroupEdit() {
   const wg = workGroups.find(w => sameId(w.id, window._editingWgId));
   if (!wg) return;
+  const nameEl = document.getElementById('wg-edit-name-display');
   const descEl = document.getElementById('wg-edit-desc');
   const objectivesEl = document.getElementById('wg-edit-objectives');
+  const newName = nameEl ? nameEl.textContent.trim() : '';
+  if (!newName) {
+    showToast('El nombre del grupo es obligatorio', 'error');
+    return;
+  }
+  wg.name = newName;
   wg.description = descEl ? descEl.value.trim() : '';
   wg.objectives = objectivesEl ? objectivesEl.value.trim() : '';
-  saveWorkGroups();
-  closeModal('workgroup-modal');
-  renderMyGroupsView();
-  showToast('Grupo actualizado', 'success');
+  const mongoId = wg._id || wg.id;
+  apiUpdateWorkGroup(mongoId, {
+    name: wg.name,
+    description: wg.description,
+    objectives: wg.objectives,
+    memberUserIds: wg.memberUserIds || [],
+    adminUserIds: wg.adminUserIds || [],
+  }).then(async () => {
+    closeModal('workgroup-modal');
+    await renderMyGroupsView();
+    showToast('Grupo actualizado', 'success');
+  }).catch((err) => {
+    console.error('Error actualizando grupo:', err);
+    showToast('No se pudo actualizar el grupo', 'error');
+  });
 }
 
 export function acceptWgInvite(inviteId) {
-  const inv = wgInvites.find(i => sameId(i.id, inviteId));
-  if (!inv) return;
-  inv.status = 'accepted';
-  const wg = workGroups.find(w => sameId(w.id, inv.wgId));
-  if (wg) {
-    if (!wg.memberUserIds) wg.memberUserIds = [];
-    if (!wg.memberUserIds.some(id => sameId(id, currentUser.id))) {
-      wg.memberUserIds.push(currentUser.id);
-    }
-  }
-  saveWgInvites();
-  saveWorkGroups();
-  closeModal('workgroup-invites-modal');
-  renderMyGroupsView();
-  updateWorkGroupInviteNavBadge();
-  showToast('Invitación aceptada', 'success');
+  apiAcceptWorkGroupInvite(inviteId).then(async () => {
+    await refreshPendingInvitesFromAPI();
+    closeModal('workgroup-invites-modal');
+    await renderMyGroupsView();
+    updateWorkGroupInviteNavBadge();
+    showToast('Invitación aceptada', 'success');
+  }).catch((err) => {
+    console.error('Error aceptando invitación:', err);
+    showToast('No se pudo aceptar la invitación', 'error');
+  });
 }
 
 export function declineWgInvite(inviteId) {
-  const inv = wgInvites.find(i => sameId(i.id, inviteId));
-  if (!inv) return;
-  inv.status = 'declined';
-  saveWgInvites();
-  openWorkGroupInvitesModal();
-  updateWorkGroupInviteNavBadge();
-  showToast('Invitación rechazada', 'info');
+  apiDeclineWorkGroupInvite(inviteId).then(async () => {
+    await refreshPendingInvitesFromAPI();
+    await openWorkGroupInvitesModal();
+    updateWorkGroupInviteNavBadge();
+    showToast('Invitación rechazada', 'info');
+  }).catch((err) => {
+    console.error('Error rechazando invitación:', err);
+    showToast('No se pudo rechazar la invitación', 'error');
+  });
 }
 
 export function removeWgMember(wgId, userId) {
   const wg = workGroups.find(w => sameId(w.id, wgId));
   if (!wg) return;
   wg.memberUserIds = (wg.memberUserIds || []).filter(id => !sameId(id, userId));
-  saveWorkGroups();
-  openEditWorkGroupModal(wgId);
-  showToast('Miembro eliminado', 'info');
+  const mongoId = wg._id || wg.id;
+  apiUpdateWorkGroup(mongoId, {
+    memberUserIds: wg.memberUserIds || [],
+  }).then(() => {
+    openEditWorkGroupModal(wgId);
+    showToast('Miembro eliminado', 'info');
+  }).catch((err) => {
+    console.error('Error eliminando miembro:', err);
+    showToast('No se pudo eliminar el miembro', 'error');
+  });
 }
 
 export function saveNewWorkGroup() {
@@ -960,7 +1092,6 @@ export function saveNewWorkGroup() {
   if (!name) { showToast('El nombre es requerido', 'error'); return; }
   const desc = descInput?.value.trim() || '';
   const newWg = {
-    id: Date.now(),
     name,
     description: desc,
     objectives: '',
@@ -969,11 +1100,14 @@ export function saveNewWorkGroup() {
     memberUserIds: [],
     createdAt: new Date().toISOString(),
   };
-  workGroups.push(newWg);
-  saveWorkGroups();
-  closeModal('workgroup-new-modal');
-  renderMyGroupsView();
-  showToast('Grupo creado', 'success');
+  apiCreateWorkGroup(newWg).then(async () => {
+    closeModal('workgroup-new-modal');
+    await renderMyGroupsView();
+    showToast('Grupo creado', 'success');
+  }).catch((err) => {
+    console.error('Error creando grupo:', err);
+    showToast('No se pudo crear el grupo', 'error');
+  });
 }
 
 export function onWgEditInviteSearchInput(event) {
@@ -990,7 +1124,7 @@ export function onWgEditInviteSearchInput(event) {
   if (!matches.length) { sugEl.classList.add('hidden'); return; }
   sugEl.innerHTML = matches.map(u => `
     <div class="wg-invite-suggestion-item"
-      onclick="selectWgInviteSuggestion(${u.id}, '${escapeChatHtml(u.name)}')">
+      onclick="selectWgInviteSuggestion('${String(u.id).replace(/'/g, "\\'")}', '${String(u.name).replace(/'/g, "\\'")}')">
       <strong>${escapeChatHtml(u.name)}</strong>
       <span style="color:var(--text-muted);font-size:10px;margin-left:6px">${u.group}</span>
     </div>
@@ -1009,23 +1143,35 @@ export function selectWgInviteSuggestion(userId, userName) {
 export function sendWgInviteFromEditModal() {
   const userId = window._selectedWgInviteUserId;
   if (!userId) { showToast('Selecciona un usuario de la lista', 'error'); return; }
-  const wgId = window._editingWgId;
-  if (!wgId) return;
-  const already = wgInvites.some(i =>
-    sameId(i.wgId, wgId) && sameId(i.toUserId, userId) && i.status === 'pending'
+  const wg = workGroups.find(w =>
+    sameId(w.id, window._editingWgId) || sameId(w._id, window._editingWgId)
   );
-  if (already) { showToast('Ya hay una invitación pendiente para este usuario', 'info'); return; }
-  wgInvites.push({
-    id: Date.now(),
-    wgId,
-    fromUserId: currentUser.id,
-    toUserId: userId,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
+  const wgMongoId = window._editingWgMongoId || wg?._id || wg?.id;
+  if (!wgMongoId) {
+    showToast('No se puede invitar en este grupo aún. Recarga la vista de grupos.', 'error');
+    return;
+  }
+  if (/^\d+$/.test(String(wgMongoId))) {
+    showToast('Este grupo tiene un ID legado y no admite invitaciones API. Recarga "Mis grupos" para sincronizar con BD.', 'error');
+    return;
+  }
+  apiCreateWorkGroupInvite(wgMongoId, userId).then(async () => {
+    await refreshPendingInvitesFromAPI();
+    updateWorkGroupInviteNavBadge();
+    window._selectedWgInviteUserId = null;
+    const input = document.getElementById('wg-edit-invite-search');
+    if (input) input.value = '';
+    showToast('Invitación enviada', 'success');
+  }).catch((err) => {
+    console.error('Error enviando invitación:', err);
+    if (err?.status === 409) {
+      showToast('Ya hay una invitación pendiente para este usuario', 'info');
+      return;
+    }
+    if (err?.status === 400) {
+      showToast(err.message || 'Invitación no válida', 'error');
+      return;
+    }
+    showToast('No se pudo enviar la invitación', 'error');
   });
-  saveWgInvites();
-  window._selectedWgInviteUserId = null;
-  const input = document.getElementById('wg-edit-invite-search');
-  if (input) input.value = '';
-  showToast('Invitación enviada', 'success');
 }

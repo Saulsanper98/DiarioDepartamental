@@ -444,6 +444,22 @@ function countBrokenDependencyRefs(p) {
 }
 
 const PROJECT_ACTIVITY_MAX = 50;
+const PROJECT_ACTIVITY_HIDDEN_KEY = 'diario_project_activity_hidden';
+
+function getHiddenProjectActivitySet() {
+  try {
+    const raw = localStorage.getItem(PROJECT_ACTIVITY_HIDDEN_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(arr)) return new Set();
+    return new Set(arr.map(x => String(x)));
+  } catch {
+    return new Set();
+  }
+}
+
+function setHiddenProjectActivitySet(set) {
+  localStorage.setItem(PROJECT_ACTIVITY_HIDDEN_KEY, JSON.stringify(Array.from(set)));
+}
 
 function pushProjectActivity(project, { type, taskName, taskId, detail }) {
   if (!project.activityLog) project.activityLog = [];
@@ -503,6 +519,15 @@ function projectActivityLine(e) {
 function renderProjectActivity(p) {
   const log = p.activityLog || [];
   if (!log.length) return '';
+  const hidden = getHiddenProjectActivitySet().has(String(p.id));
+  if (hidden) {
+    return `<div class="project-activity-block project-activity-block--collapsed">
+      <div class="project-activity-header">
+        <span>Actividad reciente</span>
+        <button type="button" class="project-activity-toggle" onclick="toggleProjectActivityVisibility('${toOnclickStringArg(p.id)}', false)">Mostrar</button>
+      </div>
+    </div>`;
+  }
   const rows = log.slice(0, 20).map(e => `
     <div class="project-activity-row">
       <span class="project-activity-text">${projectActivityLine(e)}</span>
@@ -510,9 +535,23 @@ function renderProjectActivity(p) {
     </div>`).join('');
   return `
     <div class="project-activity-block">
-      <div class="project-activity-header">Actividad reciente</div>
+      <div class="project-activity-header">
+        <span>Actividad reciente</span>
+        <button type="button" class="project-activity-toggle" onclick="toggleProjectActivityVisibility('${toOnclickStringArg(p.id)}', true)">Ocultar</button>
+      </div>
       <div class="project-activity-list">${rows}</div>
     </div>`;
+}
+
+export function toggleProjectActivityVisibility(projectId, hide) {
+  const set = getHiddenProjectActivitySet();
+  const key = String(projectId);
+  if (hide) set.add(key);
+  else set.delete(key);
+  setHiddenProjectActivitySet(set);
+  if (currentProjectId && sameId(currentProjectId, projectId)) {
+    selectProject(projectId);
+  }
 }
 
 let _taskSortMode = 'default'; // 'default' | 'priority' | 'dueDate' | 'status'
@@ -1266,7 +1305,11 @@ export async function dropTaskToColumn(event, colId, projectId) {
   _dragProjectId = null;
   try {
     const mongoId = p._id || p.id;
-    await apiUpdateProject(mongoId, { tasks: p.tasks });
+    const payload = { tasks: p.tasks };
+    if (Array.isArray(p.activityLog)) {
+      payload.activityLog = p.activityLog;
+    }
+    await apiUpdateProject(mongoId, payload);
   } catch (err) {
     console.error('Error guardando tarea en API:', err);
   }
@@ -1522,7 +1565,7 @@ export function selectProject(id) {
                 const isOverdue = new Date(t.dueDate + 'T12:00:00') < new Date();
                 const d = new Date(t.dueDate + 'T12:00:00');
                 const dayLabel = d.toLocaleDateString('es-ES', {weekday:'short', day:'numeric'});
-                return `<div class="cal-task-row ${isOverdue ? 'cal-task-overdue' : ''}"
+                return `<div class="cal-task-row ${isOverdue ? 'cal-task-overdue' : 'cal-task-ontime'}"
                   onclick="openTaskViewer('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')">
                   <div class="cal-task-date">${dayLabel}</div>
                   <div class="cal-task-name">${escapeChatHtml(t.name)}</div>
@@ -2128,7 +2171,11 @@ export async function quickToggleTask(projectId, taskId, el) {
   }
   try {
     const mongoId = proj._id || proj.id;
-    await apiUpdateProject(mongoId, { tasks: proj.tasks });
+    const payload = { tasks: proj.tasks };
+    if (Array.isArray(proj.activityLog)) {
+      payload.activityLog = proj.activityLog;
+    }
+    await apiUpdateProject(mongoId, payload);
   } catch (err) {
     console.error('Error guardando tarea en API:', err);
   }

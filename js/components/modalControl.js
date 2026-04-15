@@ -140,24 +140,38 @@ export function executeConfirm() {
  * @param {number} duration - Duration in milliseconds
  */
 export function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
+  const icons = {
+    success: '✅',
+    error: '❌',
+    warning: '⚠️',
+    info: 'ℹ️',
+  };
+
+  const existing = document.getElementById('toast-container');
+  if (!existing) {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px;';
+    document.body.appendChild(container);
+  }
 
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.innerHTML = `
-    <span class="toast-icon">${getToastIcon(type)}</span>
+    <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
     <span class="toast-message">${message}</span>
-    <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+    <button class="toast-close" onclick="this.closest('.toast').remove()">✕</button>
   `;
-
-  container.appendChild(toast);
-
-  // Auto remove after duration
+  
+  document.getElementById('toast-container').appendChild(toast);
+  
+  // Animacion entrada
+  requestAnimationFrame(() => toast.classList.add('toast-visible'));
+  
+  // Auto eliminar
   setTimeout(() => {
-    if (toast.parentElement) {
-      toast.remove();
-    }
+    toast.classList.remove('toast-visible');
+    setTimeout(() => toast.remove(), 300);
   }, duration);
 }
 

@@ -60,6 +60,63 @@ html.tema-aurora .toast-close {
 html.tema-aurora .toast-close:hover {
   color: rgba(255,255,255,0.7) !important;
 }
+
+html.tema-aurora .nav-badge {
+  background: rgba(224,90,90,0.9) !important;
+  box-shadow: 0 0 8px rgba(224,90,90,0.4) !important;
+}
+
+html.tema-aurora .wg-invite-card {
+  border-bottom-color: rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora .wg-invite-wgname {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora .wg-invite-from {
+  color: rgba(255,255,255,0.4) !important;
+}
+
+html.tema-aurora .ncal-cell {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora .ncal-cell:hover {
+  background: rgba(255,255,255,0.07) !important;
+  border-color: rgba(120,88,246,0.5) !important;
+}
+
+html.tema-aurora .ncal-today {
+  background: rgba(120,88,246,0.12) !important;
+}
+
+html.tema-aurora .ncal-detail {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora .ncal-note-row:hover {
+  background: rgba(255,255,255,0.05) !important;
+}
+
+html.tema-aurora .notes-view-btn {
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.4) !important;
+}
+
+html.tema-aurora .notes-view-btn:hover {
+  background: rgba(255,255,255,0.06) !important;
+  color: rgba(255,255,255,0.8) !important;
+}
+
+html.tema-aurora .notes-view-btn.active {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+
 html.tema-aurora .wb-overlay-canvas {
   position: absolute !important;
   top: 0 !important;
@@ -4356,6 +4413,22 @@ html.tema-aurora #wg-edit-name-display {
   font-family: 'Syne', sans-serif !important;
 }
 
+html.tema-aurora #wg-edit-name-display[contenteditable="true"] {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  min-height: 38px !important;
+  padding: 8px 12px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+html.tema-aurora #wg-edit-name-display[contenteditable="true"]:focus {
+  outline: none !important;
+  border-color: rgba(120,100,255,0.45) !important;
+  box-shadow: 0 0 0 2px rgba(120,100,255,0.18) !important;
+}
+
 /* Labels */
 html.tema-aurora #workgroup-modal .form-label,
 html.tema-aurora #workgroup-new-modal .form-label {
@@ -8274,5 +8347,71 @@ html.tema-aurora .project-view-tab.active {
   background: var(--accent) !important;
   color: #fff !important;
   border-color: var(--accent) !important;
+}
+
+html.tema-aurora .postit-cards.drag-over {
+  background: rgba(120,88,246,0.08) !important;
+  border-color: rgba(120,88,246,0.4) !important;
+}
+
+html.tema-aurora .docs-breadcrumb {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+html.tema-aurora .docs-breadcrumb-item:hover {
+  background: rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+html.tema-aurora .toast {
+  background: rgba(15,10,35,0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+}
+
+html.tema-aurora #wg-info-modal .modal {
+  background: linear-gradient(145deg, rgba(18,14,42,0.96), rgba(10,34,58,0.92)) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
+}
+
+html.tema-aurora #wg-info-modal .modal-header,
+html.tema-aurora #wg-info-modal .modal-footer {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+html.tema-aurora #wg-info-modal #wg-info-desc-body,
+html.tema-aurora #wg-info-modal #wg-info-objectives-body {
+  color: rgba(255,255,255,0.82) !important;
+}
+
+html.tema-aurora .btn-comment-image {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.72) !important;
+}
+
+html.tema-aurora .btn-comment-image:hover {
+  background: rgba(120,88,246,0.18) !important;
+  border-color: rgba(120,88,246,0.45) !important;
+  color: rgba(255,255,255,0.95) !important;
+}
+
+html.tema-aurora .cal-task-ontime {
+  border-left-color: rgba(90,170,122,0.9) !important;
+}
+
+html.tema-aurora .project-activity-toggle {
+  border-color: rgba(255,255,255,0.14) !important;
+  color: rgba(255,255,255,0.62) !important;
+  background: rgba(255,255,255,0.04) !important;
+}
+
+html.tema-aurora .project-activity-toggle:hover {
+  border-color: rgba(120,88,246,0.45) !important;
+  color: rgba(255,255,255,0.9) !important;
+  background: rgba(120,88,246,0.12) !important;
 }
 

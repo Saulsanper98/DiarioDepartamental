@@ -353,7 +353,15 @@ function renderCommentsPanel(kind, targetId, containerId, extraId = null) {
   const listHtml = relevant.length === 0
     ? '<div class="comments-empty">Sin comentarios todavía.</div>'
     : relevant.map(c => {
-      const u = USERS.find(u => sameId(u.id, c.authorId)) || { initials:'?', color:'#888', name:'Desconocido' };
+      const u = USERS.find(u => sameId(u.id, c.authorId))
+        || USERS.find(u => u.msId === c.authorId)
+        || (c.authorName
+          ? {
+              name: c.authorName,
+              initials: c.authorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+              color: '#888',
+            }
+          : { initials: '?', color: '#888', name: 'Desconocido' });
       const body = renderMarkdown(c.body || '', c.images || {});
       const ts = new Date(c.createdAt).toLocaleString('es-ES', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
       return `
@@ -391,19 +399,27 @@ function renderCommentsPanel(kind, targetId, containerId, extraId = null) {
       <div class="comments-form">
         <textarea id="${textareaId}" placeholder="Escribe un comentario... (Markdown permitido)" oninput="handleCommentInput('${textareaId}')"></textarea>
         <div class="comment-mention-menu">
-          <button class="btn-comment-image" type="button" onclick="toggleCommentMentionMenu('${textareaId}')" title="Mencionar">＠</button>
+          <button class="btn-comment-image" type="button" data-comment-mention-btn title="Mencionar">＠</button>
           <div id="${mentionMenuId}" class="comment-mention-pop hidden">
             ${usersMenuHtml || '<div class="comments-empty" style="padding:8px 10px">Sin usuarios</div>'}
             ${usersMenuHtml ? `<div style="padding:8px 10px;border-top:1px solid var(--border)"><button class="btn-secondary" type="button" onclick="insertSelectedMentions('${textareaId}')">Insertar menciones</button></div>` : ''}
           </div>
           <div id="${mentionAutoId}" class="comment-mention-pop hidden"></div>
         </div>
-        <button class="btn-comment-image" type="button" onclick="insertImageIntoCommentTextarea('${textareaId}')">🖼️</button>
+        <button class="btn-comment-image" type="button" data-comment-image-btn>🖼️</button>
         <button class="btn-primary btn-comment-send" type="button" data-comment-submit data-c-kind="${kind}" data-c-tid="${String(targetId)}" data-c-eid="${extraId == null ? '' : String(extraId)}" data-c-cid="${containerId}">Añadir comentario</button>
       </div>
     </div>
   `;
   const sendBtn = container.querySelector('[data-comment-submit]');
+  const mentionBtn = container.querySelector('[data-comment-mention-btn]');
+  const imageBtn = container.querySelector('[data-comment-image-btn]');
+  if (mentionBtn) {
+    mentionBtn.addEventListener('click', () => toggleCommentMentionMenu(textareaId));
+  }
+  if (imageBtn) {
+    imageBtn.addEventListener('click', () => insertImageIntoCommentTextarea(textareaId));
+  }
   if (sendBtn) {
     sendBtn.addEventListener('click', () => {
       const rawExtraId = sendBtn.getAttribute('data-c-eid');
@@ -449,6 +465,8 @@ async function submitComment(kind, targetId, extraId, containerId) {
 
   try {
     const saved = await apiCreateComment(newComment);
+    newComment.authorId = saved.authorId || newComment.authorId;
+    newComment.authorName = saved.authorName || newComment.authorName;
     newComment._id = saved._id;
     newComment.id = saved._id || newComment.id;
   } catch (err) {

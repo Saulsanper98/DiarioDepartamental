@@ -1,7 +1,7 @@
 // ===== MAIN APPLICATION MODULE =====
 
-import { initMSAL, getCurrentUser, getAuthHeaders, logout as msalLogout } from './auth.js';
-import { setNotes, setProjects, setDocs, setUSERS, setWorkGroups, setWgInvites, setComments, setCurrentUser, wgInvites, makeImageKey, registerTempImage, collectImageMap, editingNoteImages, setEditingNoteImages, editingPostitImages, setEditingPostitImages, editingDocImages, setEditingDocImages, editingProjectImages, setEditingProjectImages, editingTaskImages, setEditingTaskImages } from './components/data.js';
+import { initMSAL, getCurrentUser, getAuthHeaders } from './auth.js';
+import { setNotes, setProjects, setDocs, setUSERS, setWorkGroups, setWgInvites, setComments, setCurrentUser, currentUser, wgInvites, makeImageKey, registerTempImage, collectImageMap, editingNoteImages, setEditingNoteImages, editingPostitImages, setEditingPostitImages, editingDocImages, setEditingDocImages, editingProjectImages, setEditingProjectImages, editingTaskImages, setEditingTaskImages } from './components/data.js';
 import {
   showView,
   renderDateNav,
@@ -10,6 +10,7 @@ import {
   handleSearch,
   onNotesSearchHistoryChange,
   setNoteView,
+  setNoteViewCalendar,
   markAllNoteMentionsAsRead,
   createWorkGroup,
   openWorkGroupInvitesModal,
@@ -35,6 +36,7 @@ import {
   backToGroups,
   selectUser as loginSelectUser,
   logout as appLogout,
+  logoutMicrosoft as appLogoutMicrosoft,
   addUser,
   removeUser,
   saveUsers,
@@ -195,6 +197,7 @@ import {
   showProjectTreeContextMenu,
   openApplyTemplateToProjectModal,
   confirmApplyTemplateToProject,
+  toggleProjectActivityVisibility,
 } from './components/projects.js';
 import {
   exportNotes,
@@ -305,8 +308,11 @@ function generateColorFromId(id) {
 }
 
 function logout() {
-  msalLogout();
   appLogout();
+}
+
+function logoutMicrosoft() {
+  appLogoutMicrosoft();
 }
 
 async function bootApp() {
@@ -338,12 +344,37 @@ async function bootApp() {
     };
 
     await showUserSelector(meData.department, headers);
+    const step2 = document.getElementById('login-step-2');
+    if (step2 && !step2.querySelector('.ms-logout-btn')) {
+      const msLogoutBtn = document.createElement('div');
+      msLogoutBtn.style.cssText = 'text-align:center;margin-top:20px';
+      msLogoutBtn.innerHTML = `<button class="ms-logout-btn btn-secondary" 
+    onclick="logoutMicrosoft()" 
+    style="font-size:11px;opacity:0.6;padding:6px 14px;border-radius:8px">
+    🔓 Cerrar sesión de Microsoft
+  </button>`;
+      step2.appendChild(msLogoutBtn);
+    }
   } catch (err) {
     console.error('Error en bootApp:', err);
-    document.getElementById('login-loading').classList.add('hidden');
-    document.getElementById('login-error').classList.remove('hidden');
-    document.getElementById('login-error-msg').textContent =
-      err.message || 'Error al conectar';
+    document.getElementById('login-screen').innerHTML = `
+      <div class="login-box" style="max-width:420px;text-align:center">
+        <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+        <h2 style="font-family:'Syne',sans-serif;font-size:18px;margin-bottom:8px;color:var(--text)">
+          Error al conectar
+        </h2>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px;line-height:1.6">
+          No se pudo establecer conexion con el servidor.<br>
+          Verifica que el servidor esta arrancado e intentalo de nuevo.
+        </p>
+        <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:20px;font-family:'DM Mono',monospace;font-size:11px;color:var(--danger,#e05a5a);text-align:left">
+          ${err.message || 'Error desconocido'}
+        </div>
+        <button class="btn-primary" onclick="bootApp()" style="width:100%">
+          🔄 Reintentar
+        </button>
+      </div>
+    `;
   }
 }
 
@@ -383,6 +414,12 @@ async function showUserSelector(department, headers) {
           </button>
         `).join('')}
       </div>
+      <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <button onclick="logoutMicrosoft()"
+          style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:6px 14px;border-radius:8px">
+          🔓 Cerrar sesión de Microsoft
+        </button>
+      </div>
     </div>
   `;
 
@@ -393,6 +430,49 @@ async function showUserSelector(department, headers) {
     }
   }, 50);
 }
+
+window.showUserSelectorDirect = function() {
+  const department = window._msAuthUser?.group || '';
+  const deptUsers = window._deptUsers || [];
+  if (!deptUsers.length) { window.bootApp(); return; }
+  if (typeof window.applyStoredTheme === 'function') window.applyStoredTheme();
+  const loginScreen = document.getElementById('login-screen');
+  loginScreen.innerHTML = `
+    <div class="login-theme-selector">
+      <button class="theme-toggle-btn" onclick="toggleLoginThemePanel()" title="Cambiar tema">🎨</button>
+      <div class="theme-panel-mini hidden" id="login-theme-panel">
+        <div class="theme-panel-label">Selecciona tema</div>
+        <div class="theme-buttons-row" id="login-theme-buttons"></div>
+      </div>
+    </div>
+    <div class="login-box login-user-selector">
+      <div class="login-header">
+        <span class="logo-mark">D</span>
+        <h1>Diario Departamental</h1>
+        <p>${department} · ¿Quién eres?</p>
+      </div>
+      <div class="user-selector-grid" id="user-selector-grid">
+        ${deptUsers.map(u => `
+          <button class="user-selector-card" onclick="selectAppUser('${u._id}')">
+            <div class="user-selector-avatar" style="background:${u.color}">${u.initials}</div>
+            <div class="user-selector-name">${u.name}</div>
+            <div class="user-selector-role">${u.role}</div>
+            ${u.pin ? '<div class="user-selector-pin-badge">🔒</div>' : ''}
+          </button>
+        `).join('')}
+      </div>
+      <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <button onclick="logoutMicrosoft()"
+          style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:6px 14px;border-radius:8px">
+          🔓 Cerrar sesión de Microsoft
+        </button>
+      </div>
+    </div>
+  `;
+  setTimeout(() => {
+    if (typeof window.renderLoginThemeButtons === 'function') window.renderLoginThemeButtons();
+  }, 50);
+};
 
 window.selectAppUser = async function(userId) {
   const user = window._deptUsers.find(u => u._id === userId);
@@ -606,7 +686,9 @@ function enterApp(dbUser) {
     email: msAuth?.email || '',
     msId: msAuth?.id || '',
   };
-
+  console.log('enterApp appUser.id:', appUser.id, 'dbUser._id:', dbUser._id);
+  const usuario = appUser;
+  console.log('setCurrentUser llamado con id:', usuario?.id, 'name:', usuario?.name);
   setCurrentUser(appUser);
   window._msUser = appUser;
   window._currentDbUser = dbUser;
@@ -624,13 +706,8 @@ function enterApp(dbUser) {
 
   if (avatarEl) {
     avatarEl.style.background = appUser.color;
+    avatarEl.style.backgroundImage = '';
     avatarEl.textContent = appUser.initials;
-  }
-  if (window._msAuthUser?.photo && avatarEl) {
-    avatarEl.style.backgroundImage = `url(${window._msAuthUser.photo})`;
-    avatarEl.style.backgroundSize = 'cover';
-    avatarEl.style.backgroundPosition = 'center';
-    avatarEl.textContent = '';
   }
   if (nameEl) nameEl.textContent = appUser.name;
   if (shiftEl) shiftEl.textContent = appUser.group + ' · ' + (appUser.role || 'Técnico');
@@ -760,7 +837,10 @@ async function checkApiStatus() {
 }
 
 async function initApp(appUser) {
+  const usuario = appUser;
+  console.log('setCurrentUser llamado con id:', usuario?.id, 'name:', usuario?.name);
   setCurrentUser(appUser);
+  console.log('currentUser después de set:', currentUser?.id, currentUser?.name);
 
   // Cargar datos en paralelo
   await Promise.all([
@@ -769,21 +849,19 @@ async function initApp(appUser) {
     import('./components/postit.js').then(m => m.loadPostitFromAPI()),
     import('./components/docs.js').then(m => m.loadDocsFromAPI()),
     import('./components/comments.js').then(m => m.loadCommentsFromAPI()),
+    import('./components/views.js').then(m => m.refreshPendingInvitesFromAPI?.()),
     import('./handover.js').then(m => m.loadHandoversFromAPI()),
+    fetch('http://localhost:3001/api/users/department', {
+      headers: await getAuthHeaders(),
+    }).then(r => r.json()).then(deptUsers => {
+      setUSERS(deptUsers.map(u => ({
+        id: u._id, name: u.name, initials: u.initials,
+        color: u.color, role: u.role, group: u.department,
+      })));
+    }).catch(err => console.error('Error cargando usuarios:', err)),
   ]);
 
-  // Cargar usuarios
-  try {
-    const headers = await getAuthHeaders();
-    const res = await fetch('http://localhost:3001/api/users/department', { headers });
-    const deptUsers = await res.json();
-    setUSERS(deptUsers.map(u => ({
-      id: u._id, name: u.name, initials: u.initials,
-      color: u.color, role: u.role, group: u.department,
-    })));
-  } catch (err) {
-    console.error('Error cargando usuarios:', err);
-  }
+  import('./components/login.js').then(m => m.updateWorkGroupInviteNavBadge());
 
   // Quitar overlay de carga
   const overlay = document.getElementById('app-loading-overlay');
@@ -802,6 +880,8 @@ async function initApp(appUser) {
       window.updateBadges();
     }
   }, 500);
+  setTimeout(() => checkApiStatus(), 2000);
+  setInterval(() => checkApiStatus(), 30000);
 }
 
 function selectUser(id) {
@@ -834,15 +914,9 @@ function loadData() {
     console.error('Error loading docs:', e);
   }
 
-  try {
-    const savedUsers = localStorage.getItem('diario_users');
-    if (savedUsers) {
-      const users = JSON.parse(savedUsers);
-      if (Array.isArray(users) && users.length) setUSERS(users);
-    }
-  } catch (e) {
-    console.error('Error loading users:', e);
-  }
+  // IMPORTANTE:
+  // No cargar usuarios desde localStorage para evitar pisar los usuarios
+  // del backend (MongoDB) y mostrar autores incorrectos en notas.
 
   // Cargar grupos de trabajo
   try {
@@ -922,6 +996,7 @@ async function initializeApp() {
       handleSearch,
       onNotesSearchHistoryChange,
       setNoteView,
+      setNoteViewCalendar,
       markAllNoteMentionsAsRead,
       goToNoteInDiary,
       duplicateNote,
@@ -939,6 +1014,7 @@ async function initializeApp() {
       backToGroups,
       selectUser,
       logout,
+      logoutMicrosoft,
       addUser,
       removeUser,
       saveUsers,
@@ -1068,6 +1144,7 @@ async function initializeApp() {
       showProjectTreeContextMenu,
       openApplyTemplateToProjectModal,
       confirmApplyTemplateToProject,
+      toggleProjectActivityVisibility,
       openNewChatModal,
       sendChatMessage,
       openChatLinkPicker,

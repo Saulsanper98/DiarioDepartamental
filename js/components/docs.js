@@ -1986,18 +1986,23 @@ function buildFolderBreadcrumb(folderId) {
     current = folder.parentFolderId ?? null;
   }
   if (crumbs.length === 0) return '';
-  const parts = [
-    `<span class="breadcrumb-item" onclick="selectDocFolder(null)" style="cursor:pointer">📁 Raíz</span>`
-  ];
-  crumbs.forEach((c, i) => {
-    parts.push(`<span class="breadcrumb-sep">›</span>`);
-    if (i === crumbs.length - 1) {
-      parts.push(`<span class="breadcrumb-item breadcrumb-item--active">${c.icon} ${escapeChatHtml(c.title)}</span>`);
-    } else {
-      parts.push(`<span class="breadcrumb-item" onclick="selectDocFolder('${c.id}')" style="cursor:pointer">${c.icon} ${escapeChatHtml(c.title)}</span>`);
-    }
-  });
-  return `<nav class="docs-breadcrumb">${parts.join('')}</nav>`;
+  const breadcrumbItems = crumbs.map(c => ({
+    id: c.id,
+    icon: c.icon || '📁',
+    title: escapeChatHtml(c.title),
+  }));
+  return `<nav class="docs-breadcrumb">
+  <span class="docs-breadcrumb-item docs-breadcrumb-root" onclick="selectDocFolder(null)">
+    📁 Documentación
+  </span>
+  ${breadcrumbItems.map((item, i) => `
+    <span class="docs-breadcrumb-sep">›</span>
+    <span class="docs-breadcrumb-item ${i === breadcrumbItems.length-1 ? 'active' : ''}" 
+      onclick="selectDocFolder('${item.id}')">
+      ${item.icon || '📁'} ${item.title}
+    </span>
+  `).join('')}
+</nav>`;
 }
 
 function getDocTemplatesKey() {

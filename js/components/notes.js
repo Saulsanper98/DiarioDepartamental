@@ -224,6 +224,10 @@ export function renderNotes() {
     renderWeeklyView();
     return;
   }
+  if (currentNoteView === 'calendar') {
+    renderNotesCalendarView();
+    return;
+  }
 
   const histCb = document.getElementById('notes-search-history');
   if (histCb) histCb.checked = searchNotesAllDates;
@@ -442,7 +446,10 @@ function syncMdChecklistHtml(html) {
 }
 
 export function renderNoteCard(note, cardOpts = {}) {
-  const author = USERS.find(u => sameId(u.id, note.authorId));
+  console.log('renderNoteCard USERS.length:', USERS?.length, 'authorId:', note.authorId);
+  const author = USERS.find(u => sameId(u.id, note.authorId)) ||
+               USERS.find(u => u.msId === note.authorId) ||
+               (note.authorName ? { name: note.authorName, initials: (note.authorName.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()), color: '#888' } : null);
   const canEdit = userCanEditNote(note);
   const pinned = !!note.pinned;
   const date = new Date(note.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
@@ -1045,6 +1052,8 @@ export async function saveNote() {
     };
     try {
       const saved = await apiCreateNote({
+        authorId: currentUser.id,
+        authorName: currentUser.name,
         title,
         body,
         shift: selectedShift,
@@ -1061,6 +1070,7 @@ export async function saveNote() {
         group: currentUser.group,
         department: currentUser.group,
       });
+      newNote.authorId = saved.authorId || newNote.authorId;
       newNote._id = saved._id;
       newNote.id = saved._id || newNote.id;
     } catch (err) {
@@ -1477,12 +1487,18 @@ export function deleteNote(e, id) {
     icon: '📋',
     title: '¿Eliminar esta nota?',
     message: `Se eliminará "${note.title}" y todos sus comentarios.`,
-    onConfirm: () => {
-      setNotes(notes.filter(n => !sameId(n.id, id)));
-      saveData();
-      renderNotes();
-      import('./login.js').then(m => m.updateBadges());
-      showToast('Nota eliminada','info');
+    onConfirm: async () => {
+      try {
+        await apiDeleteNote(id);
+        setNotes(notes.filter(n => !sameId(n.id, id)));
+        saveData();
+        renderNotes();
+        import('./login.js').then(m => m.updateBadges());
+        showToast('Nota eliminada','info');
+      } catch (err) {
+        console.error('Error eliminando nota:', err);
+        showToast('No se pudo eliminar la nota','error');
+      }
     }
   });
 }
@@ -2568,4 +2584,94 @@ export function renderWeeklyView() {
 export function setWeekMode(mode) {
   window._weekMode = mode;
   renderWeeklyView();
+}
+
+export function renderNotesCalendarView() {
+  const container = document.getElementById('notes-area');
+  if (!container) return;
+
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startDow = (firstDay.getDay() + 6) % 7;
+
+  const visibleNotes = notes.filter(n => userCanSeeNote(n));
+  const notesByDate = {};
+  visibleNotes.forEach(n => {
+    if (!n.date) return;
+    if (!notesByDate[n.date]) notesByDate[n.date] = [];
+    notesByDate[n.date].push(n);
+  });
+
+  const monthName = today.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const dayLabels = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
+    .map(d => `<div class="ncal-dow">${d}</div>`).join('');
+
+  let cells = '';
+  for (let i = 0; i < startDow; i++) {
+    cells += `<div class="ncal-cell ncal-empty"></div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayNotes = notesByDate[dateStr] || [];
+    const isToday = dateStr === toDateStr(today);
+
+    const dots = dayNotes.slice(0,4).map(n => {
+      const author = USERS.find(u => sameId(u.id, n.authorId));
+      const SHIFT_COLORS = { morning: '#f4a042', afternoon: '#5ba3e8', night: '#7858f6' };
+      const color = author?.color || SHIFT_COLORS[n.shift] || 'var(--accent)';
+      return `<div class="ncal-dot" style="background:${color}" title="${n.title}"></div>`;
+    }).join('');
+    const extra = dayNotes.length > 4 ? `<span class="ncal-extra">+${dayNotes.length-4}</span>` : '';
+
+    cells += `
+      <div class="ncal-cell ${isToday ? 'ncal-today' : ''} ${dayNotes.length ? 'ncal-has-notes' : ''}"
+        onclick="window._ncalSelectDay('${dateStr}')">
+        <div class="ncal-day-num">${d}</div>
+        <div class="ncal-dots">${dots}${extra}</div>
+      </div>`;
+  }
+
+  container.innerHTML = `
+    <div class="ncal-wrap">
+      <div class="ncal-header">
+        <span class="ncal-month-label">${monthName}</span>
+      </div>
+      <div class="ncal-grid">
+        ${dayLabels}
+        ${cells}
+      </div>
+      <div class="ncal-detail" id="ncal-detail">
+        <div class="ncal-detail-placeholder">Selecciona un día para ver sus notas</div>
+      </div>
+    </div>
+  `;
+
+  window._ncalSelectDay = function(dateStr) {
+    const dayNotes = notesByDate[dateStr] || [];
+    const detail = document.getElementById('ncal-detail');
+    if (!detail) return;
+    if (!dayNotes.length) {
+      detail.innerHTML = `<div class="ncal-detail-placeholder">Sin notas este día</div>`;
+      return;
+    }
+    const d = new Date(dateStr + 'T12:00:00');
+    const label = d.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+    const SHIFT_LABELS = { morning:'🌅 Mañana', afternoon:'🌤 Tarde', night:'🌙 Noche' };
+    detail.innerHTML = `
+      <div class="ncal-detail-header">${label}</div>
+      ${dayNotes.map(n => {
+        const author = USERS.find(u => sameId(u.id, n.authorId));
+        return `
+          <div class="ncal-note-row" onclick="editNote('${n.id || n._id}')">
+            <div class="ncal-note-shift">${SHIFT_LABELS[n.shift] || n.shift}</div>
+            <div class="ncal-note-title">${n.title || 'Sin título'}</div>
+            <div class="ncal-note-author" style="background:${author?.color || '#888'}">${author?.initials || '?'}</div>
+          </div>`;
+      }).join('')}
+    `;
+  };
 }
