@@ -1,0 +1,2067 @@
+/**
+ * Refinamiento Notas + modal (todas las vistas de #view-notes).
+ * Tokens de acento unificados (tema Aurora y fallback claro).
+ */
+#view-notes {
+  --notes-accent-select: var(--accent, #7858f6);
+  --notes-accent-cta: #f97316;
+  --notes-accent-muted: var(--text-muted, #64748b);
+  --notes-ring-focus: rgba(120, 88, 246, 0.55);
+}
+
+html.tema-aurora #view-notes {
+  --notes-accent-select: #a78bfa;
+  /* Acento cálido suave solo para micro-indicadores (p. ej. dirty dot); el CTA principal es violeta */
+  --notes-accent-cta: #c9a87a;
+  --notes-accent-muted: rgba(255, 255, 255, 0.45);
+  --notes-ring-focus: rgba(167, 139, 250, 0.75);
+}
+
+/* —— Barra de estadísticas: modo lista vs calendario —— */
+#notes-stats-list-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+}
+
+#notes-stats-calendar-group {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+#view-notes.notes-layout-calendar #notes-stats-list-group {
+  display: none !important;
+}
+
+#view-notes.notes-layout-calendar #notes-stats-calendar-group {
+  display: flex !important;
+}
+
+.notes-stats-cal-main {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text, #e2e8f0);
+}
+
+.notes-stats-cal-day {
+  font-size: 12px;
+  color: var(--notes-accent-muted);
+}
+
+/* —— Topbar: menú exportar —— */
+.notes-export-dropdown-wrap {
+  position: relative;
+}
+
+.notes-toolbar-more-btn {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2, rgba(255, 255, 255, 0.04));
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.notes-toolbar-more-btn:hover {
+  border-color: var(--notes-accent-select);
+  color: var(--text);
+}
+
+.notes-export-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 180px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface, #1a1a24);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  z-index: 200;
+}
+
+.notes-export-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.notes-export-menu-item:hover {
+  background: var(--surface2);
+}
+
+/* —— Chips fecha: coherencia con token selección —— */
+.date-chip.active {
+  background: var(--notes-accent-select) !important;
+  border-color: var(--notes-accent-select) !important;
+}
+
+.date-chip.today:not(.active) {
+  border-color: color-mix(in srgb, var(--notes-accent-select) 55%, transparent);
+}
+
+/* —— Export activo (Mes / Día) alineado a acento selección —— */
+.export-btn.active,
+.export-btn:focus-visible {
+  border-color: var(--notes-accent-select);
+  color: var(--text);
+}
+
+/* —— Calendario: layout 2 columnas escritorio —— */
+.ncal-wrap.ncal-wrap--split {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 1100px) {
+  .ncal-wrap.ncal-wrap--split {
+    display: grid;
+    grid-template-columns: 1fr minmax(300px, 38%);
+    gap: 20px 24px;
+    align-items: start;
+  }
+
+  .ncal-wrap.ncal-wrap--split .ncal-calendar-col {
+    min-width: 0;
+  }
+
+  .ncal-wrap.ncal-wrap--split .ncal-detail {
+    max-height: min(72vh, 640px);
+    overflow-y: auto;
+    margin-bottom: 0;
+  }
+}
+
+.ncal-calendar-col {
+  min-width: 0;
+}
+
+/* Hoy vs día seleccionado */
+.ncal-cell.ncal-today:not(.ncal-selected) {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--notes-accent-select) 45%, transparent);
+}
+
+.ncal-cell.ncal-selected {
+  outline: 2px solid var(--notes-accent-select);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--notes-accent-select) 35%, transparent);
+}
+
+button.ncal-cell.ncal-has-search-match {
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--notes-accent-cta) 70%, transparent);
+}
+
+.ncal-cell.ncal-empty {
+  min-height: 52px;
+  border-radius: 10px;
+}
+
+.ncal-legend {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--surface2) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.ncal-legend-title {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--text-muted) 88%, var(--text) 12%);
+}
+
+.ncal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.ncal-legend-item--search {
+  white-space: normal;
+  flex: 1 1 200px;
+  min-width: min(100%, 200px);
+}
+
+.ncal-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.ncal-detail-empty-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 8px 4px 4px;
+}
+
+.ncal-empty-day-cta {
+  align-self: flex-start;
+}
+
+.ncal-detail-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.ncal-note-row {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.ncal-note-row:last-child {
+  border-bottom: none;
+}
+
+.ncal-note-shift-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: color-mix(in srgb, var(--morning, #f4a042) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--morning) 35%, transparent);
+}
+
+.ncal-note-shift-pill.afternoon {
+  background: color-mix(in srgb, var(--afternoon, #5ba3e8) 18%, transparent);
+  border-color: color-mix(in srgb, var(--afternoon) 35%, transparent);
+}
+
+.ncal-note-shift-pill.night {
+  background: color-mix(in srgb, var(--night, #7858f6) 18%, transparent);
+  border-color: color-mix(in srgb, var(--night) 35%, transparent);
+}
+
+/* —— Cabecera de turno sticky —— */
+.shift-section .shift-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* —— Tarjetas: acciones visibles y foco —— */
+.note-actions {
+  opacity: 0.92;
+}
+
+.note-card:hover .note-actions,
+.note-card:focus-within .note-actions {
+  opacity: 1;
+}
+
+.note-action-btn {
+  color: var(--text, #e2e8f0) !important;
+  border-color: color-mix(in srgb, var(--border) 70%, var(--notes-accent-select) 25%) !important;
+  background: color-mix(in srgb, var(--surface3) 85%, var(--notes-accent-select) 8%) !important;
+}
+
+.note-action-btn:hover {
+  background: color-mix(in srgb, var(--surface3) 60%, var(--notes-accent-select) 22%) !important;
+  color: #fff !important;
+}
+
+.note-action-btn:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+}
+
+.note-action-btn.delete:hover {
+  color: #fecaca !important;
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 55%, transparent) !important;
+}
+
+.note-card--compact .note-body {
+  padding-top: 4px;
+  padding-bottom: 8px;
+}
+
+.note-card--compact {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.note-card .note-body {
+  transition: max-height 0.28s ease;
+}
+
+.note-card:hover .note-body,
+.note-card:focus-within .note-body {
+  max-height: 28em;
+}
+
+.note-card .note-meta-updated {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* —— Modal nota —— */
+/*
+  El bloque MODAL ENHANCEMENTS en style.css aplica a todos los .modal-body:
+  max-height: calc(70vh - 128px) !important — en #note-modal el layout es flex
+  (.modal--note + cuerpo scrollable); ese tope acorta el área útil y aprieta
+  pestañas/campos además de competir con overflow del .modal.
+*/
+#note-modal .modal.modal--note {
+  overflow: hidden;
+}
+
+#note-modal .modal.modal--note .modal-body.note-modal-body {
+  max-height: none !important;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding-top: 26px !important;
+  /* Aire generoso bajo el último bloque para que el pie fijo no tape Recordatorio / colaboración */
+  padding-bottom: 56px !important;
+  scroll-padding-bottom: 88px;
+  scroll-padding-top: 12px;
+  scrollbar-gutter: stable;
+}
+
+#note-modal #note-modal-panel-content,
+#note-modal #note-modal-panel-options {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+#note-modal #note-modal-panel-content > .form-group + .form-group {
+  margin-top: 14px;
+}
+
+#note-modal #note-modal-panel-options .form-row {
+  margin-top: 8px;
+}
+
+/* Turno + prioridad: dos columnas misma altura; controles alineados abajo */
+#note-modal #note-modal-panel-options .form-row:not(.note-modal-collab-row) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+  align-items: stretch;
+}
+
+#note-modal #note-modal-panel-options .form-row:not(.note-modal-collab-row) .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+#note-modal #note-modal-panel-options .form-row:not(.note-modal-collab-row) .shift-selector,
+#note-modal #note-modal-panel-options .form-row:not(.note-modal-collab-row) .priority-select {
+  flex: 1 1 auto;
+  margin-top: auto;
+  min-height: 120px;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+#note-modal #note-modal-panel-options .form-row:not(.note-modal-collab-row) .shift-option,
+#note-modal #note-modal-panel-options .form-row:not(.note-modal-collab-row) .priority-opt {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+}
+
+/* Colaboración + permiso: dos columnas misma altura; controles al pie si las etiquetas ocupan distinto alto */
+#note-modal .note-modal-collab-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+  align-items: stretch;
+}
+
+#note-modal .note-modal-collab-row .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+#note-modal .note-modal-collab-row .form-select {
+  margin-top: auto;
+  min-height: 44px;
+}
+
+/* Aurora: el <select> está oculto; el trigger vive en .custom-select-wrapper y debe recibir el empuje al pie */
+html.tema-aurora #note-modal .note-modal-collab-row .custom-select-wrapper {
+  margin-top: auto;
+  width: 100%;
+}
+
+html.tema-aurora #note-modal .note-modal-collab-row .form-select {
+  margin-top: 0;
+  min-height: 0;
+}
+
+#note-modal #note-modal-panel-options .note-vis-hint-list {
+  margin-top: 14px;
+  margin-bottom: 18px;
+}
+
+#note-modal #note-modal-panel-options .form-group + .form-group {
+  margin-top: 22px;
+}
+
+/* Varias columnas en la misma fila: no añadir margen entre celdas (p. ej. Colaboración | Permiso) */
+#note-modal #note-modal-panel-options .form-row .form-group + .form-group {
+  margin-top: 0;
+}
+
+#note-modal .modal-body .form-group {
+  gap: 12px;
+}
+
+#note-modal #note-modal-panel-content .form-label {
+  margin: 0 0 2px;
+}
+
+#note-modal #note-tags-hint {
+  margin-top: 12px;
+  margin-bottom: 28px;
+}
+
+#note-modal .note-modal-opt-section .note-form-hint:not(#note-tags-hint) {
+  margin-bottom: 8px;
+}
+
+#note-modal .note-modal-tabs {
+  margin-top: 2px;
+  margin-bottom: 22px;
+  padding-bottom: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#note-modal .modal-footer.note-modal-footer-sticky {
+  z-index: 30;
+  flex-wrap: wrap !important;
+  justify-content: stretch !important;
+  align-items: stretch !important;
+  gap: 14px !important;
+  padding-top: 18px !important;
+  padding-bottom: 22px !important;
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+  background-color: var(--surface2, #1a1a24);
+  background-image: none;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+}
+
+html.tema-aurora #note-modal .modal-footer.note-modal-footer-sticky {
+  background-color: #16141f;
+}
+
+html[class*='tema-claro'] #note-modal .modal-footer.note-modal-footer-sticky {
+  background-color: var(--surface2, #f1f5f9);
+}
+
+#note-modal .content-input-group {
+  position: relative;
+}
+
+#note-modal .btn-insert-image.note-insert-fab {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 4;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface2) 90%, var(--notes-accent-select) 12%);
+}
+
+.btn-note-preview-toggle {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.btn-note-preview-toggle:hover {
+  color: var(--text);
+}
+
+.btn-note-preview-toggle:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+}
+
+.note-modal-tab {
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.note-modal-panel {
+  animation: notePanelIn 0.22s ease;
+}
+
+@keyframes notePanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#note-modal-save-btn.is-loading {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+#note-modal-save-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.note-modal-dirty-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--notes-accent-cta);
+  margin-left: 8px;
+  vertical-align: middle;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--notes-accent-cta) 60%, transparent);
+}
+
+.note-modal-dirty-dot.hidden {
+  display: none;
+}
+
+.notes-shortcuts-help-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.notes-shortcuts-help-btn:hover {
+  color: var(--text);
+  border-color: var(--notes-accent-select);
+}
+
+/* —— Atajos modal —— */
+#notes-shortcuts-modal .modal {
+  max-width: 420px;
+}
+
+.notes-shortcuts-list {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.notes-shortcuts-list kbd {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+}
+
+/* —— Skeleton / transición área notas —— */
+#notes-area.notes-area-enter {
+  animation: notesAreaFade 0.22s ease;
+}
+
+@keyframes notesAreaFade {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.shift-notes {
+  max-height: none;
+}
+
+@media (min-width: 900px) {
+  .shift-notes {
+    max-height: 78vh;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+}
+
+/* —— Focus visible global notas —— */
+#view-notes button:focus-visible,
+#view-notes .date-chip:focus-visible,
+#view-notes .note-card:focus-visible,
+#note-modal button:focus-visible,
+#note-modal .shift-option:focus-visible,
+#note-modal .priority-opt:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+}
+
+/* —— Impresión —— */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #view-notes,
+  #view-notes * {
+    visibility: visible;
+  }
+
+  #view-notes {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .sidebar,
+  .topbar .topbar-notes-actions,
+  .notes-view-switcher,
+  .date-nav,
+  .note-actions,
+  .shift-toggle {
+    display: none !important;
+  }
+
+  #view-notes::before {
+    content: attr(data-print-app) ' — ' attr(data-print-dept) ' — ' attr(data-print-date);
+    display: block;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #333;
+    color: #111;
+  }
+
+  .note-card {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+
+  .note-card-kebab {
+    display: none !important;
+  }
+}
+
+.note-action-dupe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.note-action-btn--ghost {
+  opacity: 0.88;
+  font-size: 10px !important;
+  padding: 5px 8px !important;
+}
+
+.note-attach-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--afternoon, #5ba3e8) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--afternoon) 40%, transparent);
+  color: var(--text, #e2e8f0);
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* —— Búsqueda: hint de alcance —— */
+.notes-search-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.notes-search-scope-hint {
+  margin: 0;
+  padding: 0 2px 0 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--text-muted, #94a3b8) 92%, var(--text, #fff) 8%);
+  max-width: min(520px, 92vw);
+}
+
+.notes-search-busy {
+  display: inline-block;
+  margin: 0 0 0 8px;
+  padding: 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  font-style: italic;
+  color: color-mix(in srgb, var(--notes-accent-select, #6366f1) 75%, var(--text-muted, #94a3b8) 25%);
+  vertical-align: baseline;
+}
+
+.notes-search-busy.hidden {
+  display: none !important;
+}
+
+/* —— Topbar notas: menús por encima del contenido —— */
+#view-notes .notes-topbar {
+  position: relative;
+  z-index: 60;
+}
+
+/* —— CTA «Nueva nota» (barra superior y estado vacío): naranja atenuado; en Aurora violeta —— */
+#view-notes .topbar-notes-actions .btn-action,
+#view-notes .notes-empty-actions .btn-action {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--notes-accent-cta) 52%, var(--surface2) 48%),
+    color-mix(in srgb, var(--notes-accent-cta) 38%, var(--notes-accent-select) 62%)
+  ) !important;
+  border: 1px solid color-mix(in srgb, var(--notes-accent-cta) 35%, var(--border) 65%) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22) !important;
+}
+
+#view-notes .topbar-notes-actions .btn-action:hover,
+#view-notes .notes-empty-actions .btn-action:hover {
+  filter: brightness(1.05);
+}
+
+html.tema-aurora #view-notes .topbar-notes-actions .btn-action,
+html.tema-aurora #view-notes .notes-empty-actions .btn-action {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--notes-accent-select) 58%, #0f0d18 42%),
+    color-mix(in srgb, var(--notes-accent-select) 42%, #161325 58%)
+  ) !important;
+  border: 1px solid color-mix(in srgb, var(--notes-accent-select) 38%, rgba(255, 255, 255, 0.12)) !important;
+  color: rgba(255, 255, 255, 0.96) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--notes-accent-select) 12%, transparent),
+    0 10px 28px rgba(0, 0, 0, 0.28) !important;
+}
+
+html.tema-aurora #view-notes .topbar-notes-actions .btn-action:hover,
+html.tema-aurora #view-notes .notes-empty-actions .btn-action:hover {
+  filter: brightness(1.07);
+  border-color: color-mix(in srgb, var(--notes-accent-select) 52%, rgba(255, 255, 255, 0.14)) !important;
+}
+
+/* —— Carrusel → cabecera de turno: más aire —— */
+#view-notes.notes-layout-list .date-nav {
+  margin-bottom: 18px;
+}
+
+/* —— Lista: rejilla de tarjetas en pantallas anchas —— */
+#view-notes.notes-layout-list .shift-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+  gap: 14px 16px;
+  align-content: start;
+}
+
+#view-notes.notes-layout-list .note-card {
+  max-width: 720px;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  justify-self: center;
+  content-visibility: auto;
+  contain-intrinsic-size: 140px 1fr;
+}
+
+/* Cabecera tarjeta: bloque meta legible (anula display:contents del tema en este bloque) */
+#view-notes .note-card .note-card-header .note-meta-block,
+#notes-area .note-card .note-card-header .note-meta-block,
+#public-notes-area .note-card .note-card-header .note-meta-block,
+.shift-notes .note-card .note-card-header .note-meta-block {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+#view-notes .note-card .note-card-header .note-meta-block .note-meta,
+#notes-area .note-card .note-card-header .note-meta-block .note-meta,
+#public-notes-area .note-card .note-card-header .note-meta-block .note-meta,
+.shift-notes .note-card .note-card-header .note-meta-block .note-meta {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+
+#view-notes .note-card .note-meta-updated,
+.shift-notes .note-card .note-meta-updated,
+#view-notes .note-card .note-meta-aux,
+.shift-notes .note-card .note-meta-aux {
+  font-size: 11px;
+  line-height: 1.35;
+  padding-left: 8px;
+  border-left: 2px solid color-mix(in srgb, var(--notes-accent-select) 35%, transparent);
+  color: color-mix(in srgb, var(--text-muted) 72%, var(--text) 28%);
+}
+
+#view-notes .note-card .note-meta-updated,
+.shift-notes .note-card .note-meta-updated {
+  width: 100%;
+}
+
+#view-notes .note-card .note-title,
+.shift-notes .note-card .note-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+}
+
+#view-notes .note-card .note-body,
+.shift-notes .note-card .note-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--text, #e2e8f0) 92%, var(--text-muted) 8%);
+}
+
+html.tema-aurora #view-notes .note-tag-dept,
+html.tema-aurora .shift-notes .note-tag-dept {
+  border-color: color-mix(in srgb, var(--success, #5aaa7a) 55%, rgba(255, 255, 255, 0.2)) !important;
+  background: color-mix(in srgb, var(--success, #5aaa7a) 22%, rgba(0, 0, 0, 0.25)) !important;
+  color: #ecfdf5 !important;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 10px;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.shift-header .shift-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text-muted) 80%, var(--text) 20%);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Menú ⋮ en tarjeta */
+.note-card-kebab {
+  position: relative;
+  list-style: none;
+}
+
+.note-card-kebab > summary {
+  list-style: none;
+}
+
+.note-card-kebab > summary::-webkit-details-marker {
+  display: none;
+}
+
+.note-card-kebab-sum {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--surface2) 90%, transparent);
+}
+
+.note-card-kebab-sum:hover {
+  color: var(--text);
+  border-color: var(--notes-accent-select);
+}
+
+.note-card-kebab[open] .note-card-kebab-sum {
+  border-color: var(--notes-accent-select);
+  color: var(--text);
+}
+
+.note-card-kebab-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface, #1a1a24);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  z-index: 25;
+}
+
+.note-kebab-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.note-kebab-item:hover {
+  background: var(--surface2);
+}
+
+/* —— Modal: cabecera, pie, ayudas —— */
+#note-modal .modal-header.note-modal-header {
+  padding-top: 22px !important;
+  padding-bottom: 20px !important;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+#note-modal .note-modal-header-row {
+  flex: 1;
+  gap: 14px 16px;
+}
+
+#note-modal .note-modal-shortcuts-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface2) 88%, var(--notes-accent-select) 12%);
+  color: color-mix(in srgb, var(--text-muted) 70%, var(--text) 30%);
+  font-family: 'DM Mono', monospace;
+}
+
+#note-modal .modal-footer.note-modal-footer-sticky .note-modal-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+}
+
+#note-modal .note-modal-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+#note-modal .btn-note-template-footer {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 55%, var(--notes-accent-select) 45%);
+  background: color-mix(in srgb, var(--surface2) 75%, var(--notes-accent-select) 14%);
+  color: color-mix(in srgb, var(--text) 88%, var(--text-muted) 12%);
+  cursor: pointer;
+}
+
+#note-modal .btn-note-template-footer:hover {
+  color: var(--text);
+  border-color: var(--notes-accent-select);
+  background: color-mix(in srgb, var(--surface2) 55%, var(--notes-accent-select) 22%);
+}
+
+#note-modal #note-content-preview.markdown-preview {
+  max-height: min(300px, 44vh);
+  margin-top: 0;
+  margin-bottom: 16px;
+  padding: 12px 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--surface2) 92%, transparent);
+  box-sizing: border-box;
+}
+
+.note-vis-hint-list {
+  margin: 10px 0 0;
+  padding-left: 1.1rem;
+  font-size: 12px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--text-muted) 88%, var(--text) 12%);
+}
+
+.note-vis-hint-list li {
+  margin-bottom: 6px;
+}
+
+.note-form-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--text-muted) 88%, var(--text) 12%);
+}
+
+.note-form-hint code {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+
+.note-reminder-summary {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--notes-accent-select) 35%, var(--text-muted) 65%);
+}
+
+.note-reminder-summary.hidden {
+  display: none !important;
+}
+
+/* Turno + prioridad: altura homogénea (detalle en #note-modal-panel-options .form-row) */
+#note-modal .form-row .shift-selector,
+#note-modal .form-row .priority-select {
+  align-content: stretch;
+}
+
+#note-modal .form-row .priority-opt {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Menciones: tarjeta vacía */
+.mention-group-btn .group-count--empty {
+  font-size: 11px;
+  font-style: italic;
+  color: color-mix(in srgb, var(--text-muted) 95%, var(--text) 5%);
+}
+
+/* Menciones: rejilla homogénea en modal nota */
+#note-modal .mentions-area {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* Aurora: chips de compañeros con el mismo lenguaje visual que el modal (vidrio + acento) */
+html.tema-aurora #note-modal .mentions-area .mention-chip {
+  justify-content: flex-start;
+  padding: 10px 14px 10px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+html.tema-aurora #note-modal .mentions-area .mention-chip:hover {
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(120, 100, 255, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(120, 100, 255, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.25);
+}
+
+html.tema-aurora #note-modal .mentions-area .mention-chip.selected {
+  background: rgba(120, 100, 255, 0.2);
+  border-color: rgba(120, 100, 255, 0.65);
+  color: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 0 0 2px rgba(120, 100, 255, 0.35),
+    0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+html.tema-aurora #note-modal .mentions-area .mention-chip.back-chip {
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html.tema-aurora #note-modal .mentions-area .mention-chip.back-chip:hover {
+  background: rgba(120, 100, 255, 0.35);
+  border-color: rgba(120, 100, 255, 0.55);
+  color: #fff;
+}
+
+html.tema-aurora #note-modal .mentions-area .mention-chip .chip-avatar {
+  color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+html.tema-aurora #note-modal .mentions-area .mention-group-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+html.tema-aurora #note-modal .mentions-area .mention-group-btn:hover {
+  background: rgba(120, 100, 255, 0.14);
+  border-color: rgba(120, 100, 255, 0.45);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+}
+
+html.tema-aurora #note-modal .mentions-area .mention-group-btn .group-name {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+html.tema-aurora #note-modal .mentions-area .mention-group-btn .group-count {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+#note-modal .mention-group-btn {
+  min-height: 104px;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 12px 12px 14px;
+  box-sizing: border-box;
+}
+
+#note-modal .mention-group-btn .group-count {
+  display: block;
+  max-width: 100%;
+  line-height: 1.35;
+}
+
+/* Foco: pestañas y pills visibilidad */
+#note-modal .note-modal-tab:focus-visible,
+#note-modal .visibility-opt:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+}
+
+/* —— Calendario: contraste stats + celdas —— */
+.notes-stats-cal-main {
+  color: color-mix(in srgb, var(--text, #e2e8f0) 94%, var(--notes-accent-muted) 6%);
+}
+
+.notes-stats-cal-day {
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text-muted) 75%, var(--text) 25%);
+}
+
+.ncal-cell .ncal-cell-inner {
+  display: grid;
+  grid-template-rows: auto minmax(18px, 1fr);
+  grid-template-columns: 1fr;
+  align-items: start;
+  justify-items: stretch;
+  gap: 4px;
+  width: 100%;
+  min-height: 48px;
+}
+
+.ncal-cell .ncal-dots-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 20px;
+  width: 100%;
+}
+
+.ncal-cell .ncal-dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  align-content: flex-end;
+  gap: 3px 4px;
+  min-height: 14px;
+  max-width: 100%;
+}
+
+.ncal-cell .ncal-extra {
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin-left: 2px;
+  align-self: center;
+  background: color-mix(in srgb, var(--notes-accent-select) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--notes-accent-select) 40%, transparent);
+}
+
+.ncal-cell.ncal-today:not(.ncal-selected) {
+  background: color-mix(in srgb, var(--notes-accent-select) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--notes-accent-select) 45%, transparent);
+}
+
+.ncal-cell.ncal-today.ncal-selected {
+  background: color-mix(in srgb, var(--notes-accent-select) 18%, transparent);
+}
+
+.ncal-note-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px 14px;
+  padding: 12px 4px;
+}
+
+.ncal-note-title {
+  min-width: 0;
+}
+
+.ncal-detail-placeholder {
+  padding: 16px 8px;
+}
+
+/* Transición al cambiar lista / calendario */
+#view-notes.notes-layout-switching .notes-area,
+#view-notes.notes-layout-switching #notes-area {
+  opacity: 0.88;
+  transition: opacity 0.18s ease;
+}
+
+/* Skeleton al cambiar de día (lista) */
+.notes-day-skeleton {
+  padding: 20px 8px 32px;
+  max-width: 520px;
+}
+
+.notes-day-skeleton-bar {
+  height: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--surface2) 80%, var(--notes-accent-select) 12%),
+    color-mix(in srgb, var(--surface2) 40%, var(--notes-accent-select) 25%),
+    color-mix(in srgb, var(--surface2) 80%, var(--notes-accent-select) 12%)
+  );
+  background-size: 200% 100%;
+  animation: notesSkeletonShimmer 0.9s ease-in-out infinite;
+}
+
+.notes-day-skeleton-bar--short {
+  width: 55%;
+}
+
+@keyframes notesSkeletonShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notes-day-skeleton-bar {
+    animation: none;
+  }
+
+  #view-notes.notes-layout-switching .notes-area,
+  #view-notes.notes-layout-switching #notes-area {
+    transition: none;
+  }
+}
+
+#note-modal .note-tags-chips .note-tag-chip {
+  font-size: 12px;
+  padding: 5px 12px;
+}
+
+/* —— Modal opciones: scroll + secciones sticky —— */
+#note-modal #note-modal-panel-options {
+  scroll-padding-bottom: 80px;
+}
+
+#note-modal .note-modal-opt-section {
+  padding-bottom: 12px;
+}
+
+#note-modal .note-modal-opt-section + .note-modal-opt-section {
+  margin-top: 8px;
+}
+
+#note-modal .note-modal-opt-section:last-of-type {
+  padding-bottom: 28px;
+}
+
+/*
+  Títulos de categoría: sin position:sticky (evita solapes al scroll con el texto
+  de la sección anterior o siguiente). Jerarquía con borde + acento.
+*/
+#note-modal .note-modal-sticky-heading {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 14px;
+  padding: 8px 0 12px 12px;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-muted) 38%, var(--text) 62%);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#note-modal .note-modal-sticky-heading::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--notes-accent-select, #7858f6);
+  opacity: 0.85;
+}
+
+html[class*='tema-claro'] #note-modal .note-modal-sticky-heading,
+html[class*='tema-papel'] #note-modal .note-modal-sticky-heading {
+  color: color-mix(in srgb, var(--text-muted) 45%, var(--text) 55%);
+}
+
+#note-modal .note-vis-hint-list {
+  font-family: 'Syne', sans-serif;
+  color: color-mix(in srgb, var(--text-muted) 72%, var(--text) 28%);
+  line-height: 1.6;
+}
+
+#note-modal .note-vis-hint-list code {
+  font-family: 'DM Mono', monospace;
+}
+
+.note-image-paste-hint {
+  margin: 10px 0 18px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--text-muted) 65%, var(--text) 35%);
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, var(--notes-accent-select) 30%);
+  background: color-mix(in srgb, var(--surface2) 82%, var(--notes-accent-select) 10%);
+}
+
+.note-input--error {
+  outline: 2px solid color-mix(in srgb, var(--danger, #ef4444) 65%, transparent) !important;
+  outline-offset: 2px;
+}
+
+#note-modal #reminder-time.reminder-time-input--error {
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 55%, var(--border) 45%) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger, #ef4444) 25%, transparent);
+}
+
+#note-modal #reminder-time:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+}
+
+.note-card-kebab > summary.note-card-kebab-sum:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+}
+
+/* Sidebar: aire bajo filtros de turno */
+#view-notes .shift-filters {
+  padding-bottom: 22px;
+}
+
+/* Calendario: Ir a fecha */
+.ncal-goto-btn {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2, rgba(255, 255, 255, 0.04));
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.ncal-goto-btn:hover {
+  border-color: var(--notes-accent-select);
+  color: var(--text);
+}
+
+.ncal-goto-btn:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+}
+
+button.ncal-cell {
+  min-height: 52px;
+}
+
+.ncal-note-row--alt {
+  background: color-mix(in srgb, var(--surface2) 55%, transparent);
+}
+
+/* Expandir turno: transición suave */
+.shift-section .shift-notes {
+  transition: max-height 0.32s ease, opacity 0.22s ease, padding 0.22s ease;
+}
+
+.shift-section .shift-notes.collapsed {
+  max-height: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  opacity: 0;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  pointer-events: none;
+}
+
+/* Guardar nota: un solo acento fuerte (violeta suave), coherentes con chips */
+#note-modal .modal-footer .btn-save {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--notes-accent-select) 72%, #1a1528 28%),
+    color-mix(in srgb, var(--notes-accent-select) 52%, #0f0e18 48%)
+  ) !important;
+  border: 1px solid color-mix(in srgb, var(--notes-accent-select) 42%, var(--border) 58%) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--notes-accent-select) 28%, transparent) !important;
+}
+
+#note-modal .modal-footer .btn-save:hover {
+  filter: brightness(1.06);
+}
+
+html[class*='tema-claro'] #note-modal .modal-footer .btn-save {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent, #7858f6) 55%, #fff 45%),
+    color-mix(in srgb, var(--accent, #7858f6) 40%, #eef0ff 60%)
+  ) !important;
+  color: #1e1b2e !important;
+  border-color: color-mix(in srgb, var(--accent) 35%, #cbd5e1 65%) !important;
+}
+
+#note-modal .note-preview-controls {
+  margin-top: 12px;
+  padding: 10px 0 8px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+}
+
+#note-modal .note-preview-controls .btn-note-preview-toggle {
+  padding: 8px 12px;
+}
+
+#note-modal #note-modal-panel-content .content-input-group {
+  margin-bottom: 6px;
+}
+
+#note-modal #note-modal-panel-content > .form-group:first-child {
+  padding-top: 4px;
+}
+
+#note-modal .note-modal-tab.is-active {
+  background: color-mix(in srgb, var(--notes-accent-select) 82%, #0c0a14 18%) !important;
+  border: 1px solid color-mix(in srgb, var(--notes-accent-select) 55%, var(--border) 45%) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--notes-accent-select) 35%, transparent);
+  color: #fff !important;
+}
+
+html[class*='tema-claro'] #note-modal .note-modal-tab.is-active {
+  background: color-mix(in srgb, var(--accent, #7858f6) 22%, #fff 78%) !important;
+  color: #1a1530 !important;
+  border-color: color-mix(in srgb, var(--accent) 45%, #cbd5e1 55%) !important;
+}
+
+@media (max-width: 540px) {
+  .note-action-btn {
+    min-height: 44px;
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .note-card-kebab-sum {
+    width: 44px;
+    height: 44px;
+  }
+
+  #view-notes .note-card .note-actions {
+    align-items: center;
+  }
+
+  .ncal-header-tools {
+    width: 100%;
+    margin-left: 0 !important;
+    justify-content: stretch;
+    order: 4;
+  }
+
+  .ncal-header-tools .ncal-goto-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+/* —— Onboarding dismissible (vista lista) —— */
+.notes-onboarding-banner {
+  margin: 0 40px 0;
+  padding: 0;
+}
+
+@media (max-width: 900px) {
+  .notes-onboarding-banner {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+}
+
+.notes-onboarding-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--notes-accent-select) 35%, var(--border) 65%);
+  background: color-mix(in srgb, var(--notes-accent-select) 12%, var(--surface2, #1e1e28) 88%);
+}
+
+.notes-onboarding-text {
+  margin: 0;
+  flex: 1 1 220px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--text) 88%, var(--text-muted) 12%);
+}
+
+.notes-onboarding-dismiss {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* —— Lista: bloques de turno centrados en pantallas anchas —— */
+#view-notes .notes-area .shift-section {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* Cabecera de turno: el chevron queda a la derecha; el contador junto al horario */
+#view-notes .shift-header .shift-count,
+.notes-area .shift-header .shift-count {
+  margin-left: 0 !important;
+}
+
+#view-notes .shift-header .shift-toggle,
+.notes-area .shift-header .shift-toggle {
+  margin-left: auto;
+}
+
+/* —— Calendario: acciones «Ir a fecha» + «Hoy» agrupadas —— */
+.ncal-header-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+#view-notes .ncal-header .ncal-today-btn,
+.ncal-header-tools .ncal-today-btn {
+  margin-left: 0 !important;
+}
+
+/* Celdas un poco más compactas en vista mensual */
+#view-notes button.ncal-cell {
+  min-height: 48px;
+}
+
+/* Panel día: más ritmo vertical */
+.ncal-note-row {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 6px;
+}
+
+/* Cargar más: meta + botón */
+.shift-load-more-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  padding: 10px 4px 4px;
+}
+
+.shift-load-more-meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Menciones: fila sin leer más visible */
+.mention-inbox-row--unread {
+  border-left: 3px solid var(--accent, #7858f6);
+  padding-left: 4px;
+  background: color-mix(in srgb, var(--accent, #7858f6) 6%, var(--surface2) 94%);
+}
+
+html.tema-aurora .mention-inbox-row--unread {
+  border-left-color: var(--notes-accent-select, #a78bfa);
+  background: color-mix(in srgb, var(--notes-accent-select) 8%, var(--surface2) 92%);
+}
+
+/* Plantillas: vista previa del cuerpo */
+.note-template-row-preview {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  max-width: 100%;
+}
+
+.note-template-row-title {
+  display: block;
+  margin-top: 2px;
+}
+
+/* Tarjeta: cabecera alineada en eje cruzado */
+#view-notes .note-card .note-card-header,
+.shift-notes .note-card .note-card-header {
+  align-items: center;
+}
+
+/* —— Tarjeta: meta secundaria legible + autor filtrable —— */
+#view-notes .note-meta,
+.shift-notes .note-meta {
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.note-author-hit {
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 6px;
+}
+
+.note-author-hit:hover {
+  color: var(--notes-accent-select, #7858f6);
+  text-decoration: underline;
+}
+
+.note-author-hit:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+}
+
+.note-meta-aux {
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text-muted) 55%, var(--text) 45%);
+  white-space: nowrap;
+}
+
+/* Acciones compactas (iconos) */
+.note-action-btn--icon {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 8px 10px !important;
+  font-size: 16px !important;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.note-tag--dept-scope {
+  border-left: 3px solid color-mix(in srgb, var(--success, #22c55e) 70%, transparent) !important;
+  font-weight: 700;
+}
+
+.note-tag-dept-text {
+  margin-left: 2px;
+}
+
+/* Stats: orden + filtro autor */
+#notes-stats-bar {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+/* Filtros + orden + limpiar: un solo bloque visual (menos ruido que controles sueltos en fila) */
+.notes-stats-filters-cluster {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 4px 10px 4px 12px;
+  margin: 2px 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface2) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+}
+
+.notes-stats-filters-cluster__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.notes-stats-filters-cluster__tags .notes-author-filter-bar {
+  margin-left: 0;
+}
+
+.notes-stats-filters-cluster__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-left: auto;
+}
+
+#notes-stats-bar .stats-bar-divider--before-filters {
+  opacity: 0.55;
+  padding-right: 2px;
+}
+
+html.tema-aurora .notes-stats-filters-cluster {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+html.tema-aurora #view-notes .notes-stats-filters-cluster .notes-sort-seg {
+  background: rgba(0, 0, 0, 0.12);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+html.tema-aurora #view-notes .notes-stats-filters-cluster .notes-sort-seg-btn.active {
+  background: rgba(120, 100, 255, 0.22);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.notes-stats-filters-cluster .notes-tag-filter-trigger {
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .notes-stats-filters-cluster__tools {
+    margin-left: 0;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+}
+
+.notes-author-filter-bar {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.notes-author-filter-bar.hidden {
+  display: none !important;
+}
+
+.note-author-active-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--notes-accent-select) 18%, var(--surface2) 82%);
+  border: 1px solid color-mix(in srgb, var(--notes-accent-select) 35%, var(--border) 65%);
+}
+
+.note-author-active-clear {
+  font: inherit;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.note-author-active-clear:hover {
+  color: var(--text);
+}
+
+.notes-sort-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  margin-left: 0;
+}
+
+.notes-sort-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.notes-sort-seg {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 1px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface2) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  gap: 0;
+}
+
+.notes-sort-seg-btn {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 4px 9px;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.notes-sort-seg-btn:hover {
+  color: var(--text);
+}
+
+.notes-sort-seg-btn.active {
+  background: color-mix(in srgb, var(--notes-accent-select) 18%, var(--surface2) 82%);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.notes-sort-seg-btn:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+  z-index: 1;
+}
+
+/* Texto enlace: menos peso que un btn-secondary al lado del orden */
+.notes-clear-filters-btn {
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Syne', sans-serif;
+  white-space: nowrap;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.notes-clear-filters-btn:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface2) 70%, transparent);
+}
+
+.notes-clear-filters-btn:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+}
+
+html.tema-aurora #view-notes .notes-clear-filters-btn {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+html.tema-aurora #view-notes .notes-clear-filters-btn:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.notes-list-sort-select {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.notes-list-sort-select:focus-visible {
+  outline: 2px solid var(--notes-ring-focus);
+  outline-offset: 2px;
+}
+
+.notes-topbar-overflow-menu .notes-overflow-menu-label {
+  padding: 6px 12px 2px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.notes-overflow-menu-divider {
+  height: 1px;
+  margin: 6px 8px;
+  background: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+/* Carrusel de fechas más compacto */
+#view-notes .date-nav {
+  padding-block: 8px;
+  padding-inline: 16px;
+}
+
+#view-notes .date-chip {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+/* Calendario: panel día con snippet y modo denso */
+.ncal-note-row {
+  align-items: flex-start;
+}
+
+.ncal-note-maincol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ncal-note-snippet {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ncal-detail.ncal-detail--dense .ncal-note-row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.ncal-detail.ncal-detail--dense .ncal-note-snippet {
+  -webkit-line-clamp: 1;
+}

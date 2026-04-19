@@ -1,0 +1,2200 @@
+/**
+ * Proyectos & Tareas: estadísticas, detalle y Kanban/lista
+ * (tokens de tema; evita rgba fijos en JS para claros/aurora).
+ */
+
+/* —— Panel detalle: capa de lectura sobre fondos Aurora —— */
+html.tema-aurora #view-projects .project-detail-panel {
+  background: color-mix(in srgb, var(--surface, #0f0e0c) 97%, #000 3%);
+  backdrop-filter: blur(12px) saturate(1.04);
+  -webkit-backdrop-filter: blur(12px) saturate(1.04);
+}
+
+#view-projects .project-detail-panel {
+  position: relative;
+  z-index: 1;
+  transform: none;
+}
+
+/* Cabecera del proyecto fija; solo el cuerpo hace scroll (mismo patrón que modal nota). */
+#view-projects #project-detail.project-detail-panel:has(#project-detail-root) {
+  overflow: hidden;
+  gap: 0;
+}
+
+/* —— Resumen ejecutivo bajo cabecera —— */
+.project-quick-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px 14px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text-muted) 35%, var(--text) 65%);
+  background: color-mix(in srgb, var(--surface2) 70%, transparent);
+  border: 1px solid var(--border);
+}
+
+.project-quick-strip__sep {
+  opacity: 0.35;
+  user-select: none;
+}
+
+.project-quick-strip__warn {
+  color: color-mix(in srgb, var(--danger, #ef4444) 85%, var(--text) 15%);
+  font-weight: 700;
+}
+
+html.tema-aurora .project-quick-strip {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+html.tema-aurora .project-quick-strip__warn {
+  color: rgba(255, 160, 160, 0.95);
+}
+
+/* —— Menú acciones proyecto —— */
+.project-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.project-header-actions__more-wrap {
+  position: relative;
+}
+
+.project-actions-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.project-actions-menu.hidden {
+  display: none !important;
+}
+
+.project-actions-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Syne', sans-serif;
+  cursor: pointer;
+}
+
+.project-actions-menu button:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface3) 90%);
+}
+
+.project-actions-menu button.project-actions-menu__danger {
+  color: var(--danger, #ef4444);
+}
+
+.project-actions-menu hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 4px 6px;
+}
+
+html.tema-aurora .project-actions-menu {
+  background: rgba(22, 20, 35, 0.96);
+  border-color: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+}
+
+/* —— Estadísticas —— */
+.proj-stats-block {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface2) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  box-shadow: none;
+}
+
+.proj-stats-heading {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-muted) 70%, var(--text) 30%);
+  margin-bottom: 10px;
+}
+
+html.tema-aurora .proj-stats-heading {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.proj-status-track {
+  display: flex;
+  height: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.proj-status-track__seg {
+  min-width: 0;
+  transition: width 0.25s ease;
+}
+
+.proj-status-track__seg--done {
+  background: color-mix(in srgb, var(--success, #22c55e) 75%, transparent);
+}
+
+.proj-status-track__seg--progress {
+  background: color-mix(in srgb, var(--accent2, #fbbf24) 70%, transparent);
+}
+
+.proj-status-track__seg--pending {
+  background: color-mix(in srgb, var(--text-muted) 45%, transparent);
+}
+
+.proj-status-track__seg--overdue {
+  background: color-mix(in srgb, var(--danger, #ef4444) 72%, transparent);
+  min-width: 0;
+}
+
+.proj-status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.proj-status-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.proj-status-legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.proj-status-legend__dot--done {
+  background: color-mix(in srgb, var(--success, #22c55e) 80%, transparent);
+}
+
+.proj-status-legend__dot--progress {
+  background: color-mix(in srgb, var(--accent2, #fbbf24) 75%, transparent);
+}
+
+.proj-status-legend__dot--pending {
+  background: color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+
+.proj-status-legend__dot--overdue {
+  background: color-mix(in srgb, var(--danger, #ef4444) 80%, transparent);
+}
+
+.proj-status-legend__overdue {
+  color: color-mix(in srgb, var(--danger, #ef4444) 85%, var(--text) 15%);
+  font-weight: 700;
+}
+
+.proj-stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.proj-stat-card {
+  padding: 10px 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 65%, transparent);
+  text-align: center;
+}
+
+.proj-stat-card--accent-done {
+  border-color: color-mix(in srgb, var(--success, #22c55e) 35%, var(--border) 65%);
+}
+
+.proj-stat-card--accent-danger {
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 35%, var(--border) 65%);
+}
+
+.proj-stat-card--accent-warn {
+  border-color: color-mix(in srgb, var(--accent2, #fbbf24) 35%, var(--border) 65%);
+}
+
+.proj-stat-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.proj-stat-value--success {
+  color: color-mix(in srgb, var(--success, #22c55e) 88%, var(--text) 12%);
+}
+
+.proj-stat-value--danger {
+  color: color-mix(in srgb, var(--danger, #ef4444) 88%, var(--text) 12%);
+}
+
+.proj-stat-value--danger-muted {
+  color: color-mix(in srgb, var(--danger, #ef4444) 35%, var(--text-muted) 65%);
+}
+
+.proj-stat-value--warn {
+  color: color-mix(in srgb, var(--accent2, #fbbf24) 88%, var(--text) 12%);
+}
+
+.proj-stat-label {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.proj-hours-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface2) 80%, transparent);
+}
+
+.proj-hours-row__mono {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text-muted) 25%, var(--text) 75%);
+}
+
+.proj-hours-row__muted {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.proj-efficiency-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.proj-efficiency-badge--ok {
+  background: color-mix(in srgb, var(--success, #22c55e) 14%, transparent);
+  color: color-mix(in srgb, var(--success, #22c55e) 90%, var(--text) 10%);
+}
+
+.proj-efficiency-badge--warn {
+  background: color-mix(in srgb, var(--danger, #ef4444) 14%, transparent);
+  color: color-mix(in srgb, var(--danger, #ef4444) 88%, var(--text) 12%);
+}
+
+.proj-assignee-disclosure {
+  margin-top: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 0 8px 10px;
+  background: color-mix(in srgb, var(--surface2) 72%, transparent);
+}
+
+html.tema-aurora .proj-assignee-disclosure {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.proj-assignee-disclosure-summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 4px 8px;
+  user-select: none;
+}
+
+.proj-assignee-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.proj-assignee-disclosure-summary::after {
+  content: '▾';
+  font-size: 10px;
+  opacity: 0.45;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.proj-assignee-disclosure:not([open]) .proj-assignee-disclosure-summary::after {
+  transform: rotate(-90deg);
+}
+
+.proj-assignee-count {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface3) 80%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.proj-assignee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px 16px;
+}
+
+.proj-assignee-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.proj-assignee-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--accent-text-on-bg, #fff);
+  flex-shrink: 0;
+}
+
+.proj-assignee-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.proj-assignee-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text-muted) 30%, var(--text) 70%);
+  margin-bottom: 4px;
+}
+
+.proj-assignee-meta > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proj-assignee-meta > span:last-child {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.proj-assignee-bar {
+  height: 5px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+.proj-assignee-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.25s ease;
+}
+
+.proj-assignee-pct {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* —— Actividad —— */
+.project-activity-list {
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-gutter: auto;
+}
+
+.project-activity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+.project-activity-row:last-child {
+  border-bottom: none;
+}
+
+.project-activity-when {
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text-muted) 40%, var(--text) 60%);
+  white-space: nowrap;
+}
+
+html.tema-aurora .project-activity-when {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* —— Toolbar tareas (título en su propia fila: evita solape con buscador/botones) —— */
+.tasks-section-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.tasks-section-header h4 {
+  margin: 0;
+  flex: none !important;
+  width: 100%;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-muted) 25%, var(--text) 75%);
+}
+
+#view-projects #project-detail .tasks-toolbar-cluster {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+#view-projects #project-detail .project-tasks-main {
+  position: relative;
+  min-width: 0;
+  padding-top: 4px;
+  margin-top: 12px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html.tema-aurora #view-projects #project-detail .project-tasks-main {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tasks-toolbar-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.task-sort-btns {
+  display: inline-flex;
+  border-radius: 10px;
+  padding: 2px;
+  gap: 2px;
+  background: color-mix(in srgb, var(--surface2) 80%, transparent);
+  border: 1px solid var(--border);
+}
+
+.task-sort-btn {
+  min-width: 34px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.task-sort-btn:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface3) 70%, transparent);
+}
+
+.task-sort-btn.active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface2) 84%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.view-toggle {
+  display: inline-flex;
+  border-radius: 10px;
+  padding: 2px;
+  gap: 2px;
+  background: color-mix(in srgb, var(--surface2) 80%, transparent);
+  border: 1px solid var(--border);
+}
+
+.view-toggle-btn {
+  min-height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  cursor: pointer;
+}
+
+.view-toggle-btn:hover {
+  color: var(--text);
+}
+
+.view-toggle-btn.active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface2) 84%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* —— Lista / búsqueda vacía —— */
+.project-tasks-empty-search {
+  padding: 20px 16px;
+  text-align: center;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.project-tasks-empty-search button {
+  margin-top: 10px;
+}
+
+/* —— Kanban vacío / tarjetas —— */
+.kanban-empty {
+  padding: 18px 12px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text-muted) 55%, var(--text) 45%);
+  border: 1px dashed color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface2) 50%, transparent);
+}
+
+html.tema-aurora .kanban-empty {
+  color: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.kanban-card {
+  min-height: 72px;
+}
+
+.kanban-card-blocked {
+  font-size: 10px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--danger, #ef4444) 80%, var(--text-muted) 20%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+html.tema-aurora .kanban-card-blocked {
+  color: rgba(255, 140, 140, 0.9);
+}
+
+.my-work-back-bar {
+  margin-bottom: 14px;
+}
+
+.my-work-back-bar .btn-secondary {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+/* —— Subproyectos como tarjetas —— */
+.subproject-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subproject-cards--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 10px;
+}
+
+.subproject-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface2) 72%, transparent);
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Syne', sans-serif;
+  color: var(--text);
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.subproject-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border) 60%);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface2) 92%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.subproject-card__accent {
+  width: 5px;
+  min-height: 36px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: var(--subproject-color, var(--accent, #7864ff));
+  align-self: stretch;
+}
+
+.subproject-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.subproject-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subproject-card__kind {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.subproject-card__hint {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.5;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+html.tema-aurora .subproject-card {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html.tema-aurora .subproject-card:hover {
+  background: rgba(120, 100, 255, 0.12);
+  border-color: rgba(120, 100, 255, 0.35);
+}
+
+/* —— Chip subproyectos en árbol lateral —— */
+.project-subcount-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 2px 7px 2px 5px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--text-muted) 40%, var(--text) 60%);
+  background: color-mix(in srgb, var(--surface3) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  font-family: 'DM Mono', monospace;
+}
+
+.project-subcount-pill__icon {
+  font-size: 9px;
+  opacity: 0.75;
+}
+
+.project-subcount-pill__n {
+  font-variant-numeric: tabular-nums;
+}
+
+html.tema-aurora #view-projects .project-subcount-pill {
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(120, 100, 255, 0.16);
+  border-color: rgba(120, 100, 255, 0.28);
+}
+
+/* —— Filtro usuarios proyectos —— */
+.project-user-filter {
+  position: relative;
+}
+
+.puf-clear {
+  margin-left: 8px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Syne', sans-serif;
+}
+
+.puf-clear:hover {
+  color: var(--danger, #ef4444);
+}
+
+/* —— Onboarding proyectos (compacto) —— */
+.projects-onboarding-banner {
+  margin: 0 24px 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface2) 92%);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.projects-onboarding-banner__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .projects-onboarding-banner__text {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+}
+
+.projects-onboarding-banner.hidden {
+  display: none !important;
+}
+
+html.tema-aurora .projects-onboarding-banner {
+  background: rgba(120, 100, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.projects-onboarding-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.projects-onboarding-banner__btn {
+  font-size: 10px;
+  padding: 4px 10px;
+  min-height: 30px;
+  box-sizing: border-box;
+}
+
+/* —— Prioridad tarea lista —— */
+.task-priority-pill {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.task-priority-pill.alta {
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 45%, transparent);
+  color: color-mix(in srgb, var(--danger, #ef4444) 90%, var(--text) 10%);
+  background: color-mix(in srgb, var(--danger, #ef4444) 10%, transparent);
+}
+
+.task-priority-pill.media {
+  border-color: color-mix(in srgb, var(--accent2, #fbbf24) 45%, transparent);
+  color: color-mix(in srgb, var(--accent2, #fbbf24) 90%, var(--text) 10%);
+  background: color-mix(in srgb, var(--accent2, #fbbf24) 10%, transparent);
+}
+
+.task-priority-pill.baja,
+.task-priority-pill.normal {
+  opacity: 0.85;
+}
+
+.task-due-overdue {
+  font-weight: 700 !important;
+  color: color-mix(in srgb, var(--danger, #ef4444) 88%, var(--text) 12%) !important;
+}
+
+/* ═══ Sprint layout / jerarquía detalle proyecto ═══ */
+#view-projects {
+  --proj-title-size: 1.35rem;
+  --proj-section-label-size: 0.78rem;
+  --proj-body-size: 0.8125rem;
+  --proj-meta-size: 0.72rem;
+  --proj-space-xs: 4px;
+  --proj-space-sm: 8px;
+  --proj-space-md: 12px;
+  --proj-space-lg: 16px;
+  --proj-space-xl: 20px;
+  --proj-radius-sm: 8px;
+  --proj-radius-md: 10px;
+  --proj-radius-lg: 12px;
+  --proj-border-subtle: color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+#view-projects .project-title-area h2 {
+  font-size: clamp(1.15rem, 2.1vw, var(--proj-title-size, 1.35rem));
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+}
+
+#view-projects .tasks-section-header h4 {
+  font-size: var(--proj-section-label-size);
+  letter-spacing: 0.06em;
+  flex: none !important;
+  width: 100%;
+}
+
+#view-projects #project-detail .project-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--proj-space-sm);
+}
+
+#view-projects #project-detail .project-header-actions .btn-secondary {
+  min-height: 36px;
+  box-sizing: border-box;
+}
+
+.project-view-empty {
+  padding: var(--proj-space-xl) var(--proj-space-md);
+  text-align: center;
+}
+
+.project-view-empty .project-view-empty-hint {
+  margin: var(--proj-space-sm) 0 0;
+  max-width: 28rem;
+  margin-inline: auto;
+  font-size: var(--proj-meta-size);
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--text-muted) 88%, var(--text) 12%);
+}
+
+html.tema-aurora .project-view-empty .project-view-empty-hint {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.project-view-empty--warn .project-view-empty-hint {
+  color: color-mix(in srgb, var(--danger, #ef4444) 55%, var(--text-muted) 45%);
+}
+
+html.tema-aurora #view-projects .project-user-filter {
+  min-height: 44px;
+  align-items: center;
+  padding-block: var(--proj-space-sm);
+}
+
+#view-projects .puf-pill {
+  min-height: 34px;
+  font-size: var(--proj-body-size);
+  padding: 6px 14px;
+}
+
+.project-comments-cta .btn-full-width {
+  font-weight: 600;
+}
+
+.project-detail-root {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.projects-sync-strip {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-height: 22px;
+  box-sizing: border-box;
+  margin: 0 0 8px;
+  padding: 2px 0;
+  flex-shrink: 0;
+}
+
+.projects-sync-strip.is-offline {
+  color: color-mix(in srgb, var(--danger, #ef4444) 80%, var(--text-muted) 20%);
+}
+
+.projects-sync-strip.is-saving {
+  color: color-mix(in srgb, var(--accent2, #fbbf24) 85%, var(--text) 15%);
+}
+
+/* Cabecera del proyecto: plana, sin tarjeta anidada (evita doble caja y artefactos de borde). */
+.project-detail-head {
+  flex-shrink: 0;
+  margin: 0 0 2px;
+  padding: 0 0 12px;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#view-projects #project-detail .project-detail-head {
+  border-bottom-color: color-mix(in srgb, var(--border) 62%, transparent);
+}
+
+html.tema-aurora #view-projects #project-detail .project-detail-head {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.project-detail-head .projects-sync-strip {
+  margin: 0 0 6px;
+}
+
+.project-detail-head .project-quick-strip {
+  border-radius: 10px;
+}
+
+.project-detail-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-top: 10px;
+  scrollbar-gutter: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  background: transparent;
+}
+
+/* Barra vertical solo al pasar el ratón (WebKit); sin hueco reservado si no hay overflow. */
+#view-projects #project-detail .project-detail-scroll::-webkit-scrollbar {
+  width: 9px;
+}
+#view-projects #project-detail .project-detail-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+#view-projects #project-detail .project-detail-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+}
+#view-projects #project-detail .project-detail-scroll:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border) 75%, transparent);
+}
+
+html.tema-aurora #view-projects #project-detail .project-detail-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#view-projects #project-detail .project-detail-scroll:hover {
+  scrollbar-color: color-mix(in srgb, var(--border) 78%, transparent) transparent;
+}
+
+html.tema-aurora #view-projects #project-detail .project-detail-scroll:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+#view-projects .projects-items {
+  scrollbar-gutter: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+#view-projects .projects-items::-webkit-scrollbar {
+  width: 9px;
+}
+#view-projects .projects-items::-webkit-scrollbar-track {
+  background: transparent;
+}
+#view-projects .projects-items::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+}
+#view-projects .projects-items:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border) 75%, transparent);
+}
+
+html.tema-aurora #view-projects .projects-items:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+#view-projects .projects-items:hover {
+  scrollbar-color: color-mix(in srgb, var(--border) 78%, transparent) transparent;
+}
+
+html.tema-aurora #view-projects .projects-items:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Filas de tarea: quita sombra inferior fuerte de style.css (línea lee como borde bajo “efef” en tema claro). */
+#view-projects #project-detail .task-item {
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 35%, transparent);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+#view-projects #project-detail .project-header-detail {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#view-projects #project-detail .project-quick-strip {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.project-detail-insights {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+@media (min-width: 1180px) {
+  .project-detail-insights {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 14px 20px;
+    align-items: start;
+  }
+}
+
+.project-detail-root--stats-compact .proj-assignee-disclosure,
+.project-detail-root--stats-compact .proj-hours-row,
+.project-detail-root--stats-compact .proj-stat-cards {
+  display: none !important;
+}
+
+.project-detail-root--stats-compact .proj-stats-block {
+  padding: 10px 12px;
+}
+
+.proj-stats-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.proj-stats-heading-row .proj-stats-heading {
+  margin-bottom: 0;
+}
+
+.proj-stats-heading.proj-section-heading {
+  letter-spacing: 0.1em;
+}
+
+.proj-stats-compact-btn {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface2) 80%, transparent);
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+}
+
+.proj-stats-compact-btn:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border) 65%);
+}
+
+.proj-assignee-meta-overdue {
+  font-size: 10px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--danger, #ef4444) 85%, var(--text-muted) 15%);
+  white-space: nowrap;
+}
+
+.project-activity-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.proj-act-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.proj-act-chip.is-active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border) 55%);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.puf-pills-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.puf-pills-scroll .puf-pill {
+  flex-shrink: 0;
+}
+
+.tasks-toolbar-dd {
+  position: relative;
+}
+
+.tasks-toolbar-dd-summary {
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  color: color-mix(in srgb, var(--text-muted) 35%, var(--text) 65%);
+  background: color-mix(in srgb, var(--surface2) 80%, transparent);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tasks-toolbar-dd-summary::-webkit-details-marker {
+  display: none;
+}
+
+.tasks-toolbar-dd[open] .tasks-toolbar-dd-summary {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border) 60%);
+}
+
+.tasks-toolbar-dd-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 130;
+  min-width: 200px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface2) 96%, var(--surface) 4%);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tasks-toolbar-dd-menu button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Syne', sans-serif;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tasks-toolbar-dd-menu button:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface3) 90%);
+}
+
+.tasks-shortcuts-btn {
+  font-size: 11px !important;
+  padding: 6px 10px !important;
+}
+
+.kanban-col--drag-over {
+  outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  outline-offset: 2px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.kanban-empty-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.kanban-empty-cta {
+  font-size: 11px !important;
+  padding: 6px 10px !important;
+}
+
+.kanban-wip-hint {
+  margin-left: 6px;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.kanban-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 10px 8px;
+  background: color-mix(in srgb, var(--surface2) 75%, transparent);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.kanban-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border) 65%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.kanban-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+html.tema-aurora .kanban-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.kanban-card-due {
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text-muted) 25%, var(--text) 75%);
+}
+
+html.tema-aurora .kanban-card-due {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.kanban-card-hours {
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text-muted) 20%, var(--text) 80%);
+}
+
+html.tema-aurora .kanban-card-hours {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.kanban-card-comments {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.project-task-multiselect-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface2) 92%);
+}
+
+.project-task-multiselect-bar.hidden {
+  display: none !important;
+}
+
+.project-ms-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-right: auto;
+}
+
+.project-detail-root--multiselect .task-ms-check {
+  display: flex !important;
+}
+
+.task-ms-check {
+  display: none;
+  align-items: center;
+  margin-right: 4px;
+}
+
+.task-ms-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent, #7864ff);
+}
+
+.task-item-dd {
+  position: relative;
+  margin-left: auto;
+}
+
+.task-item-dd-sum {
+  list-style: none;
+  width: 32px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.task-item-dd-sum::-webkit-details-marker {
+  display: none;
+}
+
+.task-item-dd[open] .task-item-dd-sum,
+.task-item-dd-sum:hover {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface2) 80%, transparent);
+  color: var(--text);
+}
+
+.task-item-dd-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 40;
+  min-width: 160px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.task-item-dd-menu button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'Syne', sans-serif;
+}
+
+.project-detail-root--multiselect .task-comment-btn,
+.project-detail-root--multiselect .task-edit-btn,
+.project-detail-root--multiselect .task-delete-btn,
+.project-detail-root--multiselect .task-item-dd {
+  display: none !important;
+}
+
+.project-actions-menu__hint {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.3;
+  white-space: normal;
+}
+
+.project-actions-menu button.project-actions-menu__stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.project-activity-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 10px 0 4px;
+}
+
+.task-item-blocked-msg {
+  font-size: 10px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--danger, #ef4444) 75%, var(--text-muted) 25%);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+}
+
+.tasks-shortcuts-btn.is-active {
+  outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* Calendario tareas proyecto */
+#view-projects .cal-month-block {
+  margin-bottom: 10px;
+}
+
+#view-projects .cal-month-header {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 6px 0 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+#view-projects .cal-task-row {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+/* —— Etiquetas de sección unificadas (stats / actividad / tareas / subproyectos) —— */
+.proj-section-heading {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-muted) 72%, var(--text) 28%);
+  margin: 0;
+}
+
+.proj-section-heading--inline {
+  letter-spacing: 0.1em;
+}
+
+.proj-section-heading--tasks {
+  font-size: var(--proj-section-label-size, 0.78rem);
+  letter-spacing: 0.06em;
+  width: 100%;
+  text-align: left;
+}
+
+.proj-section-heading--subprojects {
+  font-size: var(--proj-section-label-size, 0.78rem);
+  letter-spacing: 0.06em;
+  color: var(--text-dim, var(--text-muted));
+}
+
+html.tema-aurora .proj-section-heading {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+html.tema-aurora .proj-section-heading--subprojects {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.subprojects-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2, 10px);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.subprojects-section-head .proj-section-heading--subprojects {
+  flex: 1;
+  min-width: 0;
+}
+
+/* —— Cabecera actividad: el contenedor flex no hereda tipografía de título —— */
+html.tema-aurora .project-activity-header {
+  margin-bottom: 0 !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  color: inherit !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+html.tema-aurora .project-activity-header .proj-section-heading {
+  color: rgba(255, 255, 255, 0.55) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  flex: 1;
+  min-width: 0;
+}
+
+/* —— Lista de proyectos: truncado y ritmo —— */
+#view-projects .project-item-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+#view-projects .project-item-name-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+#view-projects .project-item-name-badge {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
+#view-projects .project-item-overdue-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.88);
+  flex-shrink: 0;
+}
+
+#view-projects .project-item-meta {
+  font-size: var(--proj-meta-size);
+  flex-wrap: wrap;
+  row-gap: 4px;
+  column-gap: 10px;
+  align-items: center;
+}
+
+#view-projects .project-item-meta-overdue {
+  color: color-mix(in srgb, var(--danger, #ef4444) 85%, var(--text) 15%);
+  font-size: var(--proj-meta-size);
+  font-weight: 600;
+}
+
+html.tema-aurora #view-projects .project-item-meta-overdue {
+  color: rgba(255, 160, 160, 0.95);
+}
+
+#view-projects .project-item.active {
+  transform: none !important;
+}
+
+#view-projects .project-item:hover {
+  transform: translateY(-1px);
+}
+
+/* —— Toolbar tareas: grupos, altura y rejilla —— */
+.tasks-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.tasks-toolbar-group--search {
+  flex: 1 1 220px;
+  min-width: min(100%, 200px);
+}
+
+.tasks-toolbar-group--search .task-search-wrap {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#view-projects #project-detail .task-search-input {
+  width: 100% !important;
+  min-width: 0;
+  height: 36px !important;
+  min-height: 36px;
+  box-sizing: border-box;
+  font-size: 12px !important;
+  padding: 0 30px 0 12px !important;
+}
+
+#view-projects #project-detail .task-search-input:focus {
+  width: 100% !important;
+}
+
+.tasks-toolbar-group--controls .tasks-toolbar-dd-summary,
+.tasks-toolbar-group--actions .btn-secondary,
+.tasks-toolbar-group--actions .btn-primary {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.tasks-toolbar-add-btn {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 0 14px !important;
+  border-radius: 10px !important;
+  font-family: 'Syne', sans-serif !important;
+}
+
+@media (max-width: 720px) {
+  #view-projects #project-detail .tasks-toolbar-cluster {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tasks-toolbar-group--controls,
+  .tasks-toolbar-group--actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (min-width: 900px) {
+  #view-projects #project-detail .tasks-toolbar-cluster {
+    display: grid;
+    grid-template-columns: minmax(200px, 1.4fr) auto 1fr;
+    align-items: center;
+    gap: 12px 14px;
+  }
+
+  .tasks-toolbar-group--actions {
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
+}
+
+.tasks-toolbar-cluster {
+  row-gap: 10px;
+}
+
+/* —— Kanban: contenedor con indicador de scroll —— */
+#view-projects .kanban-board-wrap {
+  position: relative;
+  margin: 0 -6px;
+  padding: 2px 6px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+#view-projects .kanban-board-wrap::-webkit-scrollbar {
+  height: 9px;
+}
+
+#view-projects .kanban-board-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#view-projects .kanban-board-wrap::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+}
+
+#view-projects .kanban-board-wrap:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border) 75%, transparent);
+}
+
+html.tema-aurora #view-projects .kanban-board-wrap:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#view-projects .kanban-board-wrap:hover {
+  scrollbar-color: color-mix(in srgb, var(--border) 78%, transparent) transparent;
+}
+
+html.tema-aurora #view-projects .kanban-board-wrap:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+#view-projects .kanban-board-wrap > .kanban-board {
+  overflow-x: visible !important;
+  min-width: min-content;
+}
+
+html.tema-aurora #view-projects .kanban-board-wrap > .kanban-board {
+  overflow-x: visible !important;
+}
+
+/* —— Filtro usuarios: carril (sin máscara ::after: fundía a negro y parecía “barra” lateral) —— */
+.project-user-filter-wrap {
+  position: relative;
+  margin: 0;
+}
+
+/* —— A11y foco visible en vista proyectos —— */
+#view-projects .puf-pill:focus-visible,
+#view-projects .project-item:focus-visible,
+#view-projects .task-search-input:focus-visible,
+#view-projects .tasks-toolbar-dd-summary:focus-visible,
+#view-projects .tasks-shortcuts-btn:focus-visible,
+#view-projects .btn-primary:focus-visible,
+#view-projects .btn-secondary:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.projects-panel-header {
+  padding-top: 10px;
+  align-items: baseline;
+}
+
+.projects-panel-header #projects-count {
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Aurora · #view-projects: capa final (prioridad sobre wysiwyg disperso)
+   Bordes suaves, tarjetas legibles, cabecera sin “loseta” negra, alineación.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+html.tema-aurora #view-projects .projects-list-panel .project-item {
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-projects .projects-list-panel .project-item:hover {
+  background: rgba(255, 255, 255, 0.065) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.tema-aurora #view-projects .projects-list-panel .project-item.active {
+  background: rgba(120, 100, 255, 0.14) !important;
+  border-color: rgba(120, 100, 255, 0.32) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-projects .projects-list-panel .project-item.subproject {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.055) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-projects .project-item-row-body {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+}
+
+html.tema-aurora #view-projects .project-item-name {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+html.tema-aurora #view-projects .project-item-name-text {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: block !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+html.tema-aurora #view-projects .project-detail-insights {
+  align-items: start !important;
+}
+
+html.tema-aurora #view-projects .project-detail-insights__stats,
+html.tema-aurora #view-projects .project-detail-insights__activity-wrap {
+  align-self: stretch !important;
+}
+
+html.tema-aurora #view-projects .proj-stats-block {
+  margin-top: 0 !important;
+  padding: 14px !important;
+  background: rgba(255, 255, 255, 0.028) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-projects .proj-stat-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-projects .proj-stat-value {
+  font-size: 18px !important;
+}
+
+html.tema-aurora #view-projects .project-activity-block {
+  margin-top: 0 !important;
+  padding: 14px !important;
+  background: rgba(255, 255, 255, 0.028) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-projects .project-activity-header {
+  margin-bottom: 8px !important;
+}
+
+html.tema-aurora #view-projects .project-quick-strip {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-projects .proj-assignee-disclosure {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-projects #project-detail .tasks-section-header {
+  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+html.tema-aurora #view-projects #project-detail .task-item {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-projects #project-detail .tasks-toolbar-dd-summary {
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 0 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.tema-aurora #view-projects #project-detail .tasks-shortcuts-btn {
+  min-height: 36px !important;
+  padding: 0 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+html.tema-aurora #view-projects #project-detail .tasks-toolbar-add-btn {
+  min-height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+/* Menús desplegables toolbar: opacos (no se ve el listado detrás) */
+html.tema-aurora #view-projects #project-detail .tasks-toolbar-dd-menu {
+  background: rgba(26, 24, 42, 0.98) !important;
+  backdrop-filter: blur(22px) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.58) !important;
+}
+
+html.tema-aurora #view-projects #project-detail .tasks-toolbar-dd-menu button:hover {
+  background: rgba(120, 100, 255, 0.18) !important;
+}
+
+html.tema-aurora #view-projects #project-detail .tasks-toolbar-dd[open] .tasks-toolbar-dd-summary {
+  background: rgba(120, 100, 255, 0.16) !important;
+  border-color: rgba(120, 100, 255, 0.35) !important;
+}
+
+html.tema-aurora #view-projects #project-detail .project-detail-head .project-quick-strip {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  box-shadow: none !important;
+}
+
+html.tema-aurora #view-projects #project-detail .project-actions-menu {
+  background: rgba(26, 24, 42, 0.98) !important;
+  backdrop-filter: blur(20px) saturate(1.06) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.06) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55) !important;
+}
+
+/* ═══ Sprint layout: cuerpo alineado, cabecera, densidad, Kanban, calendario, contraste vencidas ═══ */
+
+#view-projects #project-detail.project-detail-panel {
+  padding: 28px 32px 36px;
+  gap: 20px;
+}
+
+.project-detail-body-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.project-detail-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--text-muted) 88%, var(--text) 12%);
+}
+
+#view-projects .project-detail-crumb-btn {
+  font-size: 10px;
+  padding: 3px 8px;
+  min-height: 28px;
+}
+
+.project-detail-crumb-sep {
+  opacity: 0.45;
+  font-size: 10px;
+  user-select: none;
+}
+
+.project-detail-crumb-level {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent, #7864ff);
+  margin-left: 2px;
+}
+
+#view-projects .project-header-edit-btn,
+#view-projects .project-header-more-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+  min-height: 36px;
+  box-sizing: border-box;
+}
+
+.subprojects-section {
+  margin-top: var(--space-6, 48px);
+}
+
+.subprojects-section__empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+#view-projects .project-subproject-add-btn {
+  font-size: 11px;
+  padding: 5px 12px;
+  min-height: 32px;
+}
+
+.tasks-section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+#view-projects .tasks-density-toggle-btn {
+  font-size: 10px;
+  padding: 4px 10px;
+  min-height: 30px;
+  flex-shrink: 0;
+}
+
+.tasks-toolbar-overflow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1020px) {
+  #view-projects .tasks-toolbar-cluster {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #view-projects .tasks-toolbar-overflow {
+    justify-content: flex-start;
+  }
+}
+
+.project-tasks-view-wrap {
+  transition: opacity 0.2s ease;
+}
+
+#view-projects .project-detail-root--task-density-compact #project-detail .task-item {
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+
+#view-projects #project-detail .task-due.task-due-overdue,
+#view-projects #project-detail .task-due-overdue {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--danger, #ef4444) 65%, var(--text-muted) 35%);
+}
+
+#view-projects .kanban-card-due.overdue {
+  color: color-mix(in srgb, var(--danger, #ef4444) 70%, var(--text-muted) 30%);
+  font-weight: 600;
+}
+
+#view-projects .kanban-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 118px;
+}
+
+#view-projects .kanban-card-footer {
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.project-comments-cta--spaced {
+  margin-top: var(--space-6, 48px);
+}
+
+.project-cal-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+#view-projects .project-cal-jump-btn {
+  font-size: 11px;
+  padding: 5px 12px;
+}
+
+.cal-month-block--current {
+  scroll-margin-top: 12px;
+  border-radius: 12px;
+  outline: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.my-work-header-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.my-work-header-lead {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.my-work-header-count {
+  margin: 8px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--text-muted) 70%, var(--text) 30%);
+}
+
+.projects-sync-strip.is-ready {
+  color: color-mix(in srgb, var(--text-muted) 92%, var(--text) 8%);
+  font-weight: 600;
+}
+
+html.tema-aurora #view-projects #project-detail .task-due-overdue {
+  color: rgba(255, 150, 150, 0.78) !important;
+  font-weight: 600 !important;
+}
+
+html.tema-aurora #view-projects .kanban-card-due.overdue {
+  color: rgba(255, 150, 150, 0.78) !important;
+}
+
+html.tema-aurora #view-projects .kanban-card-footer {
+  margin-top: auto !important;
+  padding-top: 8px !important;
+}
+
+#view-projects .cal-task-date {
+  color: color-mix(in srgb, var(--text-muted) 55%, var(--text) 45%);
+  font-weight: 600;
+}

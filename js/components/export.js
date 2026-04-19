@@ -23,12 +23,14 @@ import {
 } from './data.js';
 import { chatMessages, reloadChatFromStorage, renderChat, updateChatNavBadge } from './chat.js';
 import { saveData, renderNotes } from './notes.js';
+import { bumpNotesMetric } from './notesTelemetry.js';
 import { showToast, escapeChatHtml, showConfirmModal, openModal } from './modalControl.js';
 import { getProjectCustomTemplatesForBackup, replaceProjectCustomTemplatesFromBackup, renderProjects } from './projects.js';
 import { renderPostitBoard } from './postit.js';
 import { renderDocs, refreshCommentIndicators } from './docs.js';
 
 export function exportNotes(period) {
+  bumpNotesMetric(`export_notes_${period || 'unknown'}`);
   const now = new Date();
   let filtered;
   let periodLabel;

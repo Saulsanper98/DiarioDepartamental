@@ -1,15 +1,578 @@
 // ===== NOTES MODULE =====
 
 // Import required dependencies
-import { currentUser, notes, projects, postitCards, currentDate, activeShiftFilters, searchQuery, searchNotesAllDates, activeNoteTagFilter, currentNoteView, weekOffset, SHIFTS, USERS, GROUPS, workGroups, sameId, toDateStr, editingNoteImages, editingPostitImages, editingDocImages, editingProjectImages, editingTaskImages, setNotes, editingNoteId, selectedShift, selectedPriority, selectedMentions, selectedMentionGroup, selectedNoteVisibility, reminderOn, setEditingNoteId, setSelectedShift, setSelectedPriority, setSelectedMentions, setEditingNoteImages, setReminderOn, setSelectedNoteVisibility, setSelectedMentionGroup, setActiveNoteTagFilter, makeImageKey, registerTempImage, collectImageMap, setSlashMenuActive, setSlashMenuCurrentTextArea, setSlashMenuCurrentPreview, setSlashMenuCurrentImageMap, slashMenuCurrentTextArea, slashMenuCurrentPreview, slashMenuCurrentImageMap, setCurrentDate, setCurrentNoteView, PUBLIC_NOTES_PER_GROUP_INITIAL } from './data.js';
+import { currentUser, notes, projects, postitCards, currentDate, activeShiftFilters, searchQuery, searchNotesAllDates, activeNoteTagFilter, notesAuthorFilterId, notesListSort, currentView, currentNoteView, weekOffset, SHIFTS, USERS, GROUPS, workGroups, sameId, toDateStr, editingNoteImages, editingPostitImages, editingDocImages, editingProjectImages, editingTaskImages, setNotes, editingNoteId, selectedShift, selectedPriority, selectedMentions, selectedMentionGroup, selectedNoteVisibility, reminderOn, setEditingNoteId, setSelectedShift, setSelectedPriority, setSelectedMentions, setEditingNoteImages, setReminderOn, setSelectedNoteVisibility, setSelectedMentionGroup, setActiveNoteTagFilter, setNotesAuthorFilterId, setNotesListSort, makeImageKey, registerTempImage, collectImageMap, setSlashMenuActive, setSlashMenuCurrentTextArea, setSlashMenuCurrentPreview, setSlashMenuCurrentImageMap, slashMenuCurrentTextArea, slashMenuCurrentPreview, slashMenuCurrentImageMap, setCurrentDate, setCurrentNoteView, PUBLIC_NOTES_PER_GROUP_INITIAL } from './data.js';
 import { loadReadMentions } from './mentionsRead.js';
 import { renderMentionChips } from './comments.js';
 import { showToast, openModal, closeModal, showConfirmModal } from './modalControl.js';
 import { updateMarkdownPreview } from './docs.js';
 import { createCustomSelect } from './auroraCustomSelect.js';
 import { apiGetAllNotes, apiCreateNote, apiUpdateNote, apiDeleteNote } from '../api.js';
+import { bumpNotesMetric } from './notesTelemetry.js';
 
 export { createCustomSelect };
+
+// —— Calendario mensual (navegación persistente hasta cambiar de vista) ——
+let ncalDisplayedYear = null;
+let ncalDisplayedMonth = null;
+
+function getCalendarYM() {
+  const now = new Date();
+  if (ncalDisplayedYear == null || ncalDisplayedMonth == null) {
+    return { y: now.getFullYear(), m: now.getMonth() };
+  }
+  return { y: ncalDisplayedYear, m: ncalDisplayedMonth };
+}
+
+export function ncalNavigateMonth(delta) {
+  const { y, m } = getCalendarYM();
+  const d = new Date(y, m + delta, 1);
+  ncalDisplayedYear = d.getFullYear();
+  ncalDisplayedMonth = d.getMonth();
+  renderNotesCalendarView();
+}
+
+export function ncalGoToday() {
+  const t = new Date();
+  ncalDisplayedYear = t.getFullYear();
+  ncalDisplayedMonth = t.getMonth();
+  renderNotesCalendarView();
+  requestAnimationFrame(() => {
+    if (typeof window._ncalSelectDay === 'function') window._ncalSelectDay(toDateStr(t));
+  });
+}
+
+/** Abre el modal de nueva nota usando la fecha del día (lista y guardado usan `currentDate`). */
+export function ncalOpenNewNoteForDay(dateStr) {
+  const raw = String(dateStr || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return;
+  setCurrentDate(raw);
+  openNewNoteModal();
+}
+
+let _ncalGoToKeyListenerBound = false;
+
+function bindNcalGoToDateShortcutOnce() {
+  if (_ncalGoToKeyListenerBound) return;
+  _ncalGoToKeyListenerBound = true;
+  document.addEventListener(
+    'keydown',
+    ev => {
+      if (currentNoteView !== 'calendar') return;
+      if (!ev.ctrlKey && !ev.metaKey) return;
+      if (ev.key !== 'g' && ev.key !== 'G') return;
+      const t = ev.target;
+      const tag = t && t.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+      ev.preventDefault();
+      ncalOpenGoToDate();
+    },
+    true
+  );
+}
+
+/** Salto a un mes/día concretos (confirmación con input type=date). */
+export function ncalOpenGoToDate() {
+  const todayStr = toDateStr(new Date());
+  showConfirmModal({
+    icon: '📅',
+    title: 'Ir a la fecha…',
+    confirmLabel: 'Ir',
+    messageHtml: `<p class="ncal-goto-intro" style="margin:0 0 12px;font-size:13px;color:var(--text-muted)">Elige un día; se mostrará ese mes y quedará seleccionado.</p>
+      <label class="ncal-goto-label" style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:var(--text)">Fecha
+        <input type="date" id="ncal-goto-date-input" class="form-input" value="${escapeHtmlAttr(todayStr)}" style="max-width:100%">
+      </label>
+      <p style="margin:10px 0 0;font-size:11px;color:var(--text-muted)">Atajo: <kbd>Ctrl</kbd>+<kbd>G</kbd></p>`,
+    onConfirm: () => {
+      const inp = document.getElementById('ncal-goto-date-input');
+      const raw = inp && inp.value ? String(inp.value).trim() : '';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        showToast('Fecha no válida', 'error');
+        return;
+      }
+      const d = new Date(raw + 'T12:00:00');
+      if (Number.isNaN(d.getTime())) {
+        showToast('Fecha no válida', 'error');
+        return;
+      }
+      ncalDisplayedYear = d.getFullYear();
+      ncalDisplayedMonth = d.getMonth();
+      renderNotesCalendarView();
+      requestAnimationFrame(() => {
+        if (typeof window._ncalSelectDay === 'function') window._ncalSelectDay(raw);
+      });
+      announceNotes(`Calendario: ${raw}`);
+    },
+  });
+  setTimeout(() => document.getElementById('ncal-goto-date-input')?.focus?.(), 80);
+}
+
+let _prevNotesLayoutMode = 'list';
+
+function syncNotesViewLayoutMode(mode) {
+  const root = document.getElementById('view-notes');
+  if (!root) return;
+  const prev = _prevNotesLayoutMode;
+  _prevNotesLayoutMode = mode;
+  root.classList.remove('notes-layout-list', 'notes-layout-calendar', 'notes-layout-mentions', 'notes-layout-weekly');
+  root.classList.add('notes-layout-' + mode);
+  if (prev !== mode) {
+    root.classList.add('notes-layout-switching');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => root.classList.remove('notes-layout-switching'));
+    });
+  }
+}
+
+export function syncNotesViewSwitcherUI() {
+  const switcher = document.querySelector('.notes-view-switcher');
+  if (!switcher) return;
+  const btns = switcher.querySelectorAll('.notes-view-btn');
+  if (btns.length >= 2) {
+    btns[0].classList.toggle('active', currentNoteView !== 'calendar');
+    btns[1].classList.toggle('active', currentNoteView === 'calendar');
+  }
+  const titleEl = document.getElementById('view-title');
+  if (titleEl) {
+    if (currentNoteView === 'calendar') {
+      titleEl.textContent = 'Calendario';
+    } else {
+      const titles = {
+        all: 'Todas las Notas',
+        mine: 'Mis Notas',
+        mentions: 'Menciones a mí',
+        reminders: 'Recordatorios',
+        weekly: 'Resumen Semanal',
+      };
+      titleEl.textContent = titles[currentNoteView] || 'Notas';
+    }
+  }
+}
+
+export function announceNotes(msg) {
+  const el = document.getElementById('notes-live-region');
+  if (!el || msg == null || msg === '') return;
+  el.textContent = '';
+  requestAnimationFrame(() => {
+    el.textContent = String(msg);
+  });
+}
+
+const NOTES_SAVE_SOUND_KEY = 'diario_notes_save_sound';
+
+export function isNotesSaveSoundEnabled() {
+  try {
+    return localStorage.getItem(NOTES_SAVE_SOUND_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setNotesSaveSoundEnabled(on) {
+  try {
+    localStorage.setItem(NOTES_SAVE_SOUND_KEY, on ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+}
+
+export function syncNotesSaveSoundCheckbox() {
+  const el = document.getElementById('pref-notes-save-sound');
+  if (el) el.checked = isNotesSaveSoundEnabled();
+}
+
+export function onNotesSaveSoundPrefChange(input) {
+  setNotesSaveSoundEnabled(!!(input && input.checked));
+}
+
+export function playNotesSaveChime() {
+  if (!isNotesSaveSoundEnabled()) return;
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      try {
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(8);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.frequency.setValueAtTime(720, ctx.currentTime);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.022, ctx.currentTime + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+    o.start(ctx.currentTime);
+    o.stop(ctx.currentTime + 0.13);
+    o.onended = () => {
+      try {
+        ctx.close();
+      } catch {
+        /* ignore */
+      }
+    };
+    try {
+      const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      if (coarse && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate(6);
+      }
+    } catch {
+      /* ignore */
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function toggleNotesTopbarOverflowMenu(forceClose) {
+  const m = document.getElementById('notes-topbar-overflow-menu');
+  const t = document.getElementById('notes-topbar-overflow-trigger');
+  if (!m) return;
+  if (forceClose === true) {
+    m.classList.add('hidden');
+    if (t) t.setAttribute('aria-expanded', 'false');
+    t?.focus?.();
+    return;
+  }
+  const wasHidden = m.classList.contains('hidden');
+  if (!wasHidden) {
+    m.classList.add('hidden');
+    if (t) t.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  toggleNotesExportMenu(true);
+  m.classList.remove('hidden');
+  if (t) t.setAttribute('aria-expanded', 'true');
+  bumpNotesMetric('notes_topbar_overflow_open');
+  const first = m.querySelector('[role="menuitem"]');
+  requestAnimationFrame(() => first?.focus?.());
+}
+
+export function toggleNotesExportMenu(forceClose) {
+  const m = document.getElementById('notes-export-menu');
+  const t = document.getElementById('notes-export-menu-trigger');
+  if (!m) return;
+  if (forceClose === true) {
+    m.classList.add('hidden');
+    if (t) t.setAttribute('aria-expanded', 'false');
+    t?.focus?.();
+    return;
+  }
+  const wasHidden = m.classList.contains('hidden');
+  m.classList.toggle('hidden');
+  const nowOpen = wasHidden && !m.classList.contains('hidden');
+  if (t) t.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
+  if (nowOpen) {
+    bumpNotesMetric('notes_export_menu_open');
+    const first = m.querySelector('[role="menuitem"]');
+    requestAnimationFrame(() => first?.focus?.());
+  }
+  if (!window._notesExportEscHandler) {
+    window._notesExportEscHandler = ev => {
+      if (ev.key !== 'Escape') return;
+      const exportMenu = document.getElementById('notes-export-menu');
+      const overflowMenu = document.getElementById('notes-topbar-overflow-menu');
+      const exportOpen = exportMenu && !exportMenu.classList.contains('hidden');
+      const overflowOpen = overflowMenu && !overflowMenu.classList.contains('hidden');
+      if (!exportOpen && !overflowOpen) return;
+      ev.preventDefault();
+      if (exportOpen) toggleNotesExportMenu(true);
+      if (overflowOpen) toggleNotesTopbarOverflowMenu(true);
+      document.getElementById('notes-export-menu-trigger')?.focus?.();
+      document.getElementById('notes-topbar-overflow-trigger')?.focus?.();
+    };
+    document.addEventListener('keydown', window._notesExportEscHandler, true);
+  }
+}
+
+function buildNoteModalFingerprint() {
+  const editor = document.getElementById('note-body-editor');
+  if (editor) syncNoteEditorToTextarea('html');
+  const t = (document.getElementById('note-title-input')?.value || '').trim();
+  const b = (document.getElementById('note-body-input')?.value || '').trim();
+  const tags = (document.getElementById('note-tags-input')?.value || '').trim();
+  return JSON.stringify({
+    t,
+    b,
+    tags,
+    shift: selectedShift,
+    pri: selectedPriority,
+    vis: selectedNoteVisibility,
+    rem: reminderOn,
+    pin: !!document.getElementById('note-pinned-toggle')?.classList.contains('on'),
+  });
+}
+
+function isNoteModalDirty() {
+  if (!window._noteModalBaseline) return false;
+  try {
+    return buildNoteModalFingerprint() !== window._noteModalBaseline;
+  } catch {
+    return false;
+  }
+}
+
+export function snapshotNoteModalBaseline() {
+  window._noteModalBaseline = buildNoteModalFingerprint();
+  syncNoteModalSaveButtonState();
+}
+
+export function syncNoteModalSaveButtonState() {
+  const btn = document.getElementById('note-modal-save-btn');
+  if (!btn) return;
+  const title = document.getElementById('note-title-input')?.value.trim() || '';
+  const editor = document.getElementById('note-body-editor');
+  if (editor) syncNoteEditorToTextarea('html');
+  const body = document.getElementById('note-body-input')?.value.trim() || '';
+  const ok = !!title && !!body && !!selectedShift;
+  const loading = btn.classList.contains('is-loading');
+  btn.disabled = loading || !ok;
+  const dot = document.getElementById('note-modal-dirty-dot');
+  if (dot) {
+    dot.classList.toggle('hidden', !isNoteModalDirty());
+  }
+}
+
+export function requestCloseNoteModal() {
+  if (!document.getElementById('note-modal')?.classList.contains('open')) return;
+  if (!isNoteModalDirty()) {
+    closeModal('note-modal');
+    return;
+  }
+  showConfirmModal({
+    title: 'Cerrar sin guardar',
+    message: 'Hay cambios sin guardar. ¿Descartarlos y cerrar el formulario?',
+    icon: '✏️',
+    confirmLabel: 'Descartar y cerrar',
+    destructive: true,
+    onConfirm: () => {
+      clearNoteDraft();
+      window._noteModalBaseline = null;
+      closeModal('note-modal');
+    },
+  });
+}
+
+export function openNotesShortcutsHelpModal() {
+  openModal('notes-shortcuts-modal');
+}
+
+export function filterNotesByAuthorFromCard(ev, authorId) {
+  if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+  setNotesAuthorFilterId(authorId);
+  renderNotes();
+}
+
+export function clearNotesAuthorFilter() {
+  setNotesAuthorFilterId(null);
+  renderNotes();
+}
+
+export function applyNotesListSort(val) {
+  setNotesListSort(val);
+  renderNotes();
+}
+
+// —— Borrador local (solo nueva nota) ——
+let _noteDraftTimer = null;
+let _noteModalKeyHandler = null;
+
+function noteDraftStorageKey() {
+  try {
+    return `diarioNoteDraft:${currentUser?.id || 'anon'}`;
+  } catch {
+    return 'diarioNoteDraft:anon';
+  }
+}
+
+function readNoteDraftPayload() {
+  const title = document.getElementById('note-title-input')?.value || '';
+  const body = document.getElementById('note-body-input')?.value || '';
+  return { title, body, savedAt: new Date().toISOString() };
+}
+
+function flushNoteDraftSave() {
+  if (editingNoteId != null) return;
+  try {
+    const p = readNoteDraftPayload();
+    if (!(p.title || '').trim() && !(p.body || '').trim()) {
+      localStorage.removeItem(noteDraftStorageKey());
+      return;
+    }
+    localStorage.setItem(noteDraftStorageKey(), JSON.stringify(p));
+  } catch {
+    /* quota u otro */
+  }
+}
+
+function scheduleNoteDraftSave() {
+  if (editingNoteId != null) return;
+  clearTimeout(_noteDraftTimer);
+  _noteDraftTimer = setTimeout(() => {
+    _noteDraftTimer = null;
+    flushNoteDraftSave();
+  }, 750);
+}
+
+function clearNoteDraft() {
+  try {
+    localStorage.removeItem(noteDraftStorageKey());
+  } catch {
+    /* noop */
+  }
+}
+
+function tryRestoreNoteDraft() {
+  if (editingNoteId != null) return;
+  let raw;
+  try {
+    raw = localStorage.getItem(noteDraftStorageKey());
+  } catch {
+    return;
+  }
+  if (!raw) return;
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  const ti = document.getElementById('note-title-input');
+  const be = document.getElementById('note-body-editor');
+  const bi = document.getElementById('note-body-input');
+  if (ti && data.title) ti.value = data.title;
+  if (be && bi) {
+    const bodyStr = data.body || '';
+    bi.value = bodyStr;
+    be.innerHTML =
+      bodyStr && /<[^>]+>/.test(bodyStr) ? syncMdChecklistHtml(bodyStr) : renderMarkdown(bodyStr, editingNoteImages);
+    updateMarkdownPreview('note-body-input', 'note-content-preview', editingNoteImages);
+  }
+  bindNoteEditorInteractions();
+  refreshNoteTagsChipsFromInput();
+  showToast('Se restauró tu borrador local', 'info', 2200);
+}
+
+function detachNoteModalHotkeys() {
+  if (_noteModalKeyHandler) {
+    document.removeEventListener('keydown', _noteModalKeyHandler, true);
+    _noteModalKeyHandler = null;
+  }
+}
+
+function attachNoteModalHotkeys() {
+  detachNoteModalHotkeys();
+  _noteModalKeyHandler = e => {
+    const modal = document.getElementById('note-modal');
+    if (!modal?.classList.contains('open')) return;
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      saveNote();
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      requestCloseNoteModal();
+    }
+  };
+  document.addEventListener('keydown', _noteModalKeyHandler, true);
+}
+
+export function onNoteModalClosed() {
+  detachNoteModalHotkeys();
+}
+
+if (typeof window !== 'undefined') {
+  window._notesLoadMoreShift = function (shift) {
+    if (!window._notesShiftLimits) window._notesShiftLimits = { morning: 45, afternoon: 45, night: 45 };
+    window._notesShiftLimits[shift] = (window._notesShiftLimits[shift] || 45) + 45;
+    bumpNotesMetric('notes_load_more_shift');
+    renderNotes();
+  };
+  window._onNoteModalClosing = () => {
+    flushNoteDraftSave();
+  };
+  window._onNoteModalClose = onNoteModalClosed;
+  if (!window._notesExportMenuGlobalBound) {
+    window._notesExportMenuGlobalBound = true;
+    document.addEventListener('click', e => {
+      const t = e.target;
+      if (!(t instanceof Node)) return;
+      const m = document.getElementById('notes-export-menu');
+      const tr = document.getElementById('notes-export-menu-trigger');
+      if (m && !m.classList.contains('hidden') && tr && !tr.contains(t) && !m.contains(t)) {
+        toggleNotesExportMenu(true);
+      }
+      const om = document.getElementById('notes-topbar-overflow-menu');
+      const otr = document.getElementById('notes-topbar-overflow-trigger');
+      if (om && !om.classList.contains('hidden') && otr && !otr.contains(t) && !om.contains(t)) {
+        toggleNotesTopbarOverflowMenu(true);
+      }
+    });
+  }
+}
+
+export function switchNoteModalTab(tab) {
+  const showOpts = tab === 'options';
+  const pContent = document.getElementById('note-modal-panel-content');
+  const pOptions = document.getElementById('note-modal-panel-options');
+  const bContent = document.getElementById('note-modal-tab-btn-content');
+  const bOptions = document.getElementById('note-modal-tab-btn-options');
+  if (pContent) {
+    pContent.classList.toggle('hidden', showOpts);
+    if (showOpts) pContent.setAttribute('hidden', '');
+    else pContent.removeAttribute('hidden');
+  }
+  if (pOptions) {
+    pOptions.classList.toggle('hidden', !showOpts);
+    if (showOpts) pOptions.removeAttribute('hidden');
+    else pOptions.setAttribute('hidden', '');
+  }
+  if (bContent) {
+    bContent.classList.toggle('is-active', !showOpts);
+    bContent.setAttribute('aria-selected', !showOpts ? 'true' : 'false');
+  }
+  if (bOptions) {
+    bOptions.classList.toggle('is-active', showOpts);
+    bOptions.setAttribute('aria-selected', showOpts ? 'true' : 'false');
+  }
+  syncNoteModalSaveButtonState();
+}
+
+export function handleNoteTitleInput() {
+  scheduleNoteDraftSave();
+  syncNoteModalSaveButtonState();
+}
+
+export function refreshNoteTagsChipsFromInput() {
+  const input = document.getElementById('note-tags-input');
+  const wrap = document.getElementById('note-tags-chips');
+  if (!input || !wrap) return;
+  const tags = (input.value || '').match(/#[\w\u00C0-\u017F]+/gi) || [];
+  wrap.innerHTML = tags
+    .slice(0, 16)
+    .map(t => `<span class="note-tag-chip">${escapeHtml(t)}</span>`)
+    .join('');
+  syncNoteModalSaveButtonState();
+}
+
+/** Rellena el &lt;datalist&gt; de etiquetas con las ya usadas en notas visibles (autocompletar equipo). */
+export function syncNoteTagsDatalist() {
+  const dl = document.getElementById('note-tags-suggestions');
+  if (!dl) return;
+  const input = document.getElementById('note-tags-input');
+  const inTags = new Set(
+    ((input && input.value) || '').match(/#[\w\u00C0-\u017F]+/gi)?.map(t => t.toLowerCase()) || []
+  );
+  const pool = getAllVisibleNoteTags().filter(t => t && !inTags.has(String(t).toLowerCase()));
+  dl.innerHTML = pool.slice(0, 80).map(t => `<option value="${escapeHtmlAttr(t)}"></option>`).join('');
+}
 
 // Slash commands configuration
 export const SLASH_COMMANDS = [
@@ -209,8 +772,53 @@ function syncNoteTagFilterUI() {
   }
 }
 
+function syncNotesOnboardingBanner() {
+  const el = document.getElementById('notes-onboarding-banner');
+  if (!el) return;
+  const root = document.getElementById('view-notes');
+  const cal = root?.classList.contains('notes-layout-calendar');
+  if (currentNoteView === 'calendar' || cal || currentNoteView === 'weekly' || currentNoteView === 'mentions') {
+    el.classList.add('hidden');
+    return;
+  }
+  try {
+    if (localStorage.getItem('diario_notes_onboarding_dismissed_v1')) el.classList.add('hidden');
+    else el.classList.remove('hidden');
+  } catch {
+    el.classList.add('hidden');
+  }
+}
+
+function syncNotesAuthorFilterBar() {
+  const bar = document.getElementById('notes-author-filter-bar');
+  if (!bar) return;
+  if (!notesAuthorFilterId) {
+    bar.innerHTML = '';
+    bar.classList.add('hidden');
+    return;
+  }
+  const u = USERS.find(x => sameId(x.id, notesAuthorFilterId));
+  const label = escapeHtml(u ? u.name : 'Autor');
+  bar.classList.remove('hidden');
+  bar.innerHTML = `<span class="note-author-active-pill">👤 ${label} <button type="button" class="note-author-active-clear" onclick="clearNotesAuthorFilter()" title="Quitar filtro de autor">✕</button></span>`;
+}
+
+function syncNotesListSortControl() {
+  const wrap = document.getElementById('notes-sort-seg');
+  if (!wrap) return;
+  wrap.querySelectorAll('.notes-sort-seg-btn').forEach(btn => {
+    const v = btn.getAttribute('data-sort') || 'recent';
+    btn.classList.toggle('active', v === (notesListSort === 'oldest' ? 'oldest' : 'recent'));
+    btn.setAttribute('aria-pressed', btn.classList.contains('active') ? 'true' : 'false');
+  });
+}
+
 function syncNoteTagFilterTopbar() {
   syncNoteTagFilterUI();
+  syncNotesAuthorFilterBar();
+  syncNotesListSortControl();
+  syncNotesOnboardingBanner();
+  syncNotesViewSwitcherUI();
 }
 
 export function renderNotes() {
@@ -227,6 +835,31 @@ export function renderNotes() {
   if (currentNoteView === 'calendar') {
     renderNotesCalendarView();
     return;
+  }
+
+  syncNotesViewLayoutMode('list');
+
+  const viewNotesRoot = document.getElementById('view-notes');
+  if (viewNotesRoot) {
+    try {
+      const d = new Date(`${currentDate}T12:00:00`);
+      viewNotesRoot.dataset.printDate = d.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      viewNotesRoot.dataset.printDate = currentDate || '';
+    }
+    try {
+      const deptEl = document.getElementById('cfg-dept-name');
+      const appEl = document.getElementById('cfg-app-name');
+      viewNotesRoot.dataset.printDept = (deptEl && deptEl.value) || currentUser?.group || '';
+      viewNotesRoot.dataset.printApp = (appEl && appEl.value) || 'Diario Departamental';
+    } catch {
+      viewNotesRoot.dataset.printDept = currentUser?.group || '';
+    }
   }
 
   const histCb = document.getElementById('notes-search-history');
@@ -250,6 +883,7 @@ export function renderNotes() {
     if (activeNoteTagFilter) {
       if (!(n.tags || []).includes(activeNoteTagFilter)) return false;
     }
+    if (notesAuthorFilterId != null && !sameId(n.authorId, notesAuthorFilterId)) return false;
     return true;
   });
 
@@ -265,10 +899,25 @@ export function renderNotes() {
     syncNoteTagFilterTopbar();
     return;
   }
-  statTotal.textContent = todayNotes.length;
-  document.getElementById('stat-morning').textContent = todayNotes.filter(n => n.shift === 'morning').length;
-  document.getElementById('stat-afternoon').textContent = todayNotes.filter(n => n.shift === 'afternoon').length;
-  document.getElementById('stat-night').textContent = todayNotes.filter(n => n.shift === 'night').length;
+  const nTot = todayNotes.length;
+  const nM = todayNotes.filter(n => n.shift === 'morning').length;
+  const nA = todayNotes.filter(n => n.shift === 'afternoon').length;
+  const nN = todayNotes.filter(n => n.shift === 'night').length;
+  statTotal.textContent = String(nTot);
+  const capTot = document.getElementById('stat-total-caption');
+  if (capTot) capTot.textContent = nTot === 1 ? 'nota hoy' : 'notas hoy';
+  const sm = document.getElementById('stat-morning');
+  const sa = document.getElementById('stat-afternoon');
+  const sn = document.getElementById('stat-night');
+  if (sm) sm.textContent = String(nM);
+  if (sa) sa.textContent = String(nA);
+  if (sn) sn.textContent = String(nN);
+  const cm = document.getElementById('stat-morning-caption');
+  const ca = document.getElementById('stat-afternoon-caption');
+  const cn = document.getElementById('stat-night-caption');
+  if (cm) cm.textContent = nM === 1 ? 'nota · mañana' : 'notas · mañana';
+  if (ca) ca.textContent = nA === 1 ? 'nota · tarde' : 'notas · tarde';
+  if (cn) cn.textContent = nN === 1 ? 'nota · noche' : 'notas · noche';
 
   const area = document.getElementById('notes-area');
   if (!area) {
@@ -277,12 +926,31 @@ export function renderNotes() {
   }
 
   if (filtered.length === 0) {
+    if (q && !useHistorySearch) {
+      area.classList.add('notes-area-enter');
+      setTimeout(() => area.classList.remove('notes-area-enter'), 320);
+      area.innerHTML = `
+      <div class="notes-empty-state">
+        <div class="notes-empty-icon">🔎</div>
+        <div class="notes-empty-title">Sin resultados en este día</div>
+        <p class="notes-empty-hint">No hay notas que coincidan con «${escapeHtml(q)}» en la fecha del carrusel y los filtros actuales. Activa <strong>Historial completo</strong> para buscar en otras fechas.</p>
+        <div class="notes-empty-actions">
+          <button type="button" class="btn-secondary" onclick="clearNotesSearch()">Limpiar búsqueda</button>
+          <button type="button" class="btn-action" onclick="openNewNoteModal()">✏️ Nueva nota</button>
+        </div>
+      </div>`;
+      syncNoteTagFilterTopbar();
+      return;
+    }
     if (useHistorySearch) {
+      area.classList.add('notes-area-enter');
+      setTimeout(() => area.classList.remove('notes-area-enter'), 320);
       area.innerHTML = `
       <div class="notes-empty-state">
         <div class="notes-empty-icon">🔎</div>
         <div class="notes-empty-title">Sin resultados en el historial</div>
         <p class="notes-empty-hint">Prueba otras palabras o desactiva «Historial completo» para limitar la búsqueda al día del calendario.</p>
+        ${q ? `<div class="notes-empty-actions"><button type="button" class="btn-secondary" onclick="clearNotesSearch()">Limpiar búsqueda</button></div>` : ''}
       </div>`;
       syncNoteTagFilterTopbar();
       return;
@@ -310,14 +978,26 @@ export function renderNotes() {
       searchNotesAllDates && !q.length
         ? '<p class="notes-empty-hint" style="margin-top:12px">💡 Activa «Historial completo» y escribe en el buscador para encontrar notas de otros días.</p>'
         : '';
+    const shiftFilterHint =
+      activeShiftFilters.length < 3
+        ? `<p class="notes-empty-hint notes-empty-hint--filters">Filtro de turno activo: solo ves ${activeShiftFilters.length} de 3 turnos. Amplía la selección en la barra lateral para ver más notas.</p>`
+        : '';
+    area.classList.add('notes-area-enter');
+    setTimeout(() => area.classList.remove('notes-area-enter'), 320);
     area.innerHTML = `
       <div class="notes-empty-state">
         <div class="notes-empty-icon">${e.icon}</div>
         <div class="notes-empty-title">${escapeHtml(e.title)}</div>
         <p class="notes-empty-hint">${escapeHtml(e.hint)}</p>
+        ${shiftFilterHint}
         ${histHint}
+        <ol class="notes-empty-steps" aria-label="Pasos sugeridos">
+          <li>Elige el día en el carrusel de fechas arriba.</li>
+          <li>Pulsa <strong>Nueva nota</strong> y escribe título y contenido.</li>
+          <li>Comprueba turno y visibilidad en la pestaña <strong>Opciones</strong>.</li>
+        </ol>
         <div class="notes-empty-actions">
-          <button type="button" class="btn-primary" onclick="openNewNoteModal()">✏️ Nueva nota</button>
+          <button type="button" class="btn-action" onclick="openNewNoteModal()">✏️ Nueva nota</button>
           ${currentNoteView !== 'all' ? `<button type="button" class="btn-secondary" onclick="setNoteView('all', document.getElementById('nav-all'))">📋 Ver todas las notas</button>` : ''}
         </div>
       </div>`;
@@ -336,6 +1016,8 @@ export function renderNotes() {
       return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
     });
     const dates = [...new Set(filtered.map(n => n.date))].sort((a, b) => b.localeCompare(a));
+    area.classList.add('notes-area-enter');
+    setTimeout(() => area.classList.remove('notes-area-enter'), 320);
     area.innerHTML = `<div class="notes-history-wrap">${dates
       .map(ds => {
         const chunk = filtered.filter(n => n.date === ds);
@@ -344,6 +1026,9 @@ export function renderNotes() {
           const sb = shiftOrder(b.shift);
           if (sa !== sb) return sa - sb;
           if (!!a.pinned !== !!b.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+          if (notesListSort === 'oldest') {
+            return String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
+          }
           return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
         });
         const label = formatHistoryDateLabel(ds);
@@ -359,23 +1044,50 @@ export function renderNotes() {
   Object.keys(byShift).forEach(k => {
     byShift[k].sort((a, b) => {
       if (!!a.pinned !== !!b.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      if (notesListSort === 'oldest') {
+        return String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
+      }
       return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
     });
   });
 
+  if (window._notesShiftLimitsDate !== currentDate) {
+    window._notesShiftLimits = { morning: 45, afternoon: 45, night: 45 };
+    window._notesShiftLimitsDate = currentDate;
+  }
+  const lims = window._notesShiftLimits || { morning: 45, afternoon: 45, night: 45 };
+
+  area.classList.add('notes-area-enter');
+  setTimeout(() => area.classList.remove('notes-area-enter'), 320);
   area.innerHTML = Object.keys(SHIFTS).map(shift => {
     const sns = byShift[shift];
     if (!activeShiftFilters.includes(shift) || sns.length === 0) return '';
     const s = SHIFTS[shift];
-    return `<div class="shift-section">
+    const cap = lims[shift] != null ? lims[shift] : 45;
+    const visible = sns.slice(0, cap);
+    const more = sns.length - visible.length;
+    const loadMore =
+      more > 0
+        ? `<div class="shift-load-more-wrap"><span class="shift-load-more-meta" aria-live="polite">Mostrando ${visible.length} de ${sns.length}</span><button type="button" class="btn-secondary shift-load-more-btn" onclick="window._notesLoadMoreShift('${shift}')">Cargar más (${more} nota${more !== 1 ? 's' : ''})</button></div>`
+        : '';
+    let shiftCollapsed = false;
+    try {
+      shiftCollapsed = localStorage.getItem(`diario_notes_shift_collapsed:${currentDate}:${shift}`) === '1';
+    } catch {
+      shiftCollapsed = false;
+    }
+    const notesBodyClass = shiftCollapsed ? 'shift-notes collapsed' : 'shift-notes';
+    const arrowClass = shiftCollapsed ? 'shift-toggle' : 'shift-toggle open';
+    const secCollapsedClass = shiftCollapsed ? ' shift-section--collapsed' : '';
+    return `<div class="shift-section${secCollapsedClass}" data-shift="${shift}">
       <div class="shift-header" onclick="toggleShiftSection(this)">
         <div class="shift-dot" style="background:${s.dot}"></div>
         <h3 style="color:${s.color}">${s.emoji} Turno ${s.label}</h3>
         <span class="shift-time">${s.hours}</span>
         <span class="shift-count">${sns.length} nota${sns.length !== 1 ? 's' : ''}</span>
-        <span class="shift-toggle open">▶</span>
+        <span class="${arrowClass}">▶</span>
       </div>
-      <div class="shift-notes">${sns.map(n => renderNoteCard(n, { query: searchQuery })).join('')}</div>
+      <div class="${notesBodyClass}">${visible.map(n => renderNoteCard(n, { query: searchQuery })).join('')}${loadMore}</div>
     </div>`;
   }).join('');
   syncNoteTagFilterTopbar();
@@ -446,7 +1158,6 @@ function syncMdChecklistHtml(html) {
 }
 
 export function renderNoteCard(note, cardOpts = {}) {
-  console.log('renderNoteCard USERS.length:', USERS?.length, 'authorId:', note.authorId);
   const author = USERS.find(u => sameId(u.id, note.authorId)) ||
                USERS.find(u => u.msId === note.authorId) ||
                (note.authorName ? { name: note.authorName, initials: (note.authorName.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()), color: '#888' } : null);
@@ -472,7 +1183,7 @@ export function renderNoteCard(note, cardOpts = {}) {
   const publicTag = note.visibility === 'public' ? `<span class="note-tag note-tag-public">🌐 Pública</span>` : '';
   const deptTag =
     note.visibility === 'department'
-      ? `<span class="note-tag note-tag-dept">🏢 ${escapeHtml(note.group || 'Departamento')}</span>`
+      ? `<span class="note-tag note-tag-dept note-tag--dept-scope" title="Visibilidad: todo el departamento (no es una etiqueta #)"><span class="note-tag-scope-mark" aria-hidden="true">🏢</span><span class="note-tag-dept-text">${escapeHtml(note.group || 'Departamento')}</span></span>`
       : '';
   const isNew = (() => {
     if (sameId(note.authorId, currentUser?.id)) return false;
@@ -489,19 +1200,51 @@ export function renderNoteCard(note, cardOpts = {}) {
   const initials = escapeHtml(author?.initials || '?');
   const authorName = escapeHtml(author ? author.name : 'Usuario desconocido');
   const safeDate = escapeHtml(date);
+  const whenIso = note.updatedAt || note.createdAt;
+  let metaAux = '';
+  if (whenIso) {
+    const whenStr = escapeHtml(
+      new Date(whenIso).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })
+    );
+    const lab = note.updatedAt ? 'Editada' : 'Creada';
+    metaAux = `<span class="note-meta-aux">${lab} · ${whenStr}</span>`;
+  }
+
+  const imgCount = Array.isArray(note.images)
+    ? note.images.length
+    : note.images && typeof note.images === 'object'
+      ? Object.keys(note.images).length
+      : 0;
+  const attachBadge =
+    imgCount > 0 ? `<span class="note-attach-badge" title="Nota con adjuntos">Adj. ${imgCount}</span>` : '';
+
+  const idLit = JSON.stringify(String(note.id || note._id || ''));
+  const kebabMenu = `<details class="note-card-kebab" onclick="event.stopPropagation()"><summary class="note-card-kebab-sum" aria-label="Más acciones para esta nota" onclick="event.stopPropagation()"><span aria-hidden="true">⋮</span></summary><div class="note-card-kebab-menu" role="menu"><button type="button" class="note-kebab-item" role="menuitem" onclick='duplicateNote(event, ${idLit}, "diary")'>Copiar al día del carrusel</button><button type="button" class="note-kebab-item" role="menuitem" onclick='duplicateNote(event, ${idLit}, "original")'>Copiar en la fecha original de la nota</button></div></details>`;
 
   const headerHtml = [
     '<div class="note-card-header">',
     `<div class="note-author-avatar" style="background:${bg}">${initials}</div>`,
+    '<div class="note-meta-block">',
     '<div class="note-meta">',
-    `<span class="note-author-name">${authorName}</span>`,
+    `<button type="button" class="note-author-name note-author-hit" title="Ver solo notas de ${authorName}" aria-label="Filtrar por autor ${authorName}" onclick='filterNotesByAuthorFromCard(event, ${JSON.stringify(String(note.authorId || ''))})'>${authorName}</button>`,
     `<span class="note-timestamp">${safeDate}</span>`,
+    metaAux,
     '</div>',
-    `<div class="note-tags">${newBadge}${pinTag}${priorityTag}${deptTag}${publicTag}${tagsHtml}</div>`,
+    '</div>',
+    `<div class="note-tags">${newBadge}${attachBadge}${pinTag}${priorityTag}${deptTag}${publicTag}${tagsHtml}${kebabMenu}</div>`,
     '</div>',
   ].join('');
 
   const rawBody = noteTextForDisplay(note.body);
+  const plainBodyLen = rawBody
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim().length;
+  const compact =
+    plainBodyLen > 0 &&
+    plainBodyLen < 88 &&
+    imgCount === 0 &&
+    !(note.mentions && note.mentions.length);
   const bodyInner =
     rawBody && /<[^>]+>/.test(rawBody) ? syncMdChecklistHtml(rawBody) : noteBodyPreview(rawBody, cardOpts.query || '');
   const bodyHtml = `<div class="note-body">${bodyInner}</div>`;
@@ -510,7 +1253,7 @@ export function renderNoteCard(note, cardOpts = {}) {
   if (note.mentions && note.mentions.length > 0) {
     const mentionUsers = note.mentions.map(id => USERS.find(u => sameId(u.id, id))).filter(Boolean);
     if (mentionUsers.length > 0) {
-      mentionsHtml = `<div class="note-mentions">${mentionUsers.map(u => 
+      mentionsHtml = `<div class="note-mentions" title="Compañeros mencionados en esta nota">${mentionUsers.map(u => 
         `<span class="mention">@${escapeHtml(u.name)}</span>`
       ).join(' ')}</div>`;
     }
@@ -550,26 +1293,27 @@ export function renderNoteCard(note, cardOpts = {}) {
   footerHtml += reminderHtml;
   footerHtml += commentBadge;
   footerHtml += '<div class="note-actions">';
-  footerHtml += `<button type="button" class="note-action-btn" onclick="duplicateNote(event, '${note.id}')" title="Copia en el día actual como tu nota">📄 Duplicar</button>`;
   if (canEdit) {
-    footerHtml += `<button type="button" class="note-action-btn" onclick="toggleNotePinnedQuick(event, '${note.id}')" title="Mostrar primero en el turno">${pinned ? '📌 Quitar fijación' : '📌 Fijar'}</button>`;
-    footerHtml += `<button type="button" class="note-action-btn" onclick="editNote(event, '${note.id}')">✏️ Editar</button>`;
+    footerHtml += `<button type="button" class="note-action-btn note-action-btn--icon" onclick='toggleNotePinnedQuick(event, ${idLit})' title="${pinned ? 'Quitar fijación' : 'Fijar al inicio del turno'}" aria-label="${pinned ? 'Quitar fijación' : 'Fijar nota'}"><span aria-hidden="true">${pinned ? '📌' : '📍'}</span></button>`;
+    footerHtml += `<button type="button" class="note-action-btn note-action-btn--icon" onclick='editNote(event, ${idLit})' title="Editar nota" aria-label="Editar nota"><span aria-hidden="true">✏️</span></button>`;
   }
   if (sameId(note.authorId, currentUser.id)) {
-    footerHtml += `<button type="button" class="note-action-btn delete" onclick="deleteNote(event, '${note.id}')">🗑 Borrar</button>`;
+    footerHtml += `<button type="button" class="note-action-btn note-action-btn--icon delete" onclick='deleteNote(event, ${idLit})' title="Borrar nota" aria-label="Borrar nota"><span aria-hidden="true">🗑️</span></button>`;
   }
   footerHtml += '</div></div>';
 
   const innerHtml = [
     headerHtml,
-    `<div class="note-title">${escapeHtml(noteTextForDisplay(note.title) || 'Sin título')}</div>`,
+    `<div class="note-title" data-note-heading="true">${escapeHtml(noteTextForDisplay(note.title) || 'Sin título')}</div>`,
     bodyHtml,
     mentionsHtml,
     imagesHtml,
     footerHtml,
   ].join('');
 
-  const cardClass = pinned ? 'note-card note-card--pinned' : 'note-card';
+  const cardClass = [pinned ? 'note-card note-card--pinned' : 'note-card', compact ? 'note-card--compact' : '']
+    .filter(Boolean)
+    .join(' ');
   return `<div class="${cardClass}" data-id="${note.id}" data-note-id="${note.id}" onclick="openDetail('${note.id}')">${innerHtml}</div>`;
 }
 
@@ -651,6 +1395,8 @@ export function renderMentionsView() {
   const area = document.getElementById('notes-area');
   if (!area || !currentUser) return;
 
+  syncNotesViewLayoutMode('mentions');
+
   const readSet = loadReadMentions();
   const list = notes.filter(
     n =>
@@ -672,9 +1418,10 @@ export function renderMentionsView() {
         <div class="notes-empty-title">Aún no te han mencionado</div>
         <p class="notes-empty-hint">Cuando alguien te incluya con @ en una nota de tu departamento o en una nota pública que puedas ver, aparecerá aquí. El punto en el calendario marcará días con menciones sin leer.</p>
         <div class="notes-empty-actions">
-          <button type="button" class="btn-primary" onclick="setNoteView('all', document.getElementById('nav-all'))">📋 Ir a todas las notas</button>
+          <button type="button" class="btn-action" onclick="setNoteView('all', document.getElementById('nav-all'))">📋 Ir a todas las notas</button>
         </div>
       </div>`;
+    syncNoteTagFilterTopbar();
     return;
   }
 
@@ -737,37 +1484,104 @@ export function renderMentionsView() {
       </header>
       ${groupsHtml}
     </div>`;
+  syncNoteTagFilterTopbar();
 }
 
 /** Handlers del modal de nota (onclick en index.html) */
 export function selectShiftOpt(el) {
-  document.querySelectorAll('#note-modal .shift-option').forEach(o => o.classList.remove('selected'));
+  document.querySelectorAll('#note-modal .shift-option').forEach(o => {
+    o.classList.remove('selected');
+    o.setAttribute('aria-pressed', 'false');
+  });
   el.classList.add('selected');
+  el.setAttribute('aria-pressed', 'true');
   setSelectedShift(el.dataset.shift);
+  syncNoteModalSaveButtonState();
 }
 
 export function selectPriority(el) {
-  document.querySelectorAll('#note-modal .priority-opt').forEach(o => o.classList.remove('selected'));
+  document.querySelectorAll('#note-modal .priority-opt').forEach(o => {
+    o.classList.remove('selected');
+    o.setAttribute('aria-pressed', 'false');
+  });
   el.classList.add('selected');
+  el.setAttribute('aria-pressed', 'true');
   setSelectedPriority(el.dataset.priority);
+  syncNoteModalSaveButtonState();
 }
 
 export function selectVisibility(el) {
   const p = el.closest('.visibility-pills');
-  if (p) p.querySelectorAll('.visibility-opt').forEach(o => o.classList.remove('selected'));
+  if (p) {
+    p.querySelectorAll('.visibility-opt').forEach(o => {
+      o.classList.remove('selected');
+      o.setAttribute('aria-pressed', 'false');
+    });
+  }
   el.classList.add('selected');
+  el.setAttribute('aria-pressed', 'true');
   setSelectedNoteVisibility(el.dataset.vis || 'department');
+  syncNoteModalSaveButtonState();
 }
 
 export function toggleReminder() {
   const next = !reminderOn;
   setReminderOn(next);
-  document.getElementById('reminder-toggle')?.classList.toggle('on', next);
-  document.getElementById('reminder-time')?.classList.toggle('hidden', !next);
+  const el = document.getElementById('reminder-toggle');
+  if (el) {
+    el.classList.toggle('on', next);
+    el.setAttribute('aria-checked', next ? 'true' : 'false');
+  }
+  const rt = document.getElementById('reminder-time');
+  rt?.classList.toggle('hidden', !next);
+  if (!next) rt?.classList.remove('reminder-time-input--error');
+  syncReminderSummaryLine();
+  if (next) {
+    setTimeout(() => rt?.focus?.(), 60);
+  }
+  syncNoteModalSaveButtonState();
+}
+
+/** Sincroniza el texto de estado bajo el interruptor de recordatorio (modal nota). */
+export function syncReminderSummaryFromInput() {
+  syncReminderSummaryLine();
+}
+
+function syncReminderSummaryLine() {
+  const el = document.getElementById('note-reminder-summary');
+  if (!el) return;
+  const rt = document.getElementById('reminder-toggle');
+  const on = rt ? rt.classList.contains('on') : reminderOn;
+  const time = document.getElementById('reminder-time')?.value?.trim() || '';
+  if (!on) {
+    el.classList.add('hidden');
+    el.textContent = '';
+    return;
+  }
+  el.classList.remove('hidden');
+  let dlab = currentDate || '';
+  try {
+    dlab = new Date(`${currentDate}T12:00:00`).toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+  } catch {
+    /* ignore */
+  }
+  el.textContent = time
+    ? `Recordatorio el ${dlab} a las ${time}.`
+    : `Recordatorio activo: elige una hora para que quede programado.`;
+  const rtInput = document.getElementById('reminder-time');
+  if (on && time) rtInput?.classList.remove('reminder-time-input--error');
 }
 
 export function toggleNotePinnedModal() {
-  document.getElementById('note-pinned-toggle')?.classList.toggle('on');
+  const el = document.getElementById('note-pinned-toggle');
+  if (!el) return;
+  el.classList.toggle('on');
+  el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
+  syncNoteModalSaveButtonState();
 }
 
 // ===== PUBLIC NOTES =====
@@ -881,9 +1695,15 @@ export function openNewNoteModal() {
   if (preview) preview.innerHTML = '';
   bindNoteEditorInteractions();
 
+  tryRestoreNoteDraft();
   updateNoteModalUI();
+  refreshNoteTagsChipsFromInput();
+  syncNoteTagsDatalist();
+  switchNoteModalTab('content');
   createCustomSelect('note-collab-target-select');
   createCustomSelect('note-collab-permission-select');
+  attachNoteModalHotkeys();
+  snapshotNoteModalBaseline();
 }
 
 /**
@@ -892,9 +1712,11 @@ export function openNewNoteModal() {
  * @param {number} id - Note ID
  */
 export function editNote(e, id) {
-  e.stopPropagation();
+  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
   const note = notes.find(n => sameId(n.id, id));
   if (!note || !userCanEditNote(note)) return;
+
+  clearNoteDraft();
 
   // Set editing state
   setEditingNoteId(id);
@@ -957,28 +1779,63 @@ export function editNote(e, id) {
   if (tagsInputEl) tagsInputEl.value = (note.tags || []).join(' ');
   createCustomSelect('note-collab-target-select');
   createCustomSelect('note-collab-permission-select');
+  refreshNoteTagsChipsFromInput();
+  syncNoteTagsDatalist();
+  switchNoteModalTab('content');
+  attachNoteModalHotkeys();
+  snapshotNoteModalBaseline();
 }
 
 /**
  * Save note from modal
  */
 export async function saveNote() {
+  const saveBtn = document.getElementById('note-modal-save-btn');
+  if (saveBtn?.disabled) return;
+
   const title = document.getElementById('note-title-input')?.value.trim() || '';
   const noteEditor = document.getElementById('note-body-editor');
   if (noteEditor) syncMdChecklistDom(noteEditor, true);
   syncNoteEditorToTextarea('html');
   const body = document.getElementById('note-body-input')?.value.trim() || '';
   if (!title) {
-    showToast('El título es requerido', 'error');
+    showToast('Falta el título: escribe un título breve arriba.', 'error');
+    switchNoteModalTab('content');
+    const tiEl = document.getElementById('note-title-input');
+    tiEl?.classList.add('note-input--error');
+    setTimeout(() => tiEl?.classList.remove('note-input--error'), 2400);
+    tiEl?.focus?.();
     return;
   }
+  document.getElementById('note-title-input')?.classList.remove('note-input--error');
   if (!body) {
-    showToast('El contenido es requerido', 'error');
+    showToast('Falta el contenido: escribe el cuerpo de la nota en el editor.', 'error');
+    switchNoteModalTab('content');
+    document.getElementById('note-body-editor')?.focus?.();
     return;
   }
   if (!selectedShift) {
     showToast('Selecciona un turno destino', 'error');
+    switchNoteModalTab('options');
     return;
+  }
+
+  const reminderTimeValPre = document.getElementById('reminder-time')?.value?.trim() || '';
+  const rtInput = document.getElementById('reminder-time');
+  if (reminderOn && !reminderTimeValPre) {
+    showToast('Selecciona una hora para el recordatorio o desactívalo', 'error');
+    switchNoteModalTab('options');
+    rtInput?.classList.add('reminder-time-input--error');
+    syncReminderSummaryLine();
+    rtInput?.classList.remove('hidden');
+    rtInput?.focus?.();
+    return;
+  }
+  rtInput?.classList.remove('reminder-time-input--error');
+
+  if (saveBtn) {
+    saveBtn.classList.add('is-loading');
+    saveBtn.disabled = true;
   }
 
   const reminderTimeVal = document.getElementById('reminder-time')?.value?.trim() || '';
@@ -995,11 +1852,17 @@ export async function saveNote() {
   const tagsRaw = document.getElementById('note-tags-input')?.value || '';
   const tags = tagsRaw.match(/#[\w\u00C0-\u017F]+/gi)?.map(t => t.toLowerCase()) || [];
   const pinned = document.getElementById('note-pinned-toggle')?.classList.contains('on') || false;
+  const wasEditing = editingNoteId != null;
 
   if (editingNoteId) {
     const idx = notes.findIndex(n => sameId(n.id, editingNoteId) && userCanEditNote(n));
     if (idx === -1) {
       showToast('No autorizado para editar esta nota', 'error');
+      if (saveBtn) {
+        saveBtn.classList.remove('is-loading');
+        saveBtn.disabled = false;
+      }
+      syncNoteModalSaveButtonState();
       return;
     }
     const prev = notes[idx];
@@ -1026,10 +1889,17 @@ export async function saveNote() {
     } catch (err) {
       console.error('Error actualizando nota en API:', err);
       showToast('Error al guardar en servidor', 'error');
+      if (saveBtn) {
+        saveBtn.classList.remove('is-loading');
+        saveBtn.disabled = false;
+      }
+      syncNoteModalSaveButtonState();
       return;
     }
     setNotes(notes.map((n, i) => (i === idx ? updated : n)));
     showToast('Nota actualizada', 'success');
+    playNotesSaveChime();
+    bumpNotesMetric('note_save_update');
   } else {
     const newNote = {
       id: Date.now(),
@@ -1076,6 +1946,11 @@ export async function saveNote() {
     } catch (err) {
       console.error('Error creando nota en API:', err);
       showToast('Error al guardar en servidor', 'error');
+      if (saveBtn) {
+        saveBtn.classList.remove('is-loading');
+        saveBtn.disabled = false;
+      }
+      syncNoteModalSaveButtonState();
       return;
     }
     setNotes([
@@ -1083,12 +1958,32 @@ export async function saveNote() {
       newNote,
     ]);
     showToast('Nota creada', 'success');
+    playNotesSaveChime();
+    bumpNotesMetric('note_save_create');
   }
 
-  saveData();
-  renderNotes();
-  closeModal('note-modal');
-  import('./login.js').then(m => m.updateBadges());
+  try {
+    saveData();
+    renderNotes();
+    announceNotes(wasEditing ? 'Nota actualizada en la lista' : 'Nota guardada en la lista');
+    clearNoteDraft();
+    window._noteModalBaseline = null;
+    const _nti = document.getElementById('note-title-input');
+    const _nbi = document.getElementById('note-body-input');
+    const _nbe = document.getElementById('note-body-editor');
+    const _npr = document.getElementById('note-content-preview');
+    if (_nti) _nti.value = '';
+    if (_nbi) _nbi.value = '';
+    if (_nbe) _nbe.innerHTML = '';
+    if (_npr) _npr.innerHTML = '';
+    closeModal('note-modal');
+    import('./login.js').then(m => m.updateBadges());
+  } finally {
+    if (saveBtn) {
+      saveBtn.classList.remove('is-loading');
+    }
+    syncNoteModalSaveButtonState();
+  }
 }
 
 function syncNoteEditorToTextarea(mode = 'text') {
@@ -1128,12 +2023,57 @@ function syncNoteTextareaToEditor() {
   cleanupLeadingEmptyNodes(editor);
 }
 
+const NOTE_PASTE_IMAGE_MAX_DIM = 1920;
+const NOTE_PASTE_JPEG_QUALITY = 0.82;
+
+function compressImageFileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+        const maxD = NOTE_PASTE_IMAGE_MAX_DIM;
+        if (w > maxD || h > maxD) {
+          const r = Math.min(maxD / w, maxD / h);
+          w = Math.round(w * r);
+          h = Math.round(h * r);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          URL.revokeObjectURL(url);
+          reject(new Error('ctx'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        const out = canvas.toDataURL('image/jpeg', NOTE_PASTE_JPEG_QUALITY);
+        URL.revokeObjectURL(url);
+        resolve(out);
+      } catch (err) {
+        URL.revokeObjectURL(url);
+        reject(err);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('load'));
+    };
+    img.src = url;
+  });
+}
+
 export function handleNoteEditorInput() {
   syncNoteEditorToTextarea();
   updateMarkdownPreview('note-body-input', 'note-content-preview', editingNoteImages);
   handleSlashFromNoteEditor();
   const editor = document.getElementById('note-body-editor');
   scrollNoteEditorCaretIntoView(editor);
+  scheduleNoteDraftSave();
+  syncNoteModalSaveButtonState();
 }
 
 function bindNoteEditorInteractions() {
@@ -1141,8 +2081,59 @@ function bindNoteEditorInteractions() {
   if (!editor || editor.dataset.wysiwygBound === '1') return;
   editor.dataset.wysiwygBound = '1';
   editor.addEventListener('paste', function(e) {
+    const cd = e.clipboardData || window.clipboardData;
+    if (cd && cd.items && cd.items.length) {
+      for (let i = 0; i < cd.items.length; i++) {
+        const it = cd.items[i];
+        if (it.kind === 'file' && it.type && it.type.indexOf('image') === 0) {
+          e.preventDefault();
+          const file = it.getAsFile();
+          const MAX_BYTES = 5 * 1024 * 1024;
+          if (!file || file.size > MAX_BYTES) {
+            showToast('Imagen demasiado grande (máx. 5 MB al pegar)', 'error');
+            return;
+          }
+          const finishPaste = dataUrl => {
+            if (typeof dataUrl !== 'string') return;
+            if (dataUrl.length > 4 * 1024 * 1024) {
+              showToast('La imagen sigue siendo muy grande tras comprimir; prueba otra más pequeña.', 'error');
+              return;
+            }
+            const key = makeImageKey();
+            registerTempImage(key, dataUrl);
+            editingNoteImages[key] = dataUrl;
+            const textarea = document.getElementById('note-body-input');
+            if (!textarea) return;
+            const cursorPos = textarea.selectionStart;
+            const altText = 'Imagen';
+            const insert = `![${altText}](${key})`;
+            textarea.value =
+              textarea.value.substring(0, cursorPos) + insert + textarea.value.substring(cursorPos);
+            textarea.focus();
+            const np = cursorPos + insert.length;
+            textarea.setSelectionRange(np, np);
+            syncNoteTextareaToEditor();
+            updateMarkdownPreview('note-body-input', 'note-content-preview', editingNoteImages);
+            handleNoteEditorInput();
+            showToast('Imagen pegada (comprimida al insertar)', 'success');
+          };
+          compressImageFileToDataUrl(file)
+            .then(finishPaste)
+            .catch(() => {
+              const reader = new FileReader();
+              reader.onload = function(ev) {
+                const r = ev.target && ev.target.result;
+                if (typeof r === 'string') finishPaste(r);
+                else showToast('No se pudo procesar la imagen pegada', 'error');
+              };
+              reader.readAsDataURL(file);
+            });
+          return;
+        }
+      }
+    }
     e.preventDefault();
-    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const text = cd ? cd.getData('text/plain') : '';
     document.execCommand('insertText', false, text);
   });
   editor.addEventListener('mousedown', (ev) => {
@@ -1472,12 +2463,26 @@ function handleSlashFromNoteEditor() {
 // These will be implemented with more note functionality
 
 export function toggleShiftSection(header) {
+  const section = header && header.closest('.shift-section');
   const body = header && header.nextElementSibling;
+  const shiftKey = section?.dataset?.shift;
   if (body) body.classList.toggle('collapsed');
+  if (section) section.classList.toggle('shift-section--collapsed', body?.classList.contains('collapsed'));
+  const arrow = header && header.querySelector('.shift-toggle');
+  if (arrow) arrow.classList.toggle('open', body && !body.classList.contains('collapsed'));
+  if (shiftKey && currentDate) {
+    try {
+      const k = `diario_notes_shift_collapsed:${currentDate}:${shiftKey}`;
+      if (body?.classList.contains('collapsed')) localStorage.setItem(k, '1');
+      else localStorage.removeItem(k);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 export function deleteNote(e, id) {
-  e.stopPropagation();
+  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
   const note = notes.find(n => sameId(n.id, id));
   if (!note || !sameId(note.authorId, currentUser.id)) {
     showToast('No autorizado para eliminar esta nota','error');
@@ -1503,13 +2508,7 @@ export function deleteNote(e, id) {
   });
 }
 
-export function duplicateNote(e, id) {
-  e.stopPropagation();
-  const note = notes.find(n => sameId(n.id, id));
-  if (!note || !userCanSeeNote(note)) {
-    showToast('No se puede duplicar esta nota', 'error');
-    return;
-  }
+function performDuplicateNote(note, dateMode, closeEvent) {
   const titleBase = (noteTextForDisplay(note.title) || 'Nota').trim();
   const vis =
     note.visibility === 'public' ? 'public' : note.visibility === 'private' ? 'private' : 'department';
@@ -1519,11 +2518,13 @@ export function duplicateNote(e, id) {
   } catch {
     sharesCopy = [...(note.shares || [])];
   }
+  const dateDest =
+    dateMode === 'original' && note.date ? note.date : currentDate;
   const newNote = {
     id: Date.now(),
     authorId: currentUser.id,
     group: currentUser.group,
-    date: currentDate,
+    date: dateDest,
     shift: note.shift || 'morning',
     title: `${titleBase} (copia)`,
     body: noteTextForDisplay(note.body),
@@ -1540,11 +2541,49 @@ export function duplicateNote(e, id) {
   setNotes([...notes, newNote]);
   saveData();
   renderNotes();
-  showToast('Nota duplicada en el día actual (es tuya; revisa visibilidad si hace falta)', 'success');
+  const where =
+    dateDest === note.date ? 'misma fecha que el original' : 'fecha del diario seleccionada';
+  showToast(`Copia creada (${where}). Es tu nota; revisa visibilidad si hace falta.`, 'success');
+  bumpNotesMetric('note_duplicate');
+  try {
+    if (closeEvent && closeEvent.target && typeof closeEvent.target.closest === 'function') {
+      const det = closeEvent.target.closest('details.note-card-kebab');
+      if (det) det.open = false;
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function duplicateNote(e, id, dateMode = 'diary') {
+  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+  const note = notes.find(n => sameId(n.id, id));
+  if (!note || !userCanSeeNote(note)) {
+    showToast('No se puede duplicar esta nota', 'error');
+    return;
+  }
+  const bodyStr = noteTextForDisplay(note.body) || '';
+  const imgCount = Array.isArray(note.images)
+    ? note.images.length
+    : note.images && typeof note.images === 'object'
+      ? Object.keys(note.images).length
+      : 0;
+  const heavy = bodyStr.length > 12000 || imgCount > 4;
+  if (heavy) {
+    showConfirmModal({
+      icon: '📋',
+      title: '¿Duplicar esta nota?',
+      message:
+        'La nota es grande o tiene varias imágenes. Duplicar puede tardar un momento y ocupará más espacio. ¿Continuar?',
+      onConfirm: () => performDuplicateNote(note, dateMode, e),
+    });
+    return;
+  }
+  performDuplicateNote(note, dateMode, e);
 }
 
 export function toggleNotePinnedQuick(e, id) {
-  e.stopPropagation();
+  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
   const note = notes.find(n => sameId(n.id, id));
   if (!note || !userCanEditNote(note)) return;
   const next = !note.pinned;
@@ -1572,6 +2611,17 @@ function loadNoteTemplatesList() {
   }
 }
 
+/** Vista previa de plantilla: texto plano truncado (HTML del cuerpo). */
+function noteTemplateBodyPreview(html, maxLen = 140) {
+  if (!html) return '';
+  const t = String(html)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!t.length) return '';
+  return t.length > maxLen ? `${t.slice(0, maxLen)}…` : t;
+}
+
 function persistNoteTemplatesList(list) {
   localStorage.setItem(noteTemplatesStorageKey(), JSON.stringify(list));
 }
@@ -1591,7 +2641,8 @@ function renderNoteTemplatesListBody() {
     <div class="note-template-row">
       <div class="note-template-row-info">
         <strong>${escapeHtml(t.name || 'Sin nombre')}</strong>
-        <span>${escapeHtml((t.title || '').slice(0, 80))}${(t.title || '').length > 80 ? '…' : ''}</span>
+        <span class="note-template-row-title">${escapeHtml((t.title || '').slice(0, 80))}${(t.title || '').length > 80 ? '…' : ''}</span>
+        <span class="note-template-row-preview">${escapeHtml(noteTemplateBodyPreview(t.body))}</span>
       </div>
       <div class="note-template-row-actions">
         <button type="button" class="btn-primary btn-sm" onclick="applyNoteTemplate('${t.id}')">Usar</button>
@@ -1603,6 +2654,7 @@ function renderNoteTemplatesListBody() {
 }
 
 export function openNoteTemplatesModal() {
+  bumpNotesMetric('note_templates_modal_open');
   renderNoteTemplatesListBody();
   openModal('note-templates-modal');
 }
@@ -1632,6 +2684,7 @@ export function saveNoteAsTemplate() {
   });
   persistNoteTemplatesList(list);
   showToast('Plantilla guardada', 'success');
+  bumpNotesMetric('note_template_save');
   renderNoteTemplatesListBody();
 }
 
@@ -1642,6 +2695,7 @@ export function applyNoteTemplate(templateId) {
     showToast('Plantilla no encontrada', 'error');
     return;
   }
+  bumpNotesMetric('note_template_apply');
   closeModal('note-templates-modal');
   openNewNoteModal();
   setTimeout(() => {
@@ -1665,6 +2719,8 @@ export function applyNoteTemplate(templateId) {
     if (preview) preview.innerHTML = renderMarkdown(bodyStr, {});
     bindNoteEditorInteractions();
     updateNoteModalUI();
+    refreshNoteTagsChipsFromInput();
+    snapshotNoteModalBaseline();
   }, 80);
 }
 
@@ -1678,11 +2734,15 @@ export function deleteNoteTemplate(templateId) {
 function updateNoteModalUI() {
   const shift = selectedShift || 'morning';
   document.querySelectorAll('#note-modal .shift-option').forEach(o => {
-    o.classList.toggle('selected', o.dataset.shift === shift);
+    const sel = o.dataset.shift === shift;
+    o.classList.toggle('selected', sel);
+    o.setAttribute('aria-pressed', sel ? 'true' : 'false');
   });
   const pri = selectedPriority || 'normal';
   document.querySelectorAll('#note-modal .priority-opt').forEach(o => {
-    o.classList.toggle('selected', o.dataset.priority === pri);
+    const sel = o.dataset.priority === pri;
+    o.classList.toggle('selected', sel);
+    o.setAttribute('aria-pressed', sel ? 'true' : 'false');
   });
   const vis =
     selectedNoteVisibility === 'public'
@@ -1693,13 +2753,26 @@ function updateNoteModalUI() {
   const vp = document.getElementById('note-visibility-pills');
   if (vp) {
     vp.querySelectorAll('.visibility-opt').forEach(o => {
-      o.classList.toggle('selected', o.dataset.vis === vis);
+      const sel = o.dataset.vis === vis;
+      o.classList.toggle('selected', sel);
+      o.setAttribute('aria-pressed', sel ? 'true' : 'false');
     });
   }
-  document.getElementById('reminder-toggle')?.classList.toggle('on', reminderOn);
+  const rt = document.getElementById('reminder-toggle');
+  if (rt) {
+    rt.classList.toggle('on', reminderOn);
+    rt.setAttribute('aria-checked', reminderOn ? 'true' : 'false');
+  }
   document.getElementById('reminder-time')?.classList.toggle('hidden', !reminderOn);
   const editing = editingNoteId != null ? notes.find(n => sameId(n.id, editingNoteId)) : null;
-  document.getElementById('note-pinned-toggle')?.classList.toggle('on', !!(editing && editing.pinned));
+  const pt = document.getElementById('note-pinned-toggle');
+  if (pt) {
+    const pinOn = !!(editing && editing.pinned);
+    pt.classList.toggle('on', pinOn);
+    pt.setAttribute('aria-checked', pinOn ? 'true' : 'false');
+  }
+  syncReminderSummaryLine();
+  syncNoteModalSaveButtonState();
 }
 
 export function renderMarkdown(md, imageMap = {}) {
@@ -1822,7 +2895,7 @@ export function renderMarkdown(md, imageMap = {}) {
     const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
     if (imgMatch) {
       const url = imageMap[imgMatch[2]] || imgMatch[2];
-      out.push(`<img src="${url}" alt="${imgMatch[1]}" class="md-img">`);
+      out.push(`<img src="${url}" alt="${imgMatch[1]}" class="md-img" loading="lazy" decoding="async">`);
       i++; continue;
     }
 
@@ -1856,7 +2929,7 @@ export function inlineMarkdown(text, imageMap = {}) {
   return text
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => {
       const resolved = (imageMap && imageMap[src]) ? imageMap[src] : src;
-      return `<img src="${resolved}" alt="${alt}" class="md-img">`;
+      return `<img src="${resolved}" alt="${alt}" class="md-img" loading="lazy" decoding="async">`;
     })
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="md-link">$1</a>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -2284,6 +3357,11 @@ export function insertImageIntoTextarea(textAreaId) {
   input.onchange = function(e) {
     const file = e.target.files[0];
     if (!file) return;
+    const MAX_BYTES = 5 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      showToast('Imagen demasiado grande (máx. 5 MB)', 'error');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = function(event) {
@@ -2394,6 +3472,8 @@ export function toggleNoteTagDropdown() {
 export function renderWeeklyView() {
   const area = document.getElementById('notes-area');
   if (!area || !currentUser) return;
+
+  syncNotesViewLayoutMode('weekly');
 
   const today = new Date();
   today.setDate(today.getDate() + weekOffset * 7);
@@ -2579,6 +3659,7 @@ export function renderWeeklyView() {
       </div>
     </div>`;
   }
+  syncNoteTagFilterTopbar();
 }
 
 export function setWeekMode(mode) {
@@ -2586,13 +3667,53 @@ export function setWeekMode(mode) {
   renderWeeklyView();
 }
 
+function ncalUpdateTodayLegend(selectedDateStr) {
+  document.querySelectorAll('.ncal-wrap button.ncal-cell.ncal-today').forEach(btn => {
+    const ds = btn.getAttribute('data-ncal-date');
+    const sp = btn.querySelector('.ncal-sr-today');
+    const sel = !!selectedDateStr && ds === selectedDateStr;
+    if (sp) sp.textContent = sel ? 'Hoy, día seleccionado.' : 'Hoy, no seleccionado.';
+    btn.setAttribute(
+      'title',
+      sel ? 'Hoy — día seleccionado' : 'Hoy — no seleccionado; pulsa para ver este día'
+    );
+  });
+}
+
 export function renderNotesCalendarView() {
   const container = document.getElementById('notes-area');
   if (!container) return;
 
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
+  syncNotesViewLayoutMode('calendar');
+  syncNotesViewSwitcherUI();
+
+  const viewNotesRoot = document.getElementById('view-notes');
+  if (viewNotesRoot) {
+    try {
+      const d = new Date(`${currentDate}T12:00:00`);
+      viewNotesRoot.dataset.printDate = d.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      viewNotesRoot.dataset.printDate = currentDate || '';
+    }
+    try {
+      const deptEl = document.getElementById('cfg-dept-name');
+      const appEl = document.getElementById('cfg-app-name');
+      viewNotesRoot.dataset.printDept = (deptEl && deptEl.value) || currentUser?.group || '';
+      viewNotesRoot.dataset.printApp = (appEl && appEl.value) || 'Diario Departamental';
+    } catch {
+      viewNotesRoot.dataset.printDept = currentUser?.group || '';
+    }
+  }
+
+  bindNcalGoToDateShortcutOnce();
+
+  const { y: year, m: month } = getCalendarYM();
+  const calToday = new Date();
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const daysInMonth = lastDay.getDate();
@@ -2606,72 +3727,211 @@ export function renderNotesCalendarView() {
     notesByDate[n.date].push(n);
   });
 
-  const monthName = today.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-  const dayLabels = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
-    .map(d => `<div class="ncal-dow">${d}</div>`).join('');
+  const monthLabelBase = new Date(year, month, 1);
+  const monthName = monthLabelBase.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+    .map(d => `<div class="ncal-dow" aria-hidden="true">${d}</div>`)
+    .join('');
 
+  const SHIFT_COLORS = { morning: '#f4a042', afternoon: '#5ba3e8', night: '#7858f6' };
+  const qcal = (searchQuery || '').trim().toLowerCase();
+
+  let monthCount = 0;
   let cells = '';
   for (let i = 0; i < startDow; i++) {
-    cells += `<div class="ncal-cell ncal-empty"></div>`;
+    cells += `<div class="ncal-cell ncal-empty" aria-hidden="true"></div>`;
   }
   for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const dayNotes = notesByDate[dateStr] || [];
-    const isToday = dateStr === toDateStr(today);
-
-    const dots = dayNotes.slice(0,4).map(n => {
-      const author = USERS.find(u => sameId(u.id, n.authorId));
-      const SHIFT_COLORS = { morning: '#f4a042', afternoon: '#5ba3e8', night: '#7858f6' };
-      const color = author?.color || SHIFT_COLORS[n.shift] || 'var(--accent)';
-      return `<div class="ncal-dot" style="background:${color}" title="${n.title}"></div>`;
+    monthCount += dayNotes.length;
+    const isToday = dateStr === toDateStr(calToday);
+    const hasSearch =
+      !!qcal &&
+      dayNotes.some(n => {
+        const t = noteTextForDisplay(n.title).toLowerCase();
+        const b = noteTextForDisplay(n.body).toLowerCase();
+        return t.includes(qcal) || b.includes(qcal);
+      });
+    const dots = dayNotes.slice(0, 4).map(n => {
+      const sh = n.shift || 'morning';
+      const rawColor = SHIFT_COLORS[sh] || '#888';
+      const colorSafe = escapeHtmlAttr(rawColor);
+      const t = escapeHtmlAttr(noteTextForDisplay(n.title) || 'Sin título');
+      return `<div class="ncal-dot ncal-dot--shift-${sh}" style="background:${colorSafe}" title="${t}"></div>`;
     }).join('');
-    const extra = dayNotes.length > 4 ? `<span class="ncal-extra">+${dayNotes.length-4}</span>` : '';
-
+    const extraCount = dayNotes.length > 4 ? dayNotes.length - 4 : 0;
+    const extra =
+      extraCount > 0
+        ? `<span class="ncal-extra" title="${extraCount} nota${extraCount !== 1 ? 's' : ''} más este día" aria-label="${extraCount} notas adicionales">+${extraCount}</span>`
+        : '';
+    const nCount = dayNotes.length;
+    const ariaDay = `Día ${d} de ${monthName}, ${nCount} nota${nCount !== 1 ? 's' : ''}.${isToday ? ' Es hoy.' : ''}`;
+    const ariaCurrent = isToday ? ' aria-current="date"' : '';
+    const searchCls = hasSearch ? ' ncal-has-search-match' : '';
+    const srToday = isToday
+      ? `<span class="sr-only ncal-sr-today" id="ncal-today-legend-${dateStr}">Hoy, no seleccionado.</span>`
+      : '';
+    const describedBy = isToday ? ` aria-describedby="ncal-today-legend-${dateStr}"` : '';
     cells += `
-      <div class="ncal-cell ${isToday ? 'ncal-today' : ''} ${dayNotes.length ? 'ncal-has-notes' : ''}"
-        onclick="window._ncalSelectDay('${dateStr}')">
-        <div class="ncal-day-num">${d}</div>
-        <div class="ncal-dots">${dots}${extra}</div>
-      </div>`;
+      <button type="button" class="ncal-cell ${isToday ? 'ncal-today' : ''} ${dayNotes.length ? 'ncal-has-notes' : ''}${searchCls}"
+        data-ncal-date="${dateStr}"
+        onclick="window._ncalSelectDay('${dateStr}')" aria-label="${escapeHtmlAttr(ariaDay)}"${describedBy}${ariaCurrent}>
+        <span class="ncal-cell-inner">
+          <span class="ncal-day-num">${d}</span>
+          ${srToday}
+          <span class="ncal-dots-wrap"><span class="ncal-dots">${dots}${extra}</span></span>
+        </span>
+      </button>`;
   }
 
+  container.classList.add('notes-area-enter');
+  setTimeout(() => container.classList.remove('notes-area-enter'), 320);
   container.innerHTML = `
-    <div class="ncal-wrap">
+    <div class="ncal-wrap ncal-wrap--split">
+      <div class="ncal-calendar-col">
       <div class="ncal-header">
-        <span class="ncal-month-label">${monthName}</span>
+        <button type="button" class="ncal-nav-btn" onclick="ncalNavigateMonth(-1)" aria-label="Mes anterior">◀</button>
+        <span class="ncal-month-label" id="ncal-month-label">${monthName}</span>
+        <button type="button" class="ncal-nav-btn" onclick="ncalNavigateMonth(1)" aria-label="Mes siguiente">▶</button>
+        <div class="ncal-header-tools">
+          <button type="button" class="ncal-goto-btn" onclick="ncalOpenGoToDate()" title="Ir a una fecha concreta (Ctrl+G o Cmd+G)">Ir a fecha…</button>
+          <button type="button" class="ncal-goto-btn ncal-today-btn" onclick="ncalGoToday()" title="Ir al mes actual y seleccionar hoy">Hoy</button>
+        </div>
       </div>
-      <div class="ncal-grid">
+      <div class="ncal-grid" role="grid" aria-labelledby="ncal-month-label">
         ${dayLabels}
         ${cells}
       </div>
-      <div class="ncal-detail" id="ncal-detail">
+      <p class="ncal-legend" id="ncal-legend">
+        <span class="ncal-legend-title">Leyenda:</span>
+        <span class="ncal-legend-item"><span class="ncal-legend-swatch" style="background:#f4a042"></span> Mañana</span>
+        <span class="ncal-legend-item"><span class="ncal-legend-swatch" style="background:#5ba3e8"></span> Tarde</span>
+        <span class="ncal-legend-item"><span class="ncal-legend-swatch" style="background:#7858f6"></span> Noche</span>
+        <span class="ncal-legend-item ncal-legend-item--search">Barra inferior naranja: día con coincidencias de búsqueda</span>
+      </p>
+      </div>
+      <div class="ncal-detail" id="ncal-detail" role="region" aria-live="polite" aria-label="Notas del día seleccionado">
         <div class="ncal-detail-placeholder">Selecciona un día para ver sus notas</div>
       </div>
     </div>
   `;
 
+  const mainEl = document.getElementById('notes-stats-cal-main');
+  const dayEl = document.getElementById('notes-stats-cal-day');
+  if (mainEl) mainEl.textContent = `${monthCount} notas en ${monthName}`;
+  if (dayEl) {
+    dayEl.textContent = '';
+    dayEl.classList.add('hidden');
+  }
+
   window._ncalSelectDay = function(dateStr) {
     const dayNotes = notesByDate[dateStr] || [];
     const detail = document.getElementById('ncal-detail');
     if (!detail) return;
+    document.querySelectorAll('.ncal-wrap button.ncal-cell').forEach(btn => {
+      btn.classList.remove('ncal-selected');
+      btn.removeAttribute('aria-selected');
+    });
+    const selectedBtn = document.querySelector(`.ncal-wrap button.ncal-cell[data-ncal-date="${dateStr}"]`);
+    if (selectedBtn) {
+      selectedBtn.classList.add('ncal-selected');
+      selectedBtn.setAttribute('aria-selected', 'true');
+    }
+    ncalUpdateTodayLegend(dateStr);
+    const d = new Date(dateStr + 'T12:00:00');
+    const label = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    const daySummary = document.getElementById('notes-stats-cal-day');
+    if (daySummary) {
+      daySummary.classList.remove('hidden');
+      daySummary.textContent = dayNotes.length
+        ? `${dayNotes.length} nota${dayNotes.length !== 1 ? 's' : ''} · ${label}`
+        : `Seleccionado: ${label} · sin notas`;
+    }
+    announceNotes(
+      dayNotes.length
+        ? `${dayNotes.length} nota${dayNotes.length !== 1 ? 's' : ''} en ${label}`
+        : `Sin notas el ${label}`
+    );
     if (!dayNotes.length) {
-      detail.innerHTML = `<div class="ncal-detail-placeholder">Sin notas este día</div>`;
+      detail.classList.remove('ncal-detail--dense');
+      const safeDate = escapeHtmlAttr(dateStr);
+      detail.innerHTML = `
+        <div class="ncal-detail-empty-wrap">
+          <div class="ncal-detail-placeholder">Sin notas este día</div>
+          <button type="button" class="btn-action ncal-empty-day-cta" onclick="ncalOpenNewNoteForDay('${safeDate}')" title="La nota nueva quedará asignada a esta fecha">✏️ Crear nota para este día</button>
+        </div>`;
       return;
     }
-    const d = new Date(dateStr + 'T12:00:00');
-    const label = d.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
-    const SHIFT_LABELS = { morning:'🌅 Mañana', afternoon:'🌤 Tarde', night:'🌙 Noche' };
+    detail.classList.toggle('ncal-detail--dense', dayNotes.length > 6);
     detail.innerHTML = `
-      <div class="ncal-detail-header">${label}</div>
-      ${dayNotes.map(n => {
-        const author = USERS.find(u => sameId(u.id, n.authorId));
-        return `
-          <div class="ncal-note-row" onclick="editNote('${n.id || n._id}')">
-            <div class="ncal-note-shift">${SHIFT_LABELS[n.shift] || n.shift}</div>
-            <div class="ncal-note-title">${n.title || 'Sin título'}</div>
-            <div class="ncal-note-author" style="background:${author?.color || '#888'}">${author?.initials || '?'}</div>
+      <div class="ncal-detail-header">${escapeHtml(label)}</div>
+      ${dayNotes
+        .map((n, idx) => {
+          const author = USERS.find(u => sameId(u.id, n.authorId));
+          const nid = String(n.id || n._id || '');
+          const bg = escapeHtmlAttr(author?.color || '#888');
+          const initials = escapeHtml(author?.initials || '?');
+          const title = escapeHtml(noteTextForDisplay(n.title) || 'Sin título');
+          const sh = n.shift || 'morning';
+          const pillClass = sh === 'afternoon' ? 'afternoon' : sh === 'night' ? 'night' : 'morning';
+          const shiftDef = SHIFTS[sh] || SHIFTS.morning;
+          const shiftLabel = escapeHtml(`${shiftDef.emoji} ${shiftDef.label}`);
+          const alt = idx % 2 === 1 ? ' ncal-note-row--alt' : '';
+          const plain = noteTextForDisplay(n.body).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          const snRaw = plain.length > 80 ? `${plain.slice(0, 80)}…` : plain;
+          const snHtml = snRaw
+            ? `<div class="ncal-note-snippet">${escapeHtml(snRaw)}</div>`
+            : '';
+          return `
+          <div class="ncal-note-row${alt}" role="button" tabindex="0"
+            onclick='editNote(event, ${JSON.stringify(nid)})'
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editNote(event, ${JSON.stringify(nid)});}">
+            <div class="ncal-note-shift-pill ${pillClass}">${shiftLabel}</div>
+            <div class="ncal-note-maincol">
+              <div class="ncal-note-title">${title}</div>
+              ${snHtml}
+            </div>
+            <div class="ncal-note-author" style="background:${bg}">${initials}</div>
           </div>`;
-      }).join('')}
+        })
+        .join('')}
     `;
   };
+
+  ncalUpdateTodayLegend('');
+
+  syncNoteTagFilterTopbar();
 }
+
+function bindNotesViewGlobalShortcutsOnce() {
+  if (typeof window === 'undefined' || window._notesViewShortcutsBound) return;
+  window._notesViewShortcutsBound = true;
+  document.addEventListener(
+    'keydown',
+    e => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('details.note-card-kebab[open]').forEach(d => {
+          d.open = false;
+        });
+      }
+      if (currentView !== 'notes') return;
+      const noteModal = document.getElementById('note-modal');
+      if (noteModal?.classList.contains('open')) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      if (e.target && e.target.isContentEditable) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if ((e.key === 'n' || e.key === 'N') && !e.shiftKey) {
+        e.preventDefault();
+        openNewNoteModal();
+      } else if (e.key === '/' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('search-input')?.focus();
+      }
+    },
+    true
+  );
+}
+
+bindNotesViewGlobalShortcutsOnce();

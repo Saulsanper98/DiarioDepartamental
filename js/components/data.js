@@ -55,6 +55,16 @@ export let searchQuery = '';
 /** Con texto de búsqueda, incluir todas las fechas (no solo el día del calendario). */
 export let searchNotesAllDates = false;
 export let activeNoteTagFilter = null;
+/** Filtro rápido «solo notas de este autor» en la vista lista del día. */
+export let notesAuthorFilterId = null;
+/** Orden de notas dentro de cada turno: 'recent' | 'oldest'. */
+export let notesListSort = 'recent';
+try {
+  const _nss = sessionStorage.getItem('diario_notes_list_sort');
+  if (_nss === 'oldest' || _nss === 'recent') notesListSort = _nss;
+} catch {
+  /* ignore */
+}
 export let editingNoteId = null;
 export let editingPostitId = null;
 export let reminderOn = false;
@@ -104,6 +114,17 @@ export function setActiveShiftFilters(val) { activeShiftFilters = val; }
 export function setSearchQuery(val) { searchQuery = val; }
 export function setSearchNotesAllDates(val) { searchNotesAllDates = !!val; }
 export function setActiveNoteTagFilter(val) { activeNoteTagFilter = val; }
+export function setNotesAuthorFilterId(val) {
+  notesAuthorFilterId = val == null || val === '' ? null : val;
+}
+export function setNotesListSort(val) {
+  notesListSort = val === 'oldest' ? 'oldest' : 'recent';
+  try {
+    sessionStorage.setItem('diario_notes_list_sort', notesListSort);
+  } catch {
+    /* ignore */
+  }
+}
 export function setEditingNoteId(val) { editingNoteId = val; }
 export function setEditingPostitId(val) { editingPostitId = val; }
 export function setReminderOn(val) { reminderOn = val; }

@@ -25,10 +25,24 @@ function shouldAttachOverlayDismiss(id, overlayEl) {
  * @param {string} id - Modal element ID
  */
 export function closeModal(id) {
+  if (id === 'note-modal' && typeof window._onNoteModalClosing === 'function') {
+    try {
+      window._onNoteModalClosing();
+    } catch (_) {
+      /* noop */
+    }
+  }
   const modal = document.getElementById(id);
   if (modal) {
     detachModalOverlayDismiss(modal);
     modal.classList.remove('open');
+  }
+  if (id === 'note-modal' && typeof window._onNoteModalClose === 'function') {
+    try {
+      window._onNoteModalClose();
+    } catch (_) {
+      /* noop */
+    }
   }
   if (id === 'comments-thread-modal' && typeof window._onCommentsThreadModalClose === 'function') {
     try {

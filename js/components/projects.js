@@ -1,17 +1,27 @@
 // ===== PROJECTS MODULE =====
 
-import { USERS, projects, currentUser, currentProjectId, projectUserFilter, editingProjectId, editingTaskId, editingProjectImages, editingTaskImages, comments, workGroups, GROUPS, collectImageMap, setProjects, setCurrentProjectId, setEditingProjectId, setEditingTaskId, setEditingProjectImages, setEditingTaskImages, setProjectUserFilter as setProjectUserFilterState } from './data.js';
+import { USERS, projects, currentUser, currentProjectId, currentView, projectUserFilter, editingProjectId, editingTaskId, editingProjectImages, editingTaskImages, comments, workGroups, GROUPS, collectImageMap, setProjects, setCurrentProjectId, setEditingProjectId, setEditingTaskId, setEditingProjectImages, setEditingTaskImages, setProjectUserFilter as setProjectUserFilterState, sameId } from './data.js';
 import { showToast, openModal, closeModal, showConfirmModal, escapeChatHtml } from './modalControl.js';
 import { renderMarkdown, fillCollabTargetSelect, buildSharesFromCollabSelect } from './notes.js';
 import { createCustomSelect } from './auroraCustomSelect.js';
 import { commentIndicators, getLatestCommentPreview } from './docs.js';
-import { sameId } from './data.js';
 import {
   apiGetProjects,
   apiCreateProject,
   apiUpdateProject,
   apiDeleteProject,
 } from '../api.js';
+
+const PROJECT_STATS_COMPACT_LS = 'diario_proj_stats_compact_v1';
+const PROJECT_ACTIVITY_FILTER_LS = 'diario_proj_activity_filter_v1';
+const PROJECT_TASK_LIST_DENSITY_LS = 'diario_proj_tasks_density_v1';
+const PROJECT_ACTIVITY_EXPANDED_V2 = 'diario_project_activity_expanded_v2';
+const PROJECT_ACTIVITY_V2_MIGRATED = 'diario_project_activity_v2_migrated';
+const PROJECT_KANBAN_WIP_SOFT = 7;
+
+let _projectTaskMultiselect = false;
+const _selectedTaskIds = new Set();
+let _projectsNetworkBound = false;
 
 /** Plantillas al crear proyecto nuevo (id vacío = sin plantilla). */
 export const PROJECT_TASK_TEMPLATES = [
@@ -110,6 +120,39 @@ export function replaceProjectCustomTemplatesFromBackup(list) {
   const capped = valid.slice(0, MAX_CUSTOM_PROJECT_TEMPLATES);
   saveCustomProjectTemplates(capped);
   return capped.length;
+}
+
+/** Parsea `dueDate` en formato YYYY-MM-DD (mediodía local). Devuelve `null` si es inválido o año fuera de rango. */
+function parseProjectTaskDueDate(dueDateStr) {
+  if (dueDateStr == null || dueDateStr === '') return null;
+  const s = String(dueDateStr).trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  const y = parseInt(m[1], 10);
+  const mo = parseInt(m[2], 10) - 1;
+  const d = parseInt(m[3], 10);
+  if (y < 1970 || y > 2100 || mo < 0 || mo > 11 || d < 1 || d > 31) return null;
+  const dt = new Date(y, mo, d, 12, 0, 0, 0);
+  if (Number.isNaN(dt.getTime())) return null;
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo || dt.getDate() !== d) return null;
+  return dt;
+}
+
+function formatCalendarMonthYearLabel(d) {
+  const cap = x => (x && x.length ? x.charAt(0).toUpperCase() + x.slice(1) : '');
+  const month = cap(d.toLocaleDateString('es-ES', { month: 'long' }));
+  return `${month} de ${d.getFullYear()}`;
+}
+
+/** Vencida = fecha límite (día natural) anterior a hoy. */
+function isTaskDueDateOverdue(dueStr, done) {
+  if (done) return false;
+  const dd = parseProjectTaskDueDate(dueStr);
+  if (!dd) return false;
+  const startToday = new Date();
+  startToday.setHours(0, 0, 0, 0);
+  const startDue = new Date(dd.getFullYear(), dd.getMonth(), dd.getDate(), 0, 0, 0, 0);
+  return startDue < startToday;
 }
 
 export async function loadProjectsFromAPI() {
@@ -446,9 +489,36 @@ function countBrokenDependencyRefs(p) {
 const PROJECT_ACTIVITY_MAX = 50;
 const PROJECT_ACTIVITY_HIDDEN_KEY = 'diario_project_activity_hidden';
 
-function getHiddenProjectActivitySet() {
+function migrateProjectActivityPanelStorageOnce() {
   try {
-    const raw = localStorage.getItem(PROJECT_ACTIVITY_HIDDEN_KEY);
+    if (localStorage.getItem(PROJECT_ACTIVITY_V2_MIGRATED)) return;
+    const v2Raw = localStorage.getItem(PROJECT_ACTIVITY_EXPANDED_V2);
+    if (v2Raw != null && v2Raw !== '') {
+      localStorage.setItem(PROJECT_ACTIVITY_V2_MIGRATED, '1');
+      return;
+    }
+    const legacyRaw = localStorage.getItem(PROJECT_ACTIVITY_HIDDEN_KEY);
+    if (legacyRaw != null) {
+      const hidden = new Set(JSON.parse(legacyRaw).map(String));
+      const expanded = projects.map(pr => String(pr.id)).filter(id => !hidden.has(id));
+      localStorage.setItem(PROJECT_ACTIVITY_EXPANDED_V2, JSON.stringify(expanded));
+      localStorage.removeItem(PROJECT_ACTIVITY_HIDDEN_KEY);
+    } else {
+      localStorage.setItem(PROJECT_ACTIVITY_EXPANDED_V2, '[]');
+    }
+    localStorage.setItem(PROJECT_ACTIVITY_V2_MIGRATED, '1');
+  } catch (_) {
+    try {
+      localStorage.setItem(PROJECT_ACTIVITY_EXPANDED_V2, '[]');
+      localStorage.setItem(PROJECT_ACTIVITY_V2_MIGRATED, '1');
+    } catch (__) { /* noop */ }
+  }
+}
+
+function getProjectActivityExpandedSet() {
+  migrateProjectActivityPanelStorageOnce();
+  try {
+    const raw = localStorage.getItem(PROJECT_ACTIVITY_EXPANDED_V2);
     const arr = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(arr)) return new Set();
     return new Set(arr.map(x => String(x)));
@@ -457,8 +527,14 @@ function getHiddenProjectActivitySet() {
   }
 }
 
-function setHiddenProjectActivitySet(set) {
-  localStorage.setItem(PROJECT_ACTIVITY_HIDDEN_KEY, JSON.stringify(Array.from(set)));
+function setProjectActivityExpandedSet(set) {
+  try {
+    localStorage.setItem(PROJECT_ACTIVITY_EXPANDED_V2, JSON.stringify(Array.from(set)));
+  } catch (_) { /* noop */ }
+}
+
+function isProjectActivityPanelExpanded(projectId) {
+  return getProjectActivityExpandedSet().has(String(projectId));
 }
 
 function pushProjectActivity(project, { type, taskName, taskId, detail }) {
@@ -516,19 +592,42 @@ function projectActivityLine(e) {
   }
 }
 
+function getProjectActivityFilter() {
+  try {
+    const v = localStorage.getItem(PROJECT_ACTIVITY_FILTER_LS);
+    if (v === 'tasks' || v === 'templates') return v;
+  } catch (_) { /* noop */ }
+  return 'all';
+}
+
+function activityEntryMatchesFilter(e, filt) {
+  if (filt === 'all') return true;
+  if (filt === 'templates') return e.type === 'template_applied';
+  return e.type !== 'template_applied';
+}
+
 function renderProjectActivity(p) {
   const log = p.activityLog || [];
   if (!log.length) return '';
-  const hidden = getHiddenProjectActivitySet().has(String(p.id));
-  if (hidden) {
+  const expanded = isProjectActivityPanelExpanded(p.id);
+  if (!expanded) {
     return `<div class="project-activity-block project-activity-block--collapsed">
       <div class="project-activity-header">
-        <span>Actividad reciente</span>
-        <button type="button" class="project-activity-toggle" onclick="toggleProjectActivityVisibility('${toOnclickStringArg(p.id)}', false)">Mostrar</button>
+        <span class="proj-section-heading">Actividad reciente</span>
+        <button type="button" class="project-activity-toggle" onclick="toggleProjectActivityVisibility('${toOnclickStringArg(p.id)}', true)">Mostrar</button>
       </div>
     </div>`;
   }
-  const rows = log.slice(0, 20).map(e => `
+  const filt = getProjectActivityFilter();
+  const idLit = JSON.stringify(p.id);
+  const chips = `
+    <div class="project-activity-filters" role="tablist" aria-label="Filtrar actividad">
+      <button type="button" class="proj-act-chip ${filt === 'all' ? 'is-active' : ''}" role="tab" aria-selected="${filt === 'all' ? 'true' : 'false'}" onclick="setProjectActivityFilter('all', ${idLit})">Todos</button>
+      <button type="button" class="proj-act-chip ${filt === 'tasks' ? 'is-active' : ''}" role="tab" aria-selected="${filt === 'tasks' ? 'true' : 'false'}" onclick="setProjectActivityFilter('tasks', ${idLit})">Tareas</button>
+      <button type="button" class="proj-act-chip ${filt === 'templates' ? 'is-active' : ''}" role="tab" aria-selected="${filt === 'templates' ? 'true' : 'false'}" onclick="setProjectActivityFilter('templates', ${idLit})">Plantillas</button>
+    </div>`;
+  const filtered = log.filter(e => activityEntryMatchesFilter(e, filt));
+  const rows = filtered.slice(0, 20).map(e => `
     <div class="project-activity-row">
       <span class="project-activity-text">${projectActivityLine(e)}</span>
       <span class="project-activity-when">${formatActivityRelative(e.at)}</span>
@@ -536,19 +635,20 @@ function renderProjectActivity(p) {
   return `
     <div class="project-activity-block">
       <div class="project-activity-header">
-        <span>Actividad reciente</span>
-        <button type="button" class="project-activity-toggle" onclick="toggleProjectActivityVisibility('${toOnclickStringArg(p.id)}', true)">Ocultar</button>
+        <span class="proj-section-heading">Actividad reciente</span>
+        <button type="button" class="project-activity-toggle" onclick="toggleProjectActivityVisibility('${toOnclickStringArg(p.id)}', false)">Ocultar</button>
       </div>
-      <div class="project-activity-list">${rows}</div>
+      ${chips}
+      <div class="project-activity-list">${rows || '<div class="project-activity-empty">Sin entradas en este filtro.</div>'}</div>
     </div>`;
 }
 
-export function toggleProjectActivityVisibility(projectId, hide) {
-  const set = getHiddenProjectActivitySet();
+export function toggleProjectActivityVisibility(projectId, expand) {
+  const set = getProjectActivityExpandedSet();
   const key = String(projectId);
-  if (hide) set.add(key);
+  if (expand) set.add(key);
   else set.delete(key);
-  setHiddenProjectActivitySet(set);
+  setProjectActivityExpandedSet(set);
   if (currentProjectId && sameId(currentProjectId, projectId)) {
     selectProject(projectId);
   }
@@ -786,26 +886,43 @@ export function getProjectParentSelectAuroraRows(opts) {
   return rows;
 }
 
+function announceProjectsUserFilter(message) {
+  const el = document.getElementById('projects-filter-announce');
+  if (!el || !message) return;
+  el.textContent = '';
+  requestAnimationFrame(() => {
+    el.textContent = message;
+  });
+}
+
 export function renderProjectUserFilter() {
   const bar = document.getElementById('project-user-filter');
   if (!bar) return;
   const usersInGroup = USERS.filter(u => u.group === currentUser.group);
   const allActive = projectUserFilter === null;
   bar.innerHTML = `<span class="puf-label">Filtrar por:</span>
-    <button class="puf-pill ${allActive ? 'active' : ''}" onclick="setProjectUserFilter(null)">👥 Todos</button>
+    ${!allActive ? '<button type="button" class="puf-clear" onclick="setProjectUserFilter(null)">Quitar filtro</button>' : ''}
+    <div id="projects-filter-announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    <div class="puf-pills-scroll" role="group" aria-label="Filtrar proyectos por miembro del equipo">
+    <button type="button" class="puf-pill ${allActive ? 'active' : ''}" onclick="setProjectUserFilter(null)">👥 Todos</button>
     ${usersInGroup.map(u => {
       const isActive = projectUserFilter === u.id;
-      return `<button class="puf-pill ${isActive ? 'active' : ''}" onclick="setProjectUserFilter('${u.id}')">
+      return `<button type="button" class="puf-pill ${isActive ? 'active' : ''}" onclick="setProjectUserFilter('${u.id}')">
         <div class="puf-avatar" style="background:${u.color}">${u.initials}</div>
         ${u.name}
       </button>`;
-    }).join('')}`;
+    }).join('')}
+    </div>`;
 }
 
 export function setProjectUserFilter(userId) {
   setProjectUserFilterState(userId);
   renderProjectUserFilter();
   renderProjects();
+  const u = userId != null ? USERS.find(x => x.id === userId) : null;
+  announceProjectsUserFilter(
+    u ? `Filtrando árbol de proyectos por ${u.name}` : 'Filtro de miembro quitado: se muestran todos los proyectos'
+  );
 }
 
 export function renderProjects() {
@@ -846,11 +963,7 @@ export function renderProjects() {
   <div class="project-tree-progress">
     <div class="project-tree-progress-fill" style="width:${pct}%"></div>
   </div>` : '';
-    const overdueTasks = tasksToShow.filter(t =>
-      !t.done &&
-      t.dueDate &&
-      new Date(t.dueDate + 'T12:00:00') < new Date()
-    ).length;
+    const overdueTasks = tasksToShow.filter(t => isTaskDueDateOverdue(t.dueDate, t.done)).length;
     const pComments = commentIndicators('project', proj.id);
     const pLast = getLatestCommentPreview('project', proj.id);
     const commentTooltip = pLast ? ` title="${escapeChatHtml(pLast.substring(0, 100))}"` : '';
@@ -864,18 +977,18 @@ export function renderProjects() {
         ${toggleBtn}
         <div class="project-item-row-body">
           <div class="project-item-name">
-            ${escapeChatHtml(proj.name)}
-            ${subCount ? `<span style="font-size:10px;opacity:0.75;margin-left:6px">· ${subCount} sub</span>` : ''}
-            ${overdueTasks > 0 ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(239,68,68,0.85);margin-left:6px;vertical-align:middle" title="${overdueTasks} tarea${overdueTasks !== 1 ? 's' : ''} vencida${overdueTasks !== 1 ? 's' : ''}"></span>` : ''}
+            <span class="project-item-name-text" title="${escapeChatHtml(proj.name)}">${escapeChatHtml(proj.name)}</span>
+            ${subCount ? `<span class="project-subcount-pill" title="${subCount} subproyecto${subCount !== 1 ? 's' : ''}" aria-label="${subCount} subproyectos"><span class="project-subcount-pill__icon" aria-hidden="true">⎘</span><span class="project-subcount-pill__n">${subCount}</span></span>` : ''}
+            ${overdueTasks > 0 ? `<span class="project-item-overdue-dot" title="${overdueTasks} tarea${overdueTasks !== 1 ? 's' : ''} vencida${overdueTasks !== 1 ? 's' : ''}"></span>` : ''}
           </div>
           <div class="project-item-meta">
             <span>${statusLabels[proj.status]}</span>
             <span>${done}/${total} tareas${projectUserFilter !== null ? ' asignadas' : ''}</span>
             ${overdueTasks > 0
-              ? `<span style="color:rgba(239,68,68,0.85);font-size:10px;font-weight:600">⚠ ${overdueTasks} vencida${overdueTasks !== 1 ? 's' : ''}</span>`
+              ? `<span class="project-item-meta-overdue">⚠ ${overdueTasks} vencida${overdueTasks !== 1 ? 's' : ''}</span>`
               : ''}
           </div>
-          ${total > 0 ? `<div class="project-tree-progress"><div class="project-tree-progress-fill" style="width:${Math.round(done/total*100)}%"></div></div>` : ''}
+          ${progressBar}
         </div>
       </div>
     </div>`;
@@ -901,17 +1014,424 @@ export function renderProjects() {
   } else if (visibleProjects.length === 0) {
     document.getElementById('project-detail').innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><div>Selecciona un proyecto para ver sus detalles</div></div>`;
   }
+
+  const ob = document.getElementById('projects-onboarding-banner');
+  if (ob) {
+    try {
+      if (localStorage.getItem('diario_projects_onboarding_dismissed_v1')) ob.classList.add('hidden');
+      else ob.classList.remove('hidden');
+    } catch (_) {
+      ob.classList.add('hidden');
+    }
+  }
+  bindProjectsViewShortcutsOnce();
 }
 
-function getSortedTasks(tasks) {
+function normalizeTaskSearchText(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function taskCommentsSearchBlob(projectId, taskId) {
+  return comments
+    .filter(c => c.kind === 'task' && sameId(c.targetId, projectId) && sameId(c.extraId, taskId))
+    .map(c => String(c.body || ''))
+    .join('\n');
+}
+
+function taskMatchesSearch(t, rawQ, projectId) {
+  const q = normalizeTaskSearchText(rawQ).trim();
+  if (!q) return true;
+  const name = normalizeTaskSearchText(t.name);
+  const desc = normalizeTaskSearchText(t.desc || '');
+  const fromComments =
+    projectId != null ? normalizeTaskSearchText(taskCommentsSearchBlob(projectId, t.id)) : '';
+  return name.includes(q) || desc.includes(q) || fromComments.includes(q);
+}
+
+function analyzeProjectTasks(tasks) {
+  const arr = Array.isArray(tasks) ? tasks : [];
+  const total = arr.length;
+  const done = arr.filter(t => t.done === true || t.done === 'true' || t.status === 'done').length;
+  const pending = arr.filter(t => !t.done && t.status !== 'progress').length;
+  const inProgress = arr.filter(t => !t.done && t.status === 'progress').length;
+  const overdue = arr.filter(t => isTaskDueDateOverdue(t.dueDate, t.done)).length;
+  const alta = arr.filter(t => t.priority === 'alta').length;
+  const media = arr.filter(t => t.priority === 'media').length;
+  const normal = arr.filter(t => !t.priority || t.priority === 'normal').length;
+  const totalEstimated = arr.reduce((sum, t) => sum + (Number(t.estimatedHours) || 0), 0);
+  const totalReal = arr.reduce((sum, t) => sum + (Number(t.realHours) || 0), 0);
+  const hoursEfficiency = totalEstimated > 0 ? Math.round(totalReal / totalEstimated * 100) : null;
+  const byAssignee = {};
+  arr.forEach(t => {
+    const key = t.assigneeId || t.assignedTo || '__none__';
+    if (!byAssignee[key]) byAssignee[key] = { done: 0, total: 0, overdue: 0 };
+    byAssignee[key].total++;
+    if (t.done === true || t.done === 'true' || t.status === 'done') byAssignee[key].done++;
+    if (isTaskDueDateOverdue(t.dueDate, t.done)) {
+      byAssignee[key].overdue++;
+    }
+  });
+  const unassigned = arr.filter(t => !t.assigneeId && !t.assignedTo).length;
+  return {
+    arr, total, done, pending, inProgress, overdue, alta, media, normal,
+    totalEstimated, totalReal, hoursEfficiency, byAssignee, unassigned,
+  };
+}
+
+function renderProjectQuickStrip(p) {
+  const m = analyzeProjectTasks(p.tasks || []);
+  if (m.total === 0) return '';
+  const parts = [
+    `<span>${m.done}/${m.total} hechas</span>`,
+    `<span class="project-quick-strip__sep">·</span>`,
+    `<span>${m.pending} pend.</span>`,
+    `<span class="project-quick-strip__sep">·</span>`,
+    `<span>${m.inProgress} en curso</span>`,
+  ];
+  if (m.overdue > 0) {
+    parts.push(`<span class="project-quick-strip__sep">·</span>`);
+    parts.push(`<span class="project-quick-strip__warn">${m.overdue} vencidas</span>`);
+  }
+  if (m.unassigned > 0) {
+    parts.push(`<span class="project-quick-strip__sep">·</span>`);
+    parts.push(`<span>${m.unassigned} sin asignar</span>`);
+  }
+  return `<div class="project-quick-strip" role="status">${parts.join('')}</div>`;
+}
+
+let _projectActionsMenuOutsideBound = false;
+function ensureProjectActionsMenuOutsideClose() {
+  if (_projectActionsMenuOutsideBound) return;
+  _projectActionsMenuOutsideBound = true;
+  document.addEventListener(
+    'mousedown',
+    e => {
+      if (e.target.closest?.('.project-header-actions__more-wrap')) return;
+      const menu = document.getElementById('project-actions-menu');
+      if (menu && !menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+        const btn = document.getElementById('project-actions-more-btn');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    },
+    true
+  );
+}
+
+/** @param {boolean} [forceClose] true: cerrar menú (desde ítems). */
+export function toggleProjectActionsMenu(forceClose) {
+  ensureProjectActionsMenuOutsideClose();
+  const menu = document.getElementById('project-actions-menu');
+  const btn = document.getElementById('project-actions-more-btn');
+  if (!menu || !btn) return;
+  if (forceClose === true) {
+    menu.classList.add('hidden');
+    btn.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  menu.classList.toggle('hidden');
+  btn.setAttribute('aria-expanded', menu.classList.contains('hidden') ? 'false' : 'true');
+}
+
+export function dismissProjectsOnboarding() {
+  try {
+    localStorage.setItem('diario_projects_onboarding_dismissed_v1', '1');
+  } catch (_) { /* ignore */ }
+  document.getElementById('projects-onboarding-banner')?.classList.add('hidden');
+}
+
+export function openProjectsShortcutsModal() {
+  openModal('projects-shortcuts-modal');
+}
+
+export function setProjectActivityFilter(filter, projectId) {
+  const f = filter === 'tasks' || filter === 'templates' ? filter : 'all';
+  try {
+    localStorage.setItem(PROJECT_ACTIVITY_FILTER_LS, f);
+  } catch (_) { /* noop */ }
+  selectProject(projectId);
+}
+
+export function toggleProjectStatsCompactLayout() {
+  const root = document.getElementById('project-detail-root');
+  if (!root) return;
+  root.classList.toggle('project-detail-root--stats-compact');
+  try {
+    localStorage.setItem(
+      PROJECT_STATS_COMPACT_LS,
+      root.classList.contains('project-detail-root--stats-compact') ? '1' : '0'
+    );
+  } catch (_) { /* noop */ }
+}
+
+function projectToolbarCloseAll() {
+  document.querySelectorAll('#project-detail .tasks-toolbar-dd').forEach(d => {
+    d.open = false;
+  });
+}
+
+export function projectToolbarPickSort(mode, projectIdStr, el) {
+  projectToolbarCloseAll();
+  if (el && el.closest) el.closest('details')?.removeAttribute('open');
+  setTaskSort(mode, projectIdStr);
+}
+
+export function projectToolbarPickView(mode, projectIdStr, el) {
+  projectToolbarCloseAll();
+  if (el && el.closest) el.closest('details')?.removeAttribute('open');
+  setProjectViewMode(mode, projectIdStr);
+}
+
+export function kanbanColDragOver(ev) {
+  ev.preventDefault();
+  ev.currentTarget.classList.add('kanban-col--drag-over');
+}
+
+export function kanbanColDragLeave(ev) {
+  const col = ev.currentTarget;
+  if (!col || !col.classList.contains('kanban-col')) return;
+  const rel = ev.relatedTarget;
+  if (rel && col.contains(rel)) return;
+  col.classList.remove('kanban-col--drag-over');
+}
+
+export function closeTaskRowMenu(el) {
+  const dd = el && el.closest ? el.closest('details.task-item-dd') : null;
+  if (dd) dd.open = false;
+}
+
+function syncProjAssigneeDisclosureViewport() {
+  const det = document.querySelector('#project-detail .proj-assignee-disclosure');
+  if (!det) return;
+  try {
+    const mq = window.matchMedia('(max-width: 900px)');
+    if (mq.matches) det.removeAttribute('open');
+    else det.setAttribute('open', '');
+  } catch (_) { /* noop */ }
+}
+
+let _projAssigneeMqlBound = false;
+function bindProjAssigneeDisclosureMqlOnce() {
+  if (_projAssigneeMqlBound) return;
+  _projAssigneeMqlBound = true;
+  try {
+    const mq = window.matchMedia('(max-width: 900px)');
+    mq.addEventListener('change', () => syncProjAssigneeDisclosureViewport());
+  } catch (_) { /* noop */ }
+}
+
+function applyAfterProjectDetailRender() {
+  const root = document.getElementById('project-detail-root');
+  if (root) {
+    try {
+      if (localStorage.getItem(PROJECT_STATS_COMPACT_LS) === '1') {
+        root.classList.add('project-detail-root--stats-compact');
+      }
+    } catch (_) { /* noop */ }
+  }
+  updateProjectMultiselectBar();
+  bindProjectsNetworkStatusOnce();
+  bindProjAssigneeDisclosureMqlOnce();
+  syncProjAssigneeDisclosureViewport();
+  const strip = document.getElementById('projects-sync-strip');
+  if (strip) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      strip.textContent = 'Sin conexión. Los cambios pueden no guardarse en el servidor.';
+      strip.classList.add('is-offline');
+      strip.classList.remove('is-ready');
+    } else {
+      strip.classList.remove('is-offline');
+      strip.classList.add('is-ready');
+      if (!strip.textContent) strip.textContent = '';
+    }
+  }
+}
+
+function bindProjectsNetworkStatusOnce() {
+  if (_projectsNetworkBound) return;
+  _projectsNetworkBound = true;
+  const sync = () => {
+    const el = document.getElementById('projects-sync-strip');
+    if (!el || currentView !== 'projects') return;
+    el.classList.remove('is-offline', 'is-saving');
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      el.textContent = 'Sin conexión. Los cambios pueden no guardarse en el servidor.';
+      el.classList.add('is-offline');
+      el.classList.remove('is-ready');
+    } else {
+      el.classList.remove('is-offline');
+      el.classList.add('is-ready');
+      el.textContent = '';
+    }
+  };
+  window.addEventListener('online', sync);
+  window.addEventListener('offline', sync);
+}
+
+export function toggleProjectTaskMultiselect(projectId) {
+  _projectTaskMultiselect = !_projectTaskMultiselect;
+  if (!_projectTaskMultiselect) _selectedTaskIds.clear();
+  if (projectId != null) selectProject(projectId);
+}
+
+export function toggleProjectTaskSelect(projectIdStr, taskIdStr, checked) {
+  const proj = projects.find(pr => sameId(pr.id, projectIdStr));
+  const t = proj?.tasks.find(x => sameId(x.id, taskIdStr));
+  if (!t) return;
+  const key = String(t.id);
+  if (checked) _selectedTaskIds.add(key);
+  else _selectedTaskIds.delete(key);
+  updateProjectMultiselectBar();
+}
+
+export function clearProjectTaskMultiselect(projectId) {
+  void projectId;
+  _selectedTaskIds.clear();
+  _projectTaskMultiselect = false;
+  updateProjectMultiselectBar();
+  if (currentProjectId && sameId(currentProjectId, projectId)) {
+    selectProject(projectId);
+  }
+}
+
+function updateProjectMultiselectBar() {
+  const bar = document.getElementById('project-task-multiselect-bar');
+  if (!bar) return;
+  const cnt = document.getElementById('project-ms-count');
+  const n = _selectedTaskIds.size;
+  if (cnt) {
+    cnt.textContent = `${n} seleccionada${n !== 1 ? 's' : ''}`;
+  }
+  bar.classList.toggle('hidden', !_projectTaskMultiselect);
+}
+
+export function toggleProjectTaskListDensity() {
+  try {
+    if (localStorage.getItem(PROJECT_TASK_LIST_DENSITY_LS) === 'compact') {
+      localStorage.removeItem(PROJECT_TASK_LIST_DENSITY_LS);
+    } else {
+      localStorage.setItem(PROJECT_TASK_LIST_DENSITY_LS, 'compact');
+    }
+  } catch (_) { /* noop */ }
+  if (currentProjectId) selectProject(currentProjectId);
+}
+
+export async function batchMarkSelectedTasksDone(projectId) {
+  const p = projects.find(pr => sameId(pr.id, projectId));
+  if (!p || _selectedTaskIds.size === 0) return;
+  let changed = false;
+  for (const t of p.tasks) {
+    if (_selectedTaskIds.has(String(t.id)) && !t.done) {
+      t.done = true;
+      t.status = 'done';
+      pushProjectActivity(p, { type: 'task_completed', taskName: t.name, taskId: t.id });
+      changed = true;
+    }
+  }
+  if (!changed) {
+    showToast('Nada que marcar (ya completadas o vacío)', 'info');
+    return;
+  }
+  _selectedTaskIds.clear();
+  _projectTaskMultiselect = false;
+  try {
+    const mongoId = p._id || p.id;
+    const payload = { tasks: p.tasks };
+    if (Array.isArray(p.activityLog)) payload.activityLog = p.activityLog;
+    await apiUpdateProject(mongoId, payload);
+    showToast('Tareas marcadas como completadas', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Error al guardar el lote', 'error');
+  }
+  saveProjectData();
+  renderProjects();
+  selectProject(projectId);
+}
+
+export function openAddTaskModalWithColumn(projectId, colId) {
+  window._taskModalPresetColumn = colId;
+  openAddTaskModal(projectId);
+}
+
+export function exitMyWorkTasksView() {
+  setCurrentProjectId(null);
+  _taskSearchQuery = '';
+  document.querySelectorAll('.project-item').forEach(el => el.classList.remove('active'));
+  const d = document.getElementById('project-detail');
+  if (d) {
+    d.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><div>Selecciona un proyecto para ver sus detalles</div></div>`;
+  }
+  renderProjects();
+}
+
+let _projectsShortcutsBound = false;
+function bindProjectsViewShortcutsOnce() {
+  if (_projectsShortcutsBound) return;
+  _projectsShortcutsBound = true;
+  document.addEventListener('keydown', e => {
+    if (currentView !== 'projects') return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Escape') {
+      const openDds = document.querySelectorAll('#project-detail .tasks-toolbar-dd[open]');
+      if (openDds.length) {
+        e.preventDefault();
+        openDds.forEach(d => {
+          d.open = false;
+        });
+        return;
+      }
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (document.activeElement?.closest?.('details[open].tasks-toolbar-dd')) return;
+      if (!currentProjectId) return;
+      const nodes = [...document.querySelectorAll('#projects-list .project-item[data-project-id]')];
+      if (!nodes.length) return;
+      const cur = document.querySelector('#projects-list .project-item.active');
+      let idx = cur ? nodes.indexOf(cur) : -1;
+      if (e.key === 'ArrowDown') idx = Math.min(nodes.length - 1, idx + 1);
+      else idx = Math.max(0, idx - 1);
+      if (idx < 0) idx = 0;
+      const row = nodes[idx];
+      const pidAttr = row && row.getAttribute('data-project-id');
+      if (pidAttr) {
+        e.preventDefault();
+        selectProject(pidAttr);
+      }
+      return;
+    }
+    if (e.key === '1' || e.key === '2' || e.key === '3') {
+      if (!currentProjectId) return;
+      e.preventDefault();
+      const modes = { 1: 'list', 2: 'kanban', 3: 'calendar' };
+      setProjectViewMode(modes[e.key], currentProjectId);
+      return;
+    }
+    if (e.key === '/') {
+      e.preventDefault();
+      document.getElementById('task-search-input')?.focus();
+    } else if (e.key === '?') {
+      e.preventDefault();
+      openProjectsShortcutsModal();
+    } else if (e.key === 'n' || e.key === 'N') {
+      if (!currentProjectId) return;
+      e.preventDefault();
+      openAddTaskModal(currentProjectId);
+    }
+  });
+}
+
+function getSortedTasks(p) {
+  const tasks = p.tasks || [];
   let arr = [...tasks];
 
   if (_taskSearchQuery.trim()) {
-    const q = _taskSearchQuery.toLowerCase().trim();
-    arr = arr.filter(t => {
-      const words = t.name.toLowerCase().split(/\s+/);
-      return words.some(word => word.startsWith(q));
-    });
+    arr = arr.filter(t => taskMatchesSearch(t, _taskSearchQuery, p.id));
   }
 
   const priorityOrder = { alta: 0, media: 1, normal: 2, baja: 3 };
@@ -923,10 +1443,9 @@ function getSortedTasks(tasks) {
       );
     case 'dueDate':
       return arr.sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return 0;
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        return new Date(a.dueDate) - new Date(b.dueDate);
+        const da = parseProjectTaskDueDate(a.dueDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        const db = parseProjectTaskDueDate(b.dueDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        return da - db;
       });
     case 'status':
       return arr.sort((a, b) => {
@@ -941,9 +1460,18 @@ function getSortedTasks(tasks) {
 
 function renderTasksList(p) {
   if (p.tasks.length === 0) {
-    return `<div class="empty-state" style="padding:20px"><div>Sin tareas aún</div></div>`;
+    return `<div class="empty-state project-view-empty" role="status"><div>Sin tareas aún</div><p class="project-view-empty-hint">Pulsa «+ Tarea» para crear la primera.</p></div>`;
   }
-  return getSortedTasks(p.tasks).map(t => {
+  const pid = toOnclickStringArg(p.id);
+  const sorted = getSortedTasks(p);
+  if (sorted.length === 0 && _taskSearchQuery.trim()) {
+    return `<div class="project-tasks-empty-search" role="status">
+      <div>Ninguna tarea coincide con «${escapeChatHtml(_taskSearchQuery.trim())}».</div>
+      <button type="button" class="btn-secondary" onclick="filterTaskSearch('','${pid}')">Limpiar búsqueda</button>
+    </div>`;
+  }
+  return sorted.map(t => {
+    const tid = toOnclickStringArg(t.id);
     const assignee = USERS.find(u => u.id === t.assigneeId);
     const isFiltered = projectUserFilter !== null && t.assigneeId !== projectUserFilter;
     const taskComments = commentIndicators('task', p.id, t.id);
@@ -951,24 +1479,35 @@ function renderTasksList(p) {
       .map(id => p.tasks.find(x => sameId(x.id, id)))
       .filter(dep => dep && !dep.done);
     const isBlocked = blockingDeps.length > 0;
+    const msCheck = _projectTaskMultiselect
+      ? `<div class="task-ms-check" onclick="event.stopPropagation()"><input type="checkbox" aria-label="Seleccionar tarea" ${
+          _selectedTaskIds.has(String(t.id)) ? 'checked' : ''
+        } onchange="toggleProjectTaskSelect('${pid}','${tid}',this.checked)"></div>`
+      : '';
+    const rowMenu = `<details class="task-item-dd" onclick="event.stopPropagation()">
+      <summary class="task-item-dd-sum" aria-label="Más acciones">⋯</summary>
+      <div class="task-item-dd-menu" role="menu">
+        <button type="button" role="menuitem" onclick="closeTaskRowMenu(this);openTaskCommentsModal('${pid}','${tid}')">💬 Comentarios</button>
+        <button type="button" role="menuitem" onclick="closeTaskRowMenu(this);openEditTaskModal('${pid}','${tid}')">✏️ Editar</button>
+        <button type="button" role="menuitem" onclick="closeTaskRowMenu(this);openTaskViewer('${pid}','${tid}')">👁 Ver</button>
+        <button type="button" role="menuitem" onclick="closeTaskRowMenu(this);deleteTask('${pid}','${tid}')">🗑 Eliminar</button>
+      </div>
+    </details>`;
     return `<div class="task-item${isBlocked ? ' task-blocked' : ''}" data-task-id="${t.id}" style="${isFiltered ? 'opacity:0.35;' : ''}">
-      <div class="task-check ${t.done?'done':''}" onclick="quickToggleTask('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}',this)">${t.done?'✓':''}</div>
-      <span class="task-name ${t.done?'done':''}" style="cursor:pointer"
-        onclick="openTaskViewer('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')">
+      ${msCheck}
+      <div class="task-check ${t.done ? 'done' : ''}" onclick="quickToggleTask('${pid}','${tid}',this)">${t.done ? '✓' : ''}</div>
+      <span class="task-name ${t.done ? 'done' : ''}" style="cursor:pointer"
+        onclick="openTaskViewer('${pid}','${tid}')">
         <span>${t.name}${taskComments}${t.desc ? ' <span style="font-size:9px;opacity:0.85">📄</span>' : ''}</span>
-        ${isBlocked ? `<span style="font-size:10px;color:rgba(239,68,68,0.7);
-    display:flex;align-items:center;gap:3px"
-    title="Bloqueada por: ${blockingDeps.map(d => escapeChatHtml(d.name)).join(', ')}">
-    🔒 ${blockingDeps.length} bloq.
-  </span>` : ''}
+        ${isBlocked ? `<span class="task-item-blocked-msg" title="Bloqueada por: ${blockingDeps.map(d => escapeChatHtml(d.name)).join(', ')}">🔒 ${blockingDeps.length} bloq.</span>` : ''}
       </span>
-      ${t.priority!=='normal'?`<span class="task-priority ${t.priority}">${t.priority}</span>`:''}
-      ${t.dueDate ? `<span class="task-due ${new Date(t.dueDate+'T12:00:00') < new Date() && !t.done ? 'task-due-overdue' : ''}">${t.dueDate}</span>` : ''}
+      ${t.priority !== 'normal' ? `<span class="task-priority task-priority-pill ${t.priority}">${t.priority}</span>` : ''}
+      ${t.dueDate
+        ? `<span class="task-due${isTaskDueDateOverdue(t.dueDate, t.done) ? ' task-due-overdue' : ''}">${escapeChatHtml(t.dueDate)}</span>`
+        : ''}
       ${t.estimatedHours != null ? `<span class="task-hours" title="Estimado: ${t.estimatedHours}h${t.realHours != null ? ' · Real: ' + t.realHours + 'h' : ''}">⏱ ${t.realHours != null ? t.realHours + '/' : ''}${t.estimatedHours}h</span>` : ''}
-      ${assignee?`<span class="task-assignee" style="display:flex;align-items:center;gap:4px"><div style="width:14px;height:14px;border-radius:50%;background:${assignee.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:var(--accent-text-on-bg)">${assignee.initials}</div>${assignee.name}</span>`:''}
-      <button type="button" class="task-comment-btn" onclick="event.stopPropagation();openTaskCommentsModal('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')" title="Comentarios">💬</button>
-      <button class="task-edit-btn" onclick="event.stopPropagation();openEditTaskModal('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')" title="Editar">✏️</button>
-      <button class="task-delete-btn" onclick="deleteTask('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')">✕</button>
+      ${assignee ? `<span class="task-assignee" style="display:flex;align-items:center;gap:4px"><div style="width:14px;height:14px;border-radius:50%;background:${assignee.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:var(--accent-text-on-bg)">${assignee.initials}</div>${assignee.name}</span>` : ''}
+      ${rowMenu}
     </div>`;
   }).join('');
 }
@@ -980,19 +1519,37 @@ function renderTasksKanban(p) {
     { id: 'done',        label: 'Completado',   filter: t => t.done },
   ];
 
-  return `<div class="kanban-board">
+  const sortedAll = getSortedTasks(p);
+  const nTasks = (p.tasks || []).length;
+  if (nTasks === 0) {
+    return `<div class="empty-state project-view-empty" role="status"><div>Sin tareas en este proyecto</div><p class="project-view-empty-hint">Pulsa «+ Tarea» para añadir la primera.</p></div>`;
+  }
+  if (sortedAll.length === 0) {
+    return `<div class="empty-state project-view-empty" role="status"><div>Sin tareas visibles con los filtros actuales</div><p class="project-view-empty-hint">Quita el buscador o cambia «Filtrar por» en la parte superior de la vista.</p></div>`;
+  }
+
+  return `<div class="kanban-board-wrap" aria-label="Tablero Kanban">
+    <div class="kanban-board">
     ${columns.map(col => {
-      const tasks = getSortedTasks(p.tasks).filter(col.filter);
+      const tasks = getSortedTasks(p).filter(col.filter);
+      const wipHint =
+        tasks.length >= PROJECT_KANBAN_WIP_SOFT
+          ? `<span class="kanban-wip-hint" title="Columna con muchas tareas; conviene repriorizar o repartir">⚠</span>`
+          : '';
       return `<div class="kanban-col" data-col="${col.id}"
-        ondragover="event.preventDefault()"
-        ondrop="dropTaskToColumn(event,'${col.id}','${toOnclickStringArg(p.id)}')">
+        ondragover="event.preventDefault();kanbanColDragOver(event)"
+        ondragleave="kanbanColDragLeave(event)"
+        ondrop="kanbanColDragLeave(event);dropTaskToColumn(event,'${col.id}','${toOnclickStringArg(p.id)}')">
         <div class="kanban-col-header">
           <span class="kanban-col-title">${col.label}</span>
-          <span class="kanban-col-count">${tasks.length}</span>
+          <span class="kanban-col-count">${tasks.length}${wipHint}</span>
         </div>
         <div class="kanban-col-body">
           ${tasks.length === 0
-            ? `<div class="kanban-empty">Sin tareas</div>`
+            ? `<div class="kanban-empty-wrap">
+            <div class="kanban-empty">Sin tareas en ${escapeChatHtml(col.label)}</div>
+            <button type="button" class="btn-secondary kanban-empty-cta" onclick="openAddTaskModalWithColumn('${toOnclickStringArg(p.id)}','${col.id}')">+ Nueva aquí</button>
+          </div>`
             : tasks.map(t => {
                 const assignee = USERS.find(u => u.id === t.assigneeId);
                 const pid = toOnclickStringArg(p.id);
@@ -1001,18 +1558,20 @@ function renderTasksKanban(p) {
                   .map(id => p.tasks.find(x => sameId(x.id, id)))
                   .filter(dep => dep && !dep.done);
                 const isBlocked = blockingDeps.length > 0;
+                const tComments = commentIndicators('task', p.id, t.id);
                 return `<div class="kanban-card" 
                   draggable="true"
                   ondragstart="dragTaskStart(event,'${tid}','${pid}')"
+                  ondragend="dragTaskEndClear()"
                   onclick="openTaskViewer('${pid}','${tid}')">
                   <div class="kanban-card-name">${escapeChatHtml(t.name)}</div>
-                  ${isBlocked ? `<div style="font-size:10px;color:rgba(239,68,68,0.7);
-      display:flex;align-items:center;gap:3px">
-      🔒 Bloqueada por ${blockingDeps.length}
-    </div>` : ''}
-                  ${t.priority !== 'normal' ? `<span class="task-priority ${t.priority}" style="font-size:9px">${t.priority}</span>` : ''}
-                  ${t.dueDate ? `<div class="kanban-card-due ${new Date(t.dueDate+'T12:00:00') < new Date() && !t.done ? 'overdue' : ''}">${t.dueDate}</div>` : ''}
+                  ${isBlocked ? `<div class="kanban-card-blocked" title="Bloqueada por: ${blockingDeps.map(d => escapeChatHtml(d.name)).join(', ')}">🔒 Bloqueada por ${blockingDeps.length}</div>` : ''}
+                  ${t.priority !== 'normal' ? `<span class="task-priority task-priority-pill ${t.priority}" style="font-size:9px">${t.priority}</span>` : ''}
+                  ${t.dueDate
+                    ? `<div class="kanban-card-due ${isTaskDueDateOverdue(t.dueDate, t.done) ? 'overdue' : ''}">${escapeChatHtml(t.dueDate)}</div>`
+                    : ''}
                   ${t.estimatedHours != null ? `<div class="kanban-card-hours">⏱ ${t.realHours != null ? t.realHours + '/' : ''}${t.estimatedHours}h</div>` : ''}
+                  ${tComments ? `<div class="kanban-card-comments">${tComments}</div>` : ''}
                   <div class="kanban-card-footer">
                     ${assignee ? `<div class="kanban-avatar" style="background:${assignee.color}" title="${escapeChatHtml(assignee.name)}">${assignee.initials}</div>` : ''}
                     <button onclick="event.stopPropagation();quickToggleTask('${pid}','${tid}',this)" 
@@ -1024,6 +1583,7 @@ function renderTasksKanban(p) {
         </div>
       </div>`;
     }).join('')}
+  </div>
   </div>`;
 }
 
@@ -1042,7 +1602,7 @@ export function openTaskViewer(projectId, taskId) {
   const assignee = USERS.find(u => sameId(u.id, t.assigneeId));
   const priorityLabels = { alta: 'Alta', media: 'Media', normal: 'Normal', baja: 'Baja' };
 
-  const isOverdue = t.dueDate && new Date(t.dueDate + 'T12:00:00') < new Date() && !t.done;
+  const isOverdue = isTaskDueDateOverdue(t.dueDate, t.done);
 
   document.getElementById('task-viewer-title').textContent = t.name;
 
@@ -1178,6 +1738,10 @@ export function openTaskCommentsFromViewer() {
 }
 
 export function setProjectViewMode(mode, projectId) {
+  if (mode !== 'list' && _projectTaskMultiselect) {
+    _projectTaskMultiselect = false;
+    _selectedTaskIds.clear();
+  }
   window._projectViewMode = mode;
   selectProject(projectId);
 }
@@ -1190,6 +1754,18 @@ export function setTaskSort(mode, projectId) {
 export function filterTaskSearch(query, projectId) {
   _taskSearchQuery = query;
   selectProject(projectId);
+  const p = projects.find(pr => sameId(pr.id, projectId));
+  requestAnimationFrame(() => {
+    const ann = document.getElementById('project-task-search-announce');
+    if (!ann || !p) return;
+    const q = String(query || '').trim();
+    if (!q) {
+      ann.textContent = '';
+      return;
+    }
+    const n = getSortedTasks(p).length;
+    ann.textContent = n === 0 ? 'Sin resultados para la búsqueda' : `${n} resultado${n !== 1 ? 's' : ''}`;
+  });
   setTimeout(() => {
     const input = document.getElementById('task-search-input');
     if (input) {
@@ -1234,8 +1810,7 @@ export function openMyWorkTasksView() {
           .map(({ p, t }) => {
             const pid = toOnclickStringArg(p.id);
             const tid = toOnclickStringArg(t.id);
-            const overdue =
-              t.dueDate && new Date(t.dueDate + 'T12:00:00') < new Date();
+            const overdue = isTaskDueDateOverdue(t.dueDate, t.done);
             return `<div class="my-work-task-row">
           <div class="task-check ${t.done ? 'done' : ''}" onclick="quickToggleTask('${pid}','${tid}',this)"></div>
           <div class="my-work-task-main">
@@ -1249,7 +1824,7 @@ export function openMyWorkTasksView() {
           }
           ${
             t.priority && t.priority !== 'normal'
-              ? `<span class="task-priority ${t.priority}" style="font-size:9px;align-self:center">${t.priority}</span>`
+              ? `<span class="task-priority task-priority-pill ${t.priority}" style="font-size:9px;align-self:center">${t.priority}</span>`
               : ''
           }
         </div>`;
@@ -1257,9 +1832,13 @@ export function openMyWorkTasksView() {
           .join('')}</div>`;
 
   document.getElementById('project-detail').innerHTML = `
+    <div class="my-work-back-bar">
+      <button type="button" class="btn-secondary" onclick="exitMyWorkTasksView()">← Volver a proyectos</button>
+    </div>
     <div class="my-work-header">
-      <h3 style="margin:0 0 6px;font-size:18px">📋 Mis tareas</h3>
-      <p style="margin:0;font-size:12px;color:var(--text-muted)">Pendientes y en progreso asignadas a ti, en todos los proyectos que puedes ver.</p>
+      <h3 class="my-work-header-title">📋 Mis tareas</h3>
+      <p class="my-work-header-lead">Pendientes y en progreso asignadas a ti, en todos los proyectos que puedes ver.</p>
+      <p class="my-work-header-count" role="status">${rows.length} tarea${rows.length !== 1 ? 's' : ''} mostrada${rows.length !== 1 ? 's' : ''}</p>
     </div>
     ${listHtml}
   `;
@@ -1274,8 +1853,13 @@ export function dragTaskStart(event, taskId, projectId) {
   event.dataTransfer.effectAllowed = 'move';
 }
 
+export function dragTaskEndClear() {
+  document.querySelectorAll('.kanban-col--drag-over').forEach(el => el.classList.remove('kanban-col--drag-over'));
+}
+
 export async function dropTaskToColumn(event, colId, projectId) {
   event.preventDefault();
+  document.querySelectorAll('.kanban-col--drag-over').forEach(el => el.classList.remove('kanban-col--drag-over'));
   if (!_dragTaskId || !_dragProjectId) return;
   const p = projects.find(pr => sameId(pr.id, _dragProjectId));
   if (!p) return;
@@ -1283,6 +1867,8 @@ export async function dropTaskToColumn(event, colId, projectId) {
   if (!task) return;
 
   const wasDone = task.done;
+  const prevDone = task.done;
+  const prevStatus = task.status;
 
   if (colId === 'done') {
     task.done = true;
@@ -1295,10 +1881,13 @@ export async function dropTaskToColumn(event, colId, projectId) {
     task.status = 'pending';
   }
 
+  let activityPushed = false;
   if (task.done && !wasDone) {
     pushProjectActivity(p, { type: 'task_completed', taskName: task.name, taskId: task.id });
+    activityPushed = true;
   } else if (!task.done && wasDone) {
     pushProjectActivity(p, { type: 'task_reopened', taskName: task.name, taskId: task.id });
+    activityPushed = true;
   }
 
   _dragTaskId = null;
@@ -1310,73 +1899,116 @@ export async function dropTaskToColumn(event, colId, projectId) {
       payload.activityLog = p.activityLog;
     }
     await apiUpdateProject(mongoId, payload);
+    showToast('Columna de la tarea actualizada', 'success');
   } catch (err) {
     console.error('Error guardando tarea en API:', err);
+    task.done = prevDone;
+    task.status = prevStatus;
+    if (activityPushed && p.activityLog?.length) {
+      p.activityLog.shift();
+    }
+    showToast('No se pudo guardar el cambio de columna', 'error');
   }
   saveProjectData();
   renderProjects();
   selectProject(projectId);
 }
 
+/** Partición mutuamente excluyente para la barra de estado (suma = total). */
+function partitionTasksForStatusBar(tasks) {
+  const arr = Array.isArray(tasks) ? tasks : [];
+  const total = arr.length;
+  if (total === 0) {
+    return { total: 0, doneN: 0, overdueN: 0, progressN: 0, pendingN: 0 };
+  }
+  let doneN = 0;
+  let overdueN = 0;
+  let progressN = 0;
+  let pendingN = 0;
+  for (const t of arr) {
+    const isDone = t.done === true || t.done === 'true' || t.status === 'done';
+    if (isDone) {
+      doneN++;
+      continue;
+    }
+    if (isTaskDueDateOverdue(t.dueDate, t.done)) overdueN++;
+    else if (t.status === 'progress') progressN++;
+    else pendingN++;
+  }
+  return { total, doneN, overdueN, progressN, pendingN };
+}
+
+/** Porcentajes de barra que suman ~100% (evita segmentos invisibles por redondeo). */
+function statusBarWidths(total, doneN, overdueN, progressN, pendingN) {
+  if (!total) return { wDone: 0, wOverdue: 0, wProgress: 0, wPending: 0 };
+  let wDone = (doneN / total) * 100;
+  let wOverdue = (overdueN / total) * 100;
+  let wProgress = (progressN / total) * 100;
+  let wPending = (pendingN / total) * 100;
+  const sum = wDone + wOverdue + wProgress + wPending;
+  if (sum > 0 && Math.abs(sum - 100) > 0.02) {
+    const k = 100 / sum;
+    wDone *= k;
+    wOverdue *= k;
+    wProgress *= k;
+    wPending *= k;
+  }
+  return { wDone, wOverdue, wProgress, wPending };
+}
+
 function renderProjectStats(p) {
-  const tasks = p.tasks;
-  if (tasks.length === 0) return '';
+  const m = analyzeProjectTasks(p.tasks || []);
+  if (m.total === 0) return '';
 
-  const totalEstimated = tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
-  const totalReal = tasks.reduce((sum, t) => sum + (t.realHours || 0), 0);
-  const hoursEfficiency = totalEstimated > 0 ? Math.round(totalReal / totalEstimated * 100) : null;
+  const {
+    done, overdue, alta, total,
+    totalEstimated, totalReal, hoursEfficiency, byAssignee,
+  } = m;
 
-  const pending = tasks.filter(t => !t.done && t.status !== 'progress').length;
-  const inProgress = tasks.filter(t => !t.done && t.status === 'progress').length;
-  const done = tasks.filter(t => t.done).length;
-  const overdue = tasks.filter(t => !t.done && t.dueDate && new Date(t.dueDate + 'T12:00:00') < new Date()).length;
+  const pctDone = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  const alta = tasks.filter(t => t.priority === 'alta').length;
-  const media = tasks.filter(t => t.priority === 'media').length;
-  const normal = tasks.filter(t => !t.priority || t.priority === 'normal').length;
+  const bar = partitionTasksForStatusBar(p.tasks || []);
+  const { wDone, wOverdue, wProgress, wPending } = statusBarWidths(
+    bar.total,
+    bar.doneN,
+    bar.overdueN,
+    bar.progressN,
+    bar.pendingN
+  );
+  const ariaTrack = `Completadas ${bar.doneN}, en progreso ${bar.progressN}, pendientes sin vencer ${bar.pendingN}, vencidas ${bar.overdueN}`;
 
-  const byAssignee = {};
-  tasks.forEach(t => {
-    const key = t.assigneeId || '__none__';
-    if (!byAssignee[key]) byAssignee[key] = { done: 0, total: 0 };
-    byAssignee[key].total++;
-    if (t.done) byAssignee[key].done++;
-  });
-
-  const total = tasks.length;
-  const pctDone = Math.round(done / total * 100);
-  const pctProgress = Math.round(inProgress / total * 100);
-  const pctPending = Math.round(pending / total * 100);
-
-  const statusBar = `
-    <div style="display:flex;height:6px;border-radius:6px;overflow:hidden;gap:1px;margin-bottom:6px">
-      <div style="width:${pctDone}%;background:rgba(52,211,153,0.7);transition:width 0.3s"></div>
-      <div style="width:${pctProgress}%;background:rgba(251,191,36,0.7);transition:width 0.3s"></div>
-      <div style="width:${pctPending}%;background:rgba(255,255,255,0.15);transition:width 0.3s"></div>
+  const statusTrack = `
+    <div class="proj-status-track" role="img" aria-label="${ariaTrack.replace(/"/g, '')}">
+      <div class="proj-status-track__seg proj-status-track__seg--done" style="width:${wDone}%"></div>
+      <div class="proj-status-track__seg proj-status-track__seg--progress" style="width:${wProgress}%"></div>
+      <div class="proj-status-track__seg proj-status-track__seg--pending" style="width:${wPending}%"></div>
+      <div class="proj-status-track__seg proj-status-track__seg--overdue" style="width:${wOverdue}%"></div>
     </div>
-    <div style="display:flex;gap:12px;font-size:10px;color:rgba(255,255,255,0.4)">
-      <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:rgba(52,211,153,0.7);display:inline-block"></span>${done} completadas</span>
-      <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:rgba(251,191,36,0.7);display:inline-block"></span>${inProgress} en progreso</span>
-      <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block"></span>${pending} pendientes</span>
-      ${overdue > 0 ? `<span style="display:flex;align-items:center;gap:4px;color:rgba(239,68,68,0.8)"><span style="width:8px;height:8px;border-radius:50%;background:rgba(239,68,68,0.7);display:inline-block"></span>${overdue} vencidas</span>` : ''}
+    <div class="proj-status-legend">
+      <span><span class="proj-status-legend__dot proj-status-legend__dot--done"></span>${done} completadas</span>
+      <span><span class="proj-status-legend__dot proj-status-legend__dot--progress"></span>${bar.progressN} en progreso</span>
+      <span><span class="proj-status-legend__dot proj-status-legend__dot--pending"></span>${bar.pendingN} pendientes sin vencer</span>
+      ${overdue > 0 ? `<span class="proj-status-legend__overdue"><span class="proj-status-legend__dot proj-status-legend__dot--overdue"></span>${overdue} vencidas</span>` : ''}
     </div>`;
 
+  const overdueValClass = overdue > 0 ? 'proj-stat-value--danger' : 'proj-stat-value--danger-muted';
+
   const metricCards = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-top:12px">
+    <div class="proj-stat-cards">
       <div class="proj-stat-card">
         <div class="proj-stat-value">${total}</div>
         <div class="proj-stat-label">Total</div>
       </div>
-      <div class="proj-stat-card" style="border-color:rgba(52,211,153,0.2)">
-        <div class="proj-stat-value" style="color:rgba(52,211,153,0.9)">${pctDone}%</div>
+      <div class="proj-stat-card proj-stat-card--accent-done">
+        <div class="proj-stat-value proj-stat-value--success">${pctDone}%</div>
         <div class="proj-stat-label">Completado</div>
       </div>
-      <div class="proj-stat-card" style="border-color:rgba(239,68,68,0.2)">
-        <div class="proj-stat-value" style="color:rgba(239,68,68,${overdue > 0 ? '0.9' : '0.3'})">${overdue}</div>
+      <div class="proj-stat-card proj-stat-card--accent-danger">
+        <div class="proj-stat-value ${overdueValClass}">${overdue}</div>
         <div class="proj-stat-label">Vencidas</div>
       </div>
-      <div class="proj-stat-card" style="border-color:rgba(251,191,36,0.2)">
-        <div class="proj-stat-value" style="color:rgba(251,191,36,0.9)">${alta}</div>
+      <div class="proj-stat-card proj-stat-card--accent-warn">
+        <div class="proj-stat-value proj-stat-value--warn">${alta}</div>
         <div class="proj-stat-label">Alta prioridad</div>
       </div>
     </div>`;
@@ -1385,69 +2017,67 @@ function renderProjectStats(p) {
     .sort((a, b) => b[1].total - a[1].total)
     .map(([uid, data]) => {
       const user = USERS.find(u => String(u.id) === String(uid));
-      const pct = Math.round(data.done / data.total * 100);
-      return `
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="width:20px;height:20px;border-radius:50%;background:${user?.color || 'rgba(120,100,255,0.4)'};
-            display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;
-            color:white;flex-shrink:0">${user?.initials || '?'}</div>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;justify-content:space-between;font-size:11px;
-              color:rgba(255,255,255,0.65);margin-bottom:3px">
-              <span>${user?.name || 'Sin asignar'}</span>
-              <span style="color:rgba(255,255,255,0.35)">${data.done}/${data.total}</span>
+      const pct = Math.round((data.done / data.total) * 100);
+      const fillColor = user?.color || 'rgba(120, 100, 255, 0.55)';
+      return `<div class="proj-assignee-row">
+          <div class="proj-assignee-avatar" style="background:${fillColor}">${escapeChatHtml(user?.initials || '?')}</div>
+          <div class="proj-assignee-main">
+            <div class="proj-assignee-meta">
+              <span>${escapeChatHtml(user?.name || 'Sin asignar')}</span>
+              <span>${data.done}/${data.total}${data.overdue > 0 ? ` · <span class="proj-assignee-meta-overdue">${data.overdue} venc.</span>` : ''}</span>
             </div>
-            <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden">
-              <div style="width:${pct}%;height:100%;background:${user?.color || 'rgba(120,100,255,0.6)'};
-                border-radius:4px;transition:width 0.3s"></div>
+            <div class="proj-assignee-bar">
+              <div class="proj-assignee-bar-fill" style="width:${pct}%;background:${fillColor}"></div>
             </div>
           </div>
-          <span style="font-size:10px;color:rgba(255,255,255,0.3);min-width:28px;text-align:right">${pct}%</span>
+          <span class="proj-assignee-pct">${pct}%</span>
         </div>`;
     }).join('');
 
-  return `
-    <div class="proj-stats-block">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.25);
-          text-transform:uppercase;letter-spacing:0.1em">Estadísticas</span>
-      </div>
-      ${statusBar}
-      ${metricCards}
-      ${totalEstimated > 0 ? `
-        <div style="display:flex;align-items:center;justify-content:space-between;
-          margin-top:8px;padding:8px 12px;
-          background:rgba(255,255,255,0.02);
-          border:1px solid rgba(255,255,255,0.06);
-          border-radius:8px">
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:11px;color:rgba(255,255,255,0.3)">⏱</span>
-            <span style="font-size:12px;font-family:'DM Mono',monospace;color:rgba(255,255,255,0.65)">
-              ${totalReal}h real
-              <span style="color:rgba(255,255,255,0.25)"> / ${totalEstimated}h estimadas</span>
-            </span>
+  const hoursBlock = totalEstimated > 0 ? `
+        <div class="proj-hours-row">
+          <div>
+            <span class="proj-hours-row__mono">${totalReal}h real <span class="proj-hours-row__muted">/ ${totalEstimated}h estimadas</span></span>
           </div>
           ${hoursEfficiency !== null ? `
-            <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;
-              background:${hoursEfficiency > 100 ? 'rgba(239,68,68,0.12)' : 'rgba(52,211,153,0.1)'};
-              color:${hoursEfficiency > 100 ? 'rgba(239,68,68,0.8)' : 'rgba(52,211,153,0.8)'}">
+            <span class="proj-efficiency-badge ${hoursEfficiency > 100 ? 'proj-efficiency-badge--warn' : 'proj-efficiency-badge--ok'}">
               ${hoursEfficiency}% eficiencia
             </span>` : ''}
-        </div>` : ''}
-      ${Object.keys(byAssignee).length > 0 ? `
-        <div style="margin-top:14px">
-          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.2);
-            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Por asignado</div>
-          <div style="display:flex;flex-direction:column;gap:10px">${assigneeRows}</div>
-        </div>` : ''}
+        </div>` : '';
+
+  const assigneeKeys = Object.keys(byAssignee);
+  const assigneeBlock = assigneeKeys.length > 0 ? `
+        <details class="proj-assignee-disclosure" open>
+          <summary class="proj-assignee-disclosure-summary">
+            <span class="proj-section-heading proj-section-heading--inline">Por asignado</span>
+            <span class="proj-assignee-count">${assigneeKeys.length}</span>
+          </summary>
+          <div class="proj-assignee-grid">${assigneeRows}</div>
+        </details>` : '';
+
+  return `
+    <div class="proj-stats-block">
+      <div class="proj-stats-heading-row">
+        <div class="proj-stats-heading proj-section-heading">Estadísticas</div>
+        <button type="button" class="proj-stats-compact-btn" onclick="toggleProjectStatsCompactLayout()" title="Alternar vista compacta del bloque">⇕</button>
+      </div>
+      ${statusTrack}
+      ${metricCards}
+      ${hoursBlock}
+      ${assigneeBlock}
     </div>`;
 }
 
 export function selectProject(id) {
+  const prevProjectId = currentProjectId;
   if (currentProjectId != null && !sameId(currentProjectId, id)) {
     _taskSearchQuery = '';
   }
   setCurrentProjectId(id);
+  if (prevProjectId != null && !sameId(prevProjectId, id)) {
+    _selectedTaskIds.clear();
+    _projectTaskMultiselect = false;
+  }
   const p = projects.find(pr => sameId(pr.id, id));
   if (!p) return;
 
@@ -1458,6 +2088,7 @@ export function selectProject(id) {
   const statusColors = {activo:'var(--success)',pausa:'var(--accent2)',completado:'var(--accent)'};
   const statusLabels = {activo:'✅ Activo',pausa:'⏸ En Pausa',completado:'🏁 Completado'};
   const viewMode = window._projectViewMode || 'list';
+  const pid = toOnclickStringArg(p.id);
 
   const childProjects = projects.filter(c => sameId(c.parentProjectId, p.id) && userCanSeeProject(c)).sort((a, b) => a.name.localeCompare(b.name, 'es'));
   const crumbs = [];
@@ -1469,16 +2100,16 @@ export function selectProject(id) {
     walk = projects.find(x => sameId(x.id, walk.parentProjectId));
   }
   const crumbHtml = crumbs.length > 1
-    ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:4px">${crumbs.slice(0, -1).map(c => `<button type="button" class="btn-secondary" style="font-size:10px;padding:3px 8px" onclick="event.stopPropagation();selectProject('${toOnclickStringArg(c.id)}')">${escapeChatHtml(c.name)}</button><span style="opacity:0.45;font-size:10px">▸</span>`).join('')}<span style="font-size:10px;font-weight:700;color:var(--accent)">Nivel ${crumbs.length}</span></div>`
+    ? `<div class="project-detail-breadcrumbs" role="navigation" aria-label="Ruta del proyecto">${crumbs.slice(0, -1).map(c => `<button type="button" class="btn-secondary project-detail-crumb-btn" onclick="event.stopPropagation();selectProject('${toOnclickStringArg(c.id)}')">${escapeChatHtml(c.name)}</button><span class="project-detail-crumb-sep" aria-hidden="true">▸</span>`).join('')}<span class="project-detail-crumb-level">Nivel ${crumbs.length}</span></div>`
     : '';
-  const subprojectsBlock = `<div style="margin-top:var(--space-6)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-2);flex-wrap:wrap;gap:8px">
-      <h4 style="font-size:12px;color:var(--text-dim);margin:0">Subproyectos${childProjects.length ? ` (${childProjects.length})` : ''}</h4>
-      <button type="button" class="btn-primary" style="font-size:11px;padding:5px 12px" onclick="event.stopPropagation();openNewProjectModal('${toOnclickStringArg(p.id)}')">+ Subproyecto</button>
+  const subprojectsBlock = `<div class="subprojects-section">
+    <div class="subprojects-section-head">
+      <h4 class="proj-section-heading proj-section-heading--subprojects">Subproyectos${childProjects.length ? ` (${childProjects.length})` : ''}</h4>
+      <button type="button" class="btn-secondary project-subproject-add-btn" onclick="event.stopPropagation();openNewProjectModal('${pid}')">+ Subproyecto</button>
     </div>
     ${childProjects.length === 0
-      ? `<p style="font-size:11px;color:var(--text-muted);margin:0">Sin subproyectos. Puedes anidar varios niveles para organizar el trabajo.</p>`
-      : `<div style="display:flex;flex-direction:column;gap:var(--space-1)">${childProjects.map(c => `<button type="button" class="btn-secondary btn-subproject-row" style="text-align:left;font-size:12px" onclick="event.stopPropagation();selectProject('${toOnclickStringArg(c.id)}')">${escapeChatHtml(c.name)} <span style="opacity:0.55;font-size:10px">Abrir →</span></button>`).join('')}</div>`}
+      ? `<p class="subprojects-section__empty">Sin subproyectos. Puedes anidar varios niveles para organizar el trabajo.</p>`
+      : `<div class="subproject-cards subproject-cards--grid">${childProjects.map(c => `<button type="button" class="subproject-card" onclick="event.stopPropagation();selectProject('${toOnclickStringArg(c.id)}')" style="--subproject-color:${escapeChatHtml(c.color || '#7864ff')}"><span class="subproject-card__accent" aria-hidden="true"></span><span class="subproject-card__body"><span class="subproject-card__title">${escapeChatHtml(c.name)}</span><span class="subproject-card__kind">Subproyecto</span></span><span class="subproject-card__hint">Abrir</span></button>`).join('')}</div>`}
   </div>`;
 
   const brokenDeps = countBrokenDependencyRefs(p);
@@ -1486,7 +2117,29 @@ export function selectProject(id) {
     ? `<div class="project-deps-warning" role="alert">⚠ Hay <strong>${brokenDeps}</strong> referencia(s) de dependencia rota(s) (tareas eliminadas). Edita las tareas afectadas y quita esas dependencias.</div>`
     : '';
 
+  const sortSummaryLabels = {
+    default: 'Orden: por defecto',
+    priority: 'Orden: prioridad',
+    dueDate: 'Orden: fecha',
+    status: 'Orden: estado',
+  };
+  const sortSummaryLabel = sortSummaryLabels[_taskSortMode] || sortSummaryLabels.default;
+  const viewSummaryLabel =
+    viewMode === 'kanban' ? 'Vista: Kanban' : viewMode === 'calendar' ? 'Vista: Calendario' : 'Vista: Lista';
+  const idLit = JSON.stringify(p.id);
+
+  let rootClass = 'project-detail-root';
+  try {
+    if (localStorage.getItem(PROJECT_TASK_LIST_DENSITY_LS) === 'compact') {
+      rootClass += ' project-detail-root--task-density-compact';
+    }
+  } catch (_) { /* noop */ }
+  if (_projectTaskMultiselect) rootClass += ' project-detail-root--multiselect';
+
   document.getElementById('project-detail').innerHTML = `
+    <div id="project-detail-root" class="${rootClass}">
+    <header class="project-detail-head">
+    <div class="projects-sync-strip" id="projects-sync-strip" role="status" aria-live="polite"></div>
     <div class="project-header-detail">
       <div class="project-color-dot" style="--project-color:${p.color};background:var(--project-color)"></div>
       <div class="project-title-area">
@@ -1494,96 +2147,151 @@ export function selectProject(id) {
         <h2>${escapeChatHtml(p.name)}</h2>
         <div class="project-desc">${p.desc ? renderMarkdown(p.desc, p.images || {}) : ''}</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="project-header-actions">
         <span class="project-badge project-badge-status" style="--badge-color:${statusColors[p.status]}">${statusLabels[p.status]}</span>
-        <button type="button" class="btn-secondary" onclick="openApplyTemplateToProjectModal('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px" title="Añadir tareas desde una plantilla al proyecto actual">⤵ Plantilla</button>
-        <button type="button" class="btn-secondary" onclick="openSaveProjectTemplateModal('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px" title="Guardar la lista de tareas como plantilla reutilizable">📋 Guardar plantilla</button>
-        <button type="button" class="btn-secondary" onclick="exportProjectAsText('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px" title="Descargar resumen en texto">📥 TXT</button>
-        <button type="button" class="btn-secondary" onclick="openProjectPrintReport('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px" title="Informe para imprimir o guardar como PDF">🖨 PDF</button>
-        <button type="button" class="btn-secondary" onclick="openEditProjectModal('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px">✏️ Editar</button>
-        <button type="button" class="btn-secondary btn-secondary-danger" onclick="deleteProject('${toOnclickStringArg(p.id)}')" style="font-size:12px;padding:6px 12px">🗑</button>
+        <button type="button" class="btn-secondary project-header-edit-btn" onclick="openEditProjectModal('${pid}')">✏️ Editar</button>
+        <div class="project-header-actions__more-wrap">
+          <button type="button" class="btn-secondary project-header-more-btn" id="project-actions-more-btn" onclick="toggleProjectActionsMenu()" aria-expanded="false" aria-haspopup="true">Más ▾</button>
+          <div id="project-actions-menu" class="project-actions-menu hidden" role="menu">
+            <button type="button" role="menuitem" onclick="toggleProjectActionsMenu(true);openApplyTemplateToProjectModal('${pid}')">⤵ Plantilla…</button>
+            <button type="button" role="menuitem" onclick="toggleProjectActionsMenu(true);openSaveProjectTemplateModal('${pid}')">📋 Guardar plantilla</button>
+            <button type="button" class="project-actions-menu__stacked" role="menuitem" onclick="toggleProjectActionsMenu(true);exportProjectAsText('${pid}')">📥 Descargar TXT<span class="project-actions-menu__hint">Listado de tareas y estados en texto plano</span></button>
+            <button type="button" class="project-actions-menu__stacked" role="menuitem" onclick="toggleProjectActionsMenu(true);openProjectPrintReport('${pid}')">🖨 Informe PDF<span class="project-actions-menu__hint">Vista imprimible; usa Imprimir → Guardar como PDF del navegador</span></button>
+            <hr/>
+            <button type="button" class="project-actions-menu__danger" role="menuitem" onclick="toggleProjectActionsMenu(true);deleteProject('${pid}')">🗑 Eliminar proyecto</button>
+          </div>
+        </div>
       </div>
     </div>
+    ${renderProjectQuickStrip(p)}
     ${brokenBanner}
-    ${renderProjectStats(p)}
-    ${renderProjectActivity(p)}
-    <div class="tasks-section">
+    </header>
+    <div class="project-detail-scroll">
+    <div class="project-detail-body-stack">
+    <div class="project-detail-insights">
+      <div class="project-detail-insights__stats">${renderProjectStats(p)}</div>
+      <div class="project-detail-insights__activity-wrap">${renderProjectActivity(p)}</div>
+    </div>
+    <div class="tasks-section project-tasks-main project-tasks-view-wrap project-tasks-view-wrap--${viewMode}">
       <div class="tasks-section-header">
-        <h4>Tareas</h4>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <div class="tasks-section-header-row">
+          <h4 class="proj-section-heading proj-section-heading--tasks">Tareas</h4>
+          <button type="button" class="btn-secondary tasks-density-toggle-btn" onclick="toggleProjectTaskListDensity()" title="Alternar lista compacta o cómoda">⇕ Densidad</button>
+        </div>
+        <div class="tasks-toolbar-cluster" role="toolbar" aria-label="Herramientas de tareas">
+          <div class="tasks-toolbar-group tasks-toolbar-group--search">
           <div class="task-search-wrap">
             <input type="text"
               class="task-search-input"
               id="task-search-input"
               placeholder="Buscar tarea..."
               value="${escapeChatHtml(_taskSearchQuery)}"
-              oninput="filterTaskSearch(this.value,'${toOnclickStringArg(p.id)}')">
-            ${_taskSearchQuery ? `<button type="button" class="task-search-clear" onclick="filterTaskSearch('','${toOnclickStringArg(p.id)}')" title="Limpiar">✕</button>` : ''}
+              oninput="filterTaskSearch(this.value,'${pid}')"
+              aria-label="Buscar en tareas del proyecto">
+            ${_taskSearchQuery ? `<button type="button" class="task-search-clear" onclick="filterTaskSearch('','${pid}')" title="Limpiar">✕</button>` : ''}
+            <span id="project-task-search-announce" class="sr-only" aria-live="polite" aria-atomic="true"></span>
           </div>
-          <div class="task-sort-btns">
-            <button type="button" class="task-sort-btn ${_taskSortMode === 'default' ? 'active' : ''}"
-              onclick="setTaskSort('default','${toOnclickStringArg(p.id)}')" title="Orden por defecto">↕</button>
-            <button type="button" class="task-sort-btn ${_taskSortMode === 'priority' ? 'active' : ''}"
-              onclick="setTaskSort('priority','${toOnclickStringArg(p.id)}')" title="Por prioridad">⚑</button>
-            <button type="button" class="task-sort-btn ${_taskSortMode === 'dueDate' ? 'active' : ''}"
-              onclick="setTaskSort('dueDate','${toOnclickStringArg(p.id)}')" title="Por fecha límite">📅</button>
-            <button type="button" class="task-sort-btn ${_taskSortMode === 'status' ? 'active' : ''}"
-              onclick="setTaskSort('status','${toOnclickStringArg(p.id)}')" title="Por estado">◉</button>
           </div>
-          <div class="view-toggle">
-            <button class="view-toggle-btn ${viewMode !== 'kanban' && viewMode !== 'calendar' ? 'active' : ''}" 
-              onclick="setProjectViewMode('list','${toOnclickStringArg(p.id)}')" title="Vista lista">≡</button>
-            <button class="view-toggle-btn ${viewMode === 'kanban' ? 'active' : ''}" 
-              onclick="setProjectViewMode('kanban','${toOnclickStringArg(p.id)}')" title="Vista Kanban">⊞</button>
-            <button class="view-toggle-btn ${viewMode === 'calendar' ? 'active' : ''}" 
-              onclick="setProjectViewMode('calendar','${toOnclickStringArg(p.id)}')" 
-              title="Vista Calendario">📅</button>
+          <div class="tasks-toolbar-overflow">
+          <div class="tasks-toolbar-group tasks-toolbar-group--controls">
+          <details class="tasks-toolbar-dd tasks-toolbar-dd--sort">
+            <summary class="tasks-toolbar-dd-summary">${sortSummaryLabel}</summary>
+            <div class="tasks-toolbar-dd-menu" role="menu">
+              <button type="button" role="menuitem" onclick="projectToolbarPickSort('default','${pid}',this)">Por defecto</button>
+              <button type="button" role="menuitem" onclick="projectToolbarPickSort('priority','${pid}',this)">Por prioridad</button>
+              <button type="button" role="menuitem" onclick="projectToolbarPickSort('dueDate','${pid}',this)">Por fecha límite</button>
+              <button type="button" role="menuitem" onclick="projectToolbarPickSort('status','${pid}',this)">Por estado</button>
+            </div>
+          </details>
+          <details class="tasks-toolbar-dd tasks-toolbar-dd--view">
+            <summary class="tasks-toolbar-dd-summary">${viewSummaryLabel}</summary>
+            <div class="tasks-toolbar-dd-menu" role="menu">
+              <button type="button" role="menuitem" onclick="projectToolbarPickView('list','${pid}',this)">Lista</button>
+              <button type="button" role="menuitem" onclick="projectToolbarPickView('kanban','${pid}',this)">Kanban</button>
+              <button type="button" role="menuitem" onclick="projectToolbarPickView('calendar','${pid}',this)">Calendario</button>
+            </div>
+          </details>
           </div>
-          <button class="btn-primary" onclick="openAddTaskModal('${toOnclickStringArg(p.id)}')" style="font-size:11px;padding:5px 12px">+ Tarea</button>
+          <div class="tasks-toolbar-group tasks-toolbar-group--actions">
+          ${viewMode === 'list' ? `<button type="button" class="btn-secondary tasks-multiselect-toggle-btn" onclick="toggleProjectTaskMultiselect('${pid}')" title="Seleccionar varias tareas en lista">${_projectTaskMultiselect ? 'Salir selección' : 'Selección'}</button>` : ''}
+          <button type="button" class="btn-secondary tasks-shortcuts-btn" onclick="openProjectsShortcutsModal()">Atajos</button>
+          <button type="button" class="btn-primary tasks-toolbar-add-btn" onclick="openAddTaskModal('${pid}')">+ Tarea</button>
+          </div>
+          </div>
         </div>
+      </div>
+      <div id="project-task-multiselect-bar" class="project-task-multiselect-bar ${_projectTaskMultiselect ? '' : 'hidden'}" role="region" aria-label="Selección múltiple">
+        <span id="project-ms-count" class="project-ms-count">0 seleccionadas</span>
+        <button type="button" class="btn-secondary" onclick="batchMarkSelectedTasksDone('${pid}')">Marcar completadas</button>
+        <button type="button" class="btn-secondary" onclick="clearProjectTaskMultiselect('${pid}')">Cancelar</button>
       </div>
       ${(() => {
         if (viewMode === 'calendar') {
           const tasksWithDate = p.tasks.filter(t => t.dueDate && !t.done);
           if (tasksWithDate.length === 0) {
-            return `<div class="empty-state"><div>Sin tareas con fecha de vencimiento</div></div>`;
+            return `<div class="empty-state project-view-empty" role="status"><div>Sin tareas con fecha de vencimiento</div><p class="project-view-empty-hint">Añade una fecha (AAAA-MM-DD) en una tarea pendiente para verla aquí.</p></div>`;
+          }
+
+          const tasksValid = tasksWithDate.filter(t => parseProjectTaskDueDate(t.dueDate));
+          if (tasksValid.length === 0) {
+            return `<div class="empty-state project-view-empty project-view-empty--warn" role="alert"><div>Fechas de vencimiento no válidas</div><p class="project-view-empty-hint">Las tareas pendientes tienen <code>dueDate</code> fuera de formato o fuera del rango 1970–2100. Corrígelas en editar tarea (AAAA-MM-DD).</p></div>`;
           }
 
           const byMonth = {};
-          tasksWithDate.forEach(t => {
-            const d = new Date(t.dueDate + 'T12:00:00');
-            const key = d.toLocaleDateString('es-ES', {month:'long', year:'numeric'});
-            if (!byMonth[key]) byMonth[key] = [];
-            byMonth[key].push(t);
+          tasksValid.forEach(t => {
+            const d = parseProjectTaskDueDate(t.dueDate);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (!byMonth[key]) byMonth[key] = { anchor: d, tasks: [] };
+            byMonth[key].tasks.push(t);
           });
 
-          return Object.entries(byMonth).map(([month, tasks]) => `
-            <div class="cal-month-block">
-              <div class="cal-month-header">${month}</div>
-              ${tasks.sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)).map(t => {
+          const monthEntries = Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b));
+          const nowD = new Date();
+          const curMonthKey = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}`;
+          const showCalJump = monthEntries.length > 1;
+          const jumpBar = showCalJump
+            ? `<div class="project-cal-toolbar"><button type="button" class="btn-secondary project-cal-jump-btn" onclick="document.getElementById('project-cal-anchor-current-month')?.scrollIntoView({behavior:'smooth',block:'start'})">Ir al mes actual</button></div>`
+            : '';
+          const monthsHtml = monthEntries
+            .map(([key, { anchor, tasks }]) => {
+              const monthTitle = escapeChatHtml(formatCalendarMonthYearLabel(anchor));
+              const sorted = [...tasks].sort(
+                (a, b) =>
+                  (parseProjectTaskDueDate(a.dueDate)?.getTime() ?? 0) -
+                  (parseProjectTaskDueDate(b.dueDate)?.getTime() ?? 0)
+              );
+              const isCur = key === curMonthKey;
+              return `<div class="cal-month-block${isCur ? ' cal-month-block--current' : ''}"${isCur ? ' id="project-cal-anchor-current-month"' : ''}>
+              <div class="cal-month-header">${monthTitle}</div>
+              ${sorted.map(t => {
                 const assignee = USERS.find(u => sameId(u.id, t.assignedTo || t.assigneeId));
-                const isOverdue = new Date(t.dueDate + 'T12:00:00') < new Date();
-                const d = new Date(t.dueDate + 'T12:00:00');
-                const dayLabel = d.toLocaleDateString('es-ES', {weekday:'short', day:'numeric'});
+                const d = parseProjectTaskDueDate(t.dueDate);
+                const isOverdue = isTaskDueDateOverdue(t.dueDate, t.done);
+                const dayLabel = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
                 return `<div class="cal-task-row ${isOverdue ? 'cal-task-overdue' : 'cal-task-ontime'}"
-                  onclick="openTaskViewer('${toOnclickStringArg(p.id)}','${toOnclickStringArg(t.id)}')">
-                  <div class="cal-task-date">${dayLabel}</div>
+                  onclick="openTaskViewer('${pid}','${toOnclickStringArg(t.id)}')">
+                  <div class="cal-task-date">${escapeChatHtml(dayLabel)}</div>
                   <div class="cal-task-name">${escapeChatHtml(t.name)}</div>
                   ${assignee ? `<div class="cal-task-assignee" style="background:${assignee.color}">${assignee.initials}</div>` : ''}
                 </div>`;
               }).join('')}
-            </div>
-          `).join('');
+            </div>`;
+            })
+            .join('');
+          return `${jumpBar}${monthsHtml}`;
         }
         if (viewMode === 'kanban') return renderTasksKanban(p);
         return renderTasksList(p);
       })()}
     </div>
     ${subprojectsBlock}
-    <div style="margin-top:var(--space-6)">
-      <button type="button" class="btn-secondary btn-full-width" onclick="openProjectCommentsModal('${toOnclickStringArg(p.id)}')">💬 Comentarios del proyecto${comments.filter(c=>c.kind==='project'&&sameId(c.targetId,p.id)).length ? ' ('+comments.filter(c=>c.kind==='project'&&sameId(c.targetId,p.id)).length+')' : ''}</button>
+    <div class="project-comments-cta project-comments-cta--spaced">
+      <button type="button" class="btn-secondary btn-full-width" onclick="openProjectCommentsModal('${pid}')">💬 Comentarios del proyecto${comments.filter(c=>c.kind==='project'&&sameId(c.targetId,p.id)).length ? ' ('+comments.filter(c=>c.kind==='project'&&sameId(c.targetId,p.id)).length+')' : ''}</button>
+    </div>
+    </div>
     </div>
   `;
+  applyAfterProjectDetailRender();
 }
 
 export function openNewProjectModal(parentProjectId) {
@@ -1996,6 +2704,15 @@ export function openAddTaskModal(projectId) {
   document.getElementById('task-desc-preview').innerHTML = '';
   document.getElementById('task-priority-input').value = 'normal';
   document.getElementById('task-status-input').value = 'pending';
+  const presetCol = window._taskModalPresetColumn;
+  window._taskModalPresetColumn = null;
+  if (presetCol === 'pending') {
+    document.getElementById('task-status-input').value = 'pending';
+  } else if (presetCol === 'progress') {
+    document.getElementById('task-status-input').value = 'progress';
+  } else if (presetCol === 'done') {
+    document.getElementById('task-status-input').value = 'done';
+  }
   document.getElementById('task-due-date').value = '';
   document.getElementById('task-estimated-hours').value = '';
   document.getElementById('task-real-hours').value = '';
@@ -2231,7 +2948,7 @@ export function toggleTask(projectId, taskId) {
 }
 
 export function deleteTask(projectId, taskId) {
-  const p = projects.find(pr => pr.id === projectId);
+  const p = projects.find(pr => sameId(pr.id, projectId));
   if (!p) return;
   const task = p.tasks.find(t => sameId(t.id, taskId));
   showConfirmModal({

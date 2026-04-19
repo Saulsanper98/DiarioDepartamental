@@ -583,10 +583,14 @@ function renderMentionChips() {
     // Mostrar grupos
     area.innerHTML = GROUPS.map(group => {
       const groupUserCount = USERS.filter(u => u.group === group && u.id !== currentUser.id).length;
+      const countLine =
+        groupUserCount === 0
+          ? `<div class="group-count group-count--empty">Sin otros usuarios en este equipo para mencionar</div>`
+          : `<div class="group-count">${groupUserCount} usuario${groupUserCount !== 1 ? 's' : ''}</div>`;
       return `
         <div class="mention-group-btn" onclick="selectMentionGroup('${group}')">
           <div class="group-name">${group}</div>
-          <div class="group-count">${groupUserCount} usuario${groupUserCount!==1?'s':''}</div>
+          ${countLine}
         </div>
       `;
     }).join('');

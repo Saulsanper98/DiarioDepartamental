@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Fraunces:ital,wght@0,300;0,500;1,300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/wysiwyg.css">
+<link rel="stylesheet" href="css/notes-refinements.css">
+<link rel="stylesheet" href="css/projects-refinements.css">
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
 <style>
 .login-spinner {
@@ -238,107 +240,199 @@
 
 <!-- Note Modal -->
 <div class="modal-overlay" id="note-modal">
-  <div class="modal">
+  <div class="modal modal--note">
+    <div class="modal-header note-modal-header">
+      <div class="note-modal-header-row">
+        <h3 id="modal-title">Nueva Nota</h3>
+        <span id="note-modal-dirty-dot" class="note-modal-dirty-dot hidden" title="Cambios sin guardar"></span>
+        <button type="button" class="notes-shortcuts-help-btn" onclick="openNotesShortcutsHelpModal()" title="Atajos de teclado">?</button>
+        <span class="note-modal-shortcuts-badge" title="Atajos: Ctrl+S guardar · Esc cerrar">Ctrl+S · Esc</span>
+      </div>
+      <button type="button" class="modal-close" onclick="requestCloseNoteModal()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="modal-body note-modal-body">
+      <div class="note-modal-tabs" role="tablist" aria-label="Secciones del formulario de nota">
+        <button type="button" class="note-modal-tab is-active" role="tab" id="note-modal-tab-btn-content" aria-selected="true" aria-controls="note-modal-panel-content" onclick="switchNoteModalTab('content')">Contenido</button>
+        <button type="button" class="note-modal-tab" role="tab" id="note-modal-tab-btn-options" aria-selected="false" aria-controls="note-modal-panel-options" onclick="switchNoteModalTab('options')">Opciones</button>
+      </div>
+      <div id="note-modal-panel-content" class="note-modal-panel" role="tabpanel" aria-labelledby="note-modal-tab-btn-content">
+        <div class="form-group">
+          <label class="form-label" for="note-title-input">Título</label>
+          <input type="text" class="form-input" id="note-title-input" placeholder="Título de la nota…" oninput="handleNoteTitleInput()">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="note-body-editor">Contenido</label>
+          <div class="content-input-group">
+            <div
+              class="form-textarea note-wysiwyg-editor"
+              id="note-body-editor"
+              contenteditable="true"
+              role="textbox"
+              aria-multiline="true"
+              data-placeholder="Escribe el contenido...&#10;Usa @nombre para mencionar compañeros"
+              oninput="handleNoteEditorInput()"
+            ></div>
+            <textarea class="form-textarea" id="note-body-input" placeholder="Escribe el contenido...&#10;Usa @nombre para mencionar compañeros" style="display:none" oninput="updateMarkdownPreview('note-body-input','note-content-preview',editingNoteImages)"></textarea>
+            <button type="button" class="btn-insert-image note-insert-fab" onclick="insertImage()" title="Insertar imagen">🖼</button>
+          </div>
+          <div class="note-preview-controls preview-controls">
+            <button type="button" class="btn-note-preview-toggle" id="note-preview-toggle" onclick="togglePreview('note-content-preview','note-preview-toggle')">Ocultar preview</button>
+          </div>
+          <p class="note-image-paste-hint" id="note-image-paste-hint">
+            Imágenes pegadas: compresión suave (JPEG, hasta ~1920 px); tamaño original al pegar máx. 5 MB.
+          </p>
+          <div class="markdown-preview" id="note-content-preview"></div>
+        </div>
+      </div>
+      <div id="note-modal-panel-options" class="note-modal-panel hidden" role="tabpanel" aria-labelledby="note-modal-tab-btn-options" hidden>
+        <section class="note-modal-opt-section" aria-labelledby="note-opt-heading-shift">
+          <h3 class="note-modal-sticky-heading" id="note-opt-heading-shift">Turno y prioridad</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" id="note-shift-label">Turno destino</label>
+            <div class="shift-selector" role="group" aria-labelledby="note-shift-label">
+              <div class="shift-option morning selected" role="button" tabindex="0" data-shift="morning" aria-pressed="true" onclick="selectShiftOpt(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectShiftOpt(this);}"><span class="shift-name">☀️ Mañana</span><span class="shift-hours">06:00–14:00</span></div>
+              <div class="shift-option afternoon" role="button" tabindex="0" data-shift="afternoon" aria-pressed="false" onclick="selectShiftOpt(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectShiftOpt(this);}"><span class="shift-name">🌤 Tarde</span><span class="shift-hours">14:00–22:00</span></div>
+              <div class="shift-option night" role="button" tabindex="0" data-shift="night" aria-pressed="false" onclick="selectShiftOpt(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectShiftOpt(this);}"><span class="shift-name">🌙 Noche</span><span class="shift-hours">22:00–06:00</span></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" id="note-priority-label">Prioridad</label>
+            <div class="priority-select" role="group" aria-labelledby="note-priority-label">
+              <div class="priority-opt normal selected" role="button" tabindex="0" data-priority="normal" aria-pressed="true" onclick="selectPriority(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectPriority(this);}">Normal</div>
+              <div class="priority-opt media" role="button" tabindex="0" data-priority="media" aria-pressed="false" onclick="selectPriority(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectPriority(this);}">Media</div>
+              <div class="priority-opt alta" role="button" tabindex="0" data-priority="alta" aria-pressed="false" onclick="selectPriority(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectPriority(this);}">Alta</div>
+            </div>
+          </div>
+        </div>
+        </section>
+        <section class="note-modal-opt-section" aria-labelledby="note-opt-heading-mentions">
+          <h3 class="note-modal-sticky-heading" id="note-opt-heading-mentions">Menciones</h3>
+        <div class="form-group">
+          <label class="form-label">Mencionar compañeros</label>
+          <div class="mentions-area" id="mentions-area"></div>
+        </div>
+        </section>
+        <section class="note-modal-opt-section" aria-labelledby="note-opt-heading-vis">
+          <h3 class="note-modal-sticky-heading" id="note-opt-heading-vis">Visibilidad y colaboración</h3>
+        <div class="form-group">
+          <label class="form-label" id="note-vis-label">Visibilidad</label>
+          <div class="visibility-pills" id="note-visibility-pills" role="group" aria-labelledby="note-vis-label">
+            <button type="button" class="visibility-opt selected" data-vis="department" aria-pressed="true" onclick="selectVisibility(this)">Departamento</button>
+            <button type="button" class="visibility-opt" data-vis="private" aria-pressed="false" onclick="selectVisibility(this)">Privada</button>
+            <button type="button" class="visibility-opt" data-vis="public" aria-pressed="false" onclick="selectVisibility(this)">Pública</button>
+          </div>
+          <ul class="note-vis-hint-list" aria-label="Descripción de cada nivel de visibilidad">
+            <li><strong>Departamento</strong> (por defecto): la ve todo tu mismo grupo en el diario del día.</li>
+            <li><strong>Privada</strong>: solo tú.</li>
+            <li><strong>Pública</strong>: compartición según colaboración abajo; en el diario del departamento del autor también la ven compañeros del mismo grupo.</li>
+          </ul>
+        </div>
+        <div class="form-row note-modal-collab-row">
+          <div class="form-group">
+            <label class="form-label">Colaboración — grupo destino</label>
+            <select class="form-select" id="note-collab-target-select"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Permiso</label>
+            <select class="form-select" id="note-collab-permission-select">
+              <option value="read">Lectura</option>
+              <option value="write">Edición</option>
+            </select>
+          </div>
+        </div>
+        </section>
+        <section class="note-modal-opt-section" aria-labelledby="note-opt-heading-tags">
+          <h3 class="note-modal-sticky-heading" id="note-opt-heading-tags">Etiquetas y opciones</h3>
+        <div class="form-group">
+          <label class="form-label" for="note-tags-input">Etiquetas</label>
+          <input type="text" class="form-input" id="note-tags-input"
+            placeholder="#incidencia #mantenimiento #urgente…"
+            autocomplete="off"
+            list="note-tags-suggestions"
+            oninput="refreshNoteTagsChipsFromInput();syncNoteTagsDatalist()"
+            onfocus="syncNoteTagsDatalist()">
+          <datalist id="note-tags-suggestions"></datalist>
+          <div id="note-tags-chips" class="note-tags-chips" aria-live="polite"></div>
+          <p class="note-form-hint" id="note-tags-hint">
+            Escribe etiquetas separadas por espacios; cada una debe empezar por <strong>#</strong> (ej. <code>#incidencia</code> <code>#urgente</code>).
+          </p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fijar en el turno</label>
+          <div class="reminder-row">
+            <div class="reminder-toggle" id="note-pinned-toggle" role="switch" aria-checked="false" tabindex="0" onclick="toggleNotePinnedModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNotePinnedModal();}"></div>
+            <span class="reminder-label">Mostrar primero en la lista del turno (solo quien edita la nota)</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Recordatorio</label>
+          <div class="reminder-row">
+            <div class="reminder-toggle" id="reminder-toggle" role="switch" aria-checked="false" tabindex="0" onclick="toggleReminder()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleReminder();}"></div>
+            <span class="reminder-label">Activar recordatorio</span>
+            <input type="time" class="form-input reminder-time-input hidden" id="reminder-time" value="07:00" oninput="syncReminderSummaryFromInput()">
+          </div>
+          <p id="note-reminder-summary" class="note-reminder-summary hidden" role="status" aria-live="polite"></p>
+        </div>
+        </section>
+      </div>
+    </div>
+    <div class="modal-footer note-modal-footer-sticky">
+      <div class="note-modal-footer-inner">
+        <button type="button" class="btn-note-template-footer" onclick="saveNoteAsTemplate()">📋 Guardar como plantilla</button>
+        <div class="note-modal-footer-actions">
+          <button type="button" class="btn-cancel" onclick="requestCloseNoteModal()">Cancelar</button>
+          <button type="button" class="btn-save" id="note-modal-save-btn" onclick="saveNote()">Guardar Nota</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Atajos proyectos -->
+<div class="modal-overlay" id="projects-shortcuts-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="projects-shortcuts-title">
     <div class="modal-header">
-      <h3 id="modal-title">Nueva Nota</h3>
-      <button class="modal-close" onclick="closeModal('note-modal')">✕</button>
+      <h3 id="projects-shortcuts-title">Atajos — Proyectos &amp; Tareas</h3>
+      <button type="button" class="modal-close" onclick="closeModal('projects-shortcuts-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">Título</label>
-        <input type="text" class="form-input" id="note-title-input" placeholder="Título de la nota...">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Contenido</label>
-        <div class="content-input-group">
-          <div
-            class="form-textarea note-wysiwyg-editor"
-            id="note-body-editor"
-            contenteditable="true"
-            data-placeholder="Escribe el contenido...&#10;Usa @nombre para mencionar compañeros"
-            oninput="handleNoteEditorInput()"
-          ></div>
-          <textarea class="form-textarea" id="note-body-input" placeholder="Escribe el contenido...&#10;Usa @nombre para mencionar compañeros" style="display:none" oninput="updateMarkdownPreview('note-body-input','note-content-preview',editingNoteImages)"></textarea>
-          <button class="btn-insert-image" onclick="insertImage()" title="Insertar imagen">🖼️</button>
-        </div>
-        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
-          <button class="btn-secondary" id="note-preview-toggle" onclick="togglePreview('note-content-preview','note-preview-toggle')">Ocultar preview</button>
-        </div>
-        <div class="markdown-preview" id="note-content-preview"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Turno destino</label>
-          <div class="shift-selector">
-            <div class="shift-option morning" data-shift="morning" onclick="selectShiftOpt(this)"><span class="shift-name">☀️ Mañana</span><span class="shift-hours">06:00–14:00</span></div>
-            <div class="shift-option afternoon" data-shift="afternoon" onclick="selectShiftOpt(this)"><span class="shift-name">🌤 Tarde</span><span class="shift-hours">14:00–22:00</span></div>
-            <div class="shift-option night" data-shift="night" onclick="selectShiftOpt(this)"><span class="shift-name">🌙 Noche</span><span class="shift-hours">22:00–06:00</span></div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Prioridad</label>
-          <div class="priority-select">
-            <div class="priority-opt normal selected" data-priority="normal" onclick="selectPriority(this)">Normal</div>
-            <div class="priority-opt media" data-priority="media" onclick="selectPriority(this)">Media</div>
-            <div class="priority-opt alta" data-priority="alta" onclick="selectPriority(this)">Alta</div>
-          </div>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Mencionar compañeros</label>
-        <div class="mentions-area" id="mentions-area"></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Visibilidad</label>
-        <div class="visibility-pills" id="note-visibility-pills">
-          <button type="button" class="visibility-opt selected" data-vis="department" onclick="selectVisibility(this)">Departamento</button>
-          <button type="button" class="visibility-opt" data-vis="private" onclick="selectVisibility(this)">Privada</button>
-          <button type="button" class="visibility-opt" data-vis="public" onclick="selectVisibility(this)">Pública</button>
-        </div>
-        <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.5"><strong>Departamento</strong> (por defecto): la ve todo tu mismo grupo en el diario. <strong>Privada</strong>: solo tú. <strong>Pública</strong>: compartición según colaboración abajo; en el diario del departamento del autor también la ven compañeros del mismo grupo.</p>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Colaboración — grupo destino</label>
-          <select class="form-select" id="note-collab-target-select"></select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Permiso</label>
-          <select class="form-select" id="note-collab-permission-select">
-            <option value="read">Lectura</option>
-            <option value="write">Edición</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Etiquetas</label>
-        <input type="text" class="form-input" id="note-tags-input"
-          placeholder="#incidencia #mantenimiento #urgente…"
-          autocomplete="off">
-        <p style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.5">
-          Escribe etiquetas separadas por espacios comenzando con #.
-        </p>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Fijar en el turno</label>
-        <div class="reminder-row">
-          <div class="reminder-toggle" id="note-pinned-toggle" onclick="toggleNotePinnedModal()"></div>
-          <span class="reminder-label">Mostrar primero en la lista del turno (solo quien edita la nota)</span>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Recordatorio</label>
-        <div class="reminder-row">
-          <div class="reminder-toggle" id="reminder-toggle" onclick="toggleReminder()"></div>
-          <span class="reminder-label">Activar recordatorio</span>
-          <input type="time" class="form-input reminder-time-input hidden" id="reminder-time" value="07:00">
-        </div>
+      <div class="notes-shortcuts-list">
+        <p><kbd>/</kbd> — Enfocar el buscador de tareas (vista proyecto abierta)</p>
+        <p><kbd>?</kbd> — Abrir esta ayuda de atajos</p>
+        <p><kbd>N</kbd> — Nueva tarea (con proyecto seleccionado; sin foco en un campo de texto)</p>
+        <p><kbd>Esc</kbd> — Cerrar los desplegables de orden y vista del panel de tareas</p>
+        <p><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> — Vista Lista / Kanban / Calendario (proyecto abierto)</p>
+        <p><kbd>↑</kbd> / <kbd>↓</kbd> — Proyecto anterior o siguiente en el árbol izquierdo</p>
+        <p><kbd>⇕</kbd> Densidad — Alternar filas de lista compactas o cómodas</p>
+        <p style="margin-top:12px;color:var(--text-muted)">En el árbol: <strong>Filtrar por</strong> reduce qué tareas se cuentan por usuario. El buscador filtra por nombre, descripción y comentarios de la tarea.</p>
       </div>
     </div>
-    <div class="modal-footer" style="flex-wrap:wrap;gap:8px;justify-content:flex-end">
-      <button type="button" class="btn-secondary" onclick="saveNoteAsTemplate()">📋 Guardar como plantilla</button>
-      <button class="btn-cancel" onclick="closeModal('note-modal')">Cancelar</button>
-      <button class="btn-save" onclick="saveNote()">Guardar Nota</button>
+    <div class="modal-footer">
+      <button type="button" class="btn-primary" onclick="closeModal('projects-shortcuts-modal')">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<!-- Atajos notas -->
+<div class="modal-overlay" id="notes-shortcuts-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Atajos — Notas</h3>
+      <button type="button" class="modal-close" onclick="closeModal('notes-shortcuts-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="notes-shortcuts-list">
+        <p><kbd>N</kbd> — Nueva nota (vista Notas, sin foco en un campo)</p>
+        <p><kbd>/</kbd> — Enfocar el buscador de notas</p>
+        <p><kbd>Ctrl</kbd> + <kbd>S</kbd> — Guardar nota</p>
+        <p><kbd>Esc</kbd> — Cerrar modal de nota (pide confirmación si hay cambios) o cerrar menús ⋮</p>
+        <p><kbd>Ctrl</kbd> + <kbd>Enter</kbd> — (próximamente) enviar desde menciones</p>
+        <p style="margin-top:12px;color:var(--text-muted)">En el calendario: <strong>Hoy</strong> (mes actual y día de hoy), <strong>Ir a fecha…</strong> o <kbd>Ctrl</kbd>+<kbd>G</kbd> (Mac: <kbd>Cmd</kbd>+<kbd>G</kbd>) para saltar a cualquier día.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-primary" onclick="closeModal('notes-shortcuts-modal')">Entendido</button>
     </div>
   </div>
 </div>

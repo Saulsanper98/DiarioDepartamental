@@ -1,10 +1,10 @@
 // ===== VIEWS MODULE =====
 
 // Import required dependencies
-import { currentUser, currentView, currentNoteView, currentDate, weekOffset, activeShiftFilters, searchQuery, notes, USERS, sameId, toDateStr, setCurrentView, setCurrentNoteView, setCurrentDate, workGroups, wgInvites, setWorkGroups, setWgInvites, CORE_DEPARTMENT_GROUPS, setActiveShiftFilters, setSearchQuery, setSearchNotesAllDates, setProjectUserFilter, setWeekOffset } from './data.js';
+import { currentUser, currentView, currentNoteView, currentDate, weekOffset, activeShiftFilters, searchQuery, notesListSort, notes, USERS, sameId, toDateStr, setCurrentView, setCurrentNoteView, setCurrentDate, workGroups, wgInvites, setWorkGroups, setWgInvites, CORE_DEPARTMENT_GROUPS, setActiveShiftFilters, setSearchQuery, setSearchNotesAllDates, setActiveNoteTagFilter, setNotesAuthorFilterId, setProjectUserFilter, setWeekOffset } from './data.js';
 import { renderThemeGrid } from './themes.js';
 import { showToast, escapeChatHtml, openModal, closeModal, showConfirmModal } from './modalControl.js';
-import { renderNotes, renderPublicNotes, userCanSeeNote } from './notes.js';
+import { renderNotes, renderPublicNotes, userCanSeeNote, syncNotesSaveSoundCheckbox, announceNotes } from './notes.js';
 import { loadReadMentions, saveReadMentions } from './mentionsRead.js';
 import { renderProjects, userIsActiveWorkGroupMember } from './projects.js';
 import { renderPostitBoard } from './postit.js';
@@ -13,6 +13,7 @@ import { renderChat, updateChatNavBadge } from './chat.js';
 import { renderShortcuts, onShortcutIconModeChange } from './shortcuts.js';
 import { renderWhiteboard } from './whiteboard.js';
 import { renderSettingsEditor, updateWorkGroupInviteNavBadge } from './login.js';
+import { bumpNotesMetric } from './notesTelemetry.js';
 import {
   apiGetMyWorkGroups,
   apiCreateWorkGroup,
@@ -41,7 +42,7 @@ function getViewHTML(view) {
   switch(view) {
     case 'notes':
       return `
-        <div class="topbar">
+        <div class="topbar notes-topbar">
           <h2 id="view-title">Todas las Notas</h2>
           <div class="notes-search-wrap">
             <div class="search-bar">
@@ -54,40 +55,65 @@ function getViewHTML(view) {
               <span class="notes-search-history-caption">Historial completo</span>
             </label>
           </div>
+          <p id="notes-search-scope-hint" class="notes-search-scope-hint" aria-live="polite"></p>
+          <span id="notes-search-busy" class="notes-search-busy hidden" aria-live="polite"></span>
           <div class="topbar-notes-actions">
-            <div class="export-toolbar-wrap" title="Exportar notas del día, semana o mes como archivo de texto">
-              <span class="export-toolbar-label export-toolbar-label--notes-inline">Exportar</span>
-              <div class="export-btn-group">
-                <button type="button" class="export-btn" onclick="exportNotes('day')" title="Descargar notas del día como archivo de texto">📄 Día</button>
-                <button type="button" class="export-btn" onclick="exportNotes('week')" title="Descargar notas de la semana">📅 Semana</button>
-                <button type="button" class="export-btn" onclick="exportNotes('month')" title="Descargar notas del mes">🗓 Mes</button>
+            <div class="notes-topbar-overflow-wrap">
+              <button type="button" class="notes-toolbar-more-btn" id="notes-topbar-overflow-trigger" onclick="toggleNotesTopbarOverflowMenu()" aria-expanded="false" aria-haspopup="true" title="Exportar, plantillas y más">Más ▾</button>
+              <div id="notes-topbar-overflow-menu" class="notes-export-menu notes-topbar-overflow-menu hidden" role="menu">
+                <div class="notes-overflow-menu-label" role="presentation">Exportar</div>
+                <button type="button" class="notes-export-menu-item" role="menuitem" onclick="exportNotes('day');toggleNotesTopbarOverflowMenu(true)">Día (texto)</button>
+                <button type="button" class="notes-export-menu-item" role="menuitem" onclick="exportNotes('week');toggleNotesTopbarOverflowMenu(true)">Semana</button>
+                <button type="button" class="notes-export-menu-item" role="menuitem" onclick="exportNotes('month');toggleNotesTopbarOverflowMenu(true)">Mes</button>
+                <div class="notes-overflow-menu-divider" role="presentation"></div>
+                <button type="button" class="notes-export-menu-item" role="menuitem" onclick="openNoteTemplatesModal();toggleNotesTopbarOverflowMenu(true)">Plantillas</button>
+                <button type="button" class="notes-export-menu-item" role="menuitem" onclick="openNotesShortcutsHelpModal();toggleNotesTopbarOverflowMenu(true)">Atajos de teclado</button>
+                <button type="button" class="notes-export-menu-item" role="menuitem" onclick="window.print();toggleNotesTopbarOverflowMenu(true)">Imprimir vista</button>
               </div>
             </div>
             <div style="position:relative">
               <button class="notif-btn" title="Notificaciones">🔔<span class="notif-badge hidden" id="notif-badge"></span></button>
             </div>
-            <button type="button" class="btn-topbar-templates" onclick="openNoteTemplatesModal()" title="Plantillas de nota guardadas en este equipo">
-              <span class="btn-topbar-templates-icon" aria-hidden="true">📋</span><span class="btn-topbar-templates-text">Plantillas</span>
-            </button>
             <button type="button" class="btn-action" onclick="openNewNoteModal()">✏️ Nueva Nota</button>
           </div>
         </div>
 
-        <div class="stats-bar">
-          <div class="stat-item"><strong id="stat-total">0</strong> notas hoy</div>
-          <div class="stat-item"><strong id="stat-morning" style="color:var(--morning)">0</strong> mañana</div>
-          <div class="stat-item"><strong id="stat-afternoon" style="color:var(--afternoon)">0</strong> tarde</div>
-          <div class="stat-item"><strong id="stat-night" style="color:var(--night)">0</strong> noche</div>
-          <span class="stats-bar-divider">|</span>
-          <div style="position:relative">
-            <button type="button" class="notes-tag-filter-trigger" id="note-tag-filter-btn" onclick="toggleNoteTagDropdown()" title="Filtrar notas por etiqueta">🏷️ Etiquetas</button>
-            <div id="note-tag-dropdown" class="note-tag-dropdown hidden"></div>
+        <div class="stats-bar notes-stats-bar" id="notes-stats-bar">
+          <div id="notes-stats-list-group" class="notes-stats-list-group">
+          <div class="stat-item" id="stat-total-item"><strong id="stat-total">0</strong> <span id="stat-total-caption" class="stat-item-caption">notas hoy</span></div>
+          <div class="stat-item" id="stat-morning-item"><strong id="stat-morning" style="color:var(--morning)">0</strong> <span id="stat-morning-caption" class="stat-item-caption">en mañana</span></div>
+          <div class="stat-item" id="stat-afternoon-item"><strong id="stat-afternoon" style="color:var(--afternoon)">0</strong> <span id="stat-afternoon-caption" class="stat-item-caption">en tarde</span></div>
+          <div class="stat-item" id="stat-night-item"><strong id="stat-night" style="color:var(--night)">0</strong> <span id="stat-night-caption" class="stat-item-caption">en noche</span></div>
           </div>
-          <div id="note-tag-active-filter" class="note-tag-active-filter hidden"></div>
+          <div id="notes-stats-calendar-group" class="notes-stats-calendar-group hidden" aria-live="polite">
+            <span class="notes-stats-cal-main" id="notes-stats-cal-main"></span>
+            <span class="notes-stats-cal-day hidden" id="notes-stats-cal-day"></span>
+          </div>
+          <span class="stats-bar-divider stats-bar-divider--before-filters" aria-hidden="true">|</span>
+          <div class="notes-stats-filters-cluster">
+            <div class="notes-stats-filters-cluster__tags">
+              <div style="position:relative">
+                <button type="button" class="notes-tag-filter-trigger" id="note-tag-filter-btn" onclick="toggleNoteTagDropdown()" title="Filtrar notas por etiqueta">🏷️ Etiquetas</button>
+                <div id="note-tag-dropdown" class="note-tag-dropdown hidden"></div>
+              </div>
+              <div id="note-tag-active-filter" class="note-tag-active-filter hidden"></div>
+              <div id="notes-author-filter-bar" class="notes-author-filter-bar hidden" aria-live="polite"></div>
+            </div>
+            <div class="notes-stats-filters-cluster__tools">
+              <div class="notes-sort-wrap" title="Orden dentro de cada turno">
+                <span class="sr-only" id="notes-sort-label">Orden dentro de cada turno</span>
+                <div id="notes-sort-seg" class="notes-sort-seg" role="group" aria-labelledby="notes-sort-label">
+                  <button type="button" class="notes-sort-seg-btn${notesListSort !== 'oldest' ? ' active' : ''}" data-sort="recent" aria-pressed="${notesListSort !== 'oldest' ? 'true' : 'false'}" title="Más recientes primero dentro de cada turno" onclick="applyNotesListSort('recent')">Recientes</button>
+                  <button type="button" class="notes-sort-seg-btn${notesListSort === 'oldest' ? ' active' : ''}" data-sort="oldest" aria-pressed="${notesListSort === 'oldest' ? 'true' : 'false'}" title="Más antiguas primero dentro de cada turno" onclick="applyNotesListSort('oldest')">Antiguas</button>
+                </div>
+              </div>
+              <button type="button" class="notes-clear-filters-btn" onclick="clearAllNotesFilters()" title="Quitar búsqueda, etiqueta, autor e historial completo">Limpiar</button>
+            </div>
+          </div>
           <div class="notes-view-switcher" style="margin-left:auto;display:flex;align-items:center;gap:4px">
             <button class="notes-view-btn ${currentNoteView !== 'calendar' ? 'active' : ''}" 
-              onclick="setNoteView('all', document.getElementById('nav-all'))"
-              title="Vista Lista">
+              onclick="exitNotesCalendarToList()"
+              title="Vista lista (restaura la subvista de notas que tenías antes del calendario)">
               ☰ Lista
             </button>
             <button class="notes-view-btn ${currentNoteView === 'calendar' ? 'active' : ''}"
@@ -104,6 +130,13 @@ function getViewHTML(view) {
           <button class="date-nav-btn" onclick="navigateWeek(1)">▶</button>
         </div>
 
+        <div id="notes-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+        <div id="notes-onboarding-banner" class="notes-onboarding-banner hidden" role="region" aria-label="Consejos rápidos de notas">
+          <div class="notes-onboarding-inner">
+            <p class="notes-onboarding-text"><strong>Consejo:</strong> Usa el carrusel de fechas para cambiar de día, <strong>Historial completo</strong> en el buscador para encontrar notas antiguas, y <strong>Exportar</strong> para descargar el día, la semana o el mes.</p>
+            <button type="button" class="btn-secondary notes-onboarding-dismiss" onclick="dismissNotesOnboarding()">Entendido</button>
+          </div>
+        </div>
         <div class="notes-area" id="notes-area"></div>
       `;
     case 'public-notes':
@@ -158,9 +191,18 @@ function getViewHTML(view) {
             <button class="btn-action" onclick="openNewProjectModal()">🎯 Nuevo Proyecto</button>
           </div>
         </div>
+        <div class="project-user-filter-wrap">
         <div class="project-user-filter" id="project-user-filter">
           <span class="puf-label">Filtrar por:</span>
           <!-- pills injected by JS -->
+        </div>
+        </div>
+        <div id="projects-onboarding-banner" class="projects-onboarding-banner hidden" role="region" aria-label="Consejos de proyectos">
+          <span class="projects-onboarding-banner__text" title="Filtrar por compañero en el árbol; / buscar; ? atajos; N nueva tarea con proyecto abierto"><strong>Consejo:</strong> Filtrar por · <kbd>/</kbd> buscar · <kbd>?</kbd> atajos · <kbd>N</kbd> nueva tarea</span>
+          <div class="projects-onboarding-banner__actions">
+            <button type="button" class="btn-secondary projects-onboarding-banner__btn" onclick="openProjectsShortcutsModal()">Atajos…</button>
+            <button type="button" class="btn-secondary projects-onboarding-banner__btn" onclick="dismissProjectsOnboarding()">Entendido</button>
+          </div>
         </div>
         <div class="projects-layout">
           <div class="projects-list-panel">
@@ -345,6 +387,13 @@ function getViewHTML(view) {
           <div class="settings-section">
             <h3>🎨 Tema de la Interfaz <span style="font-size:11px;font-weight:400;color:var(--text-muted);font-family:'DM Mono',monospace"> — se aplica solo a tu usuario</span></h3>
             <div class="theme-grid" id="theme-grid"></div>
+            <div class="settings-notes-feedback-pref" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+              <label class="setting-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600">
+                <input type="checkbox" id="pref-notes-save-sound" onchange="onNotesSaveSoundPrefChange(this)">
+                Sonido breve al guardar una nota
+              </label>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.45">Solo en este navegador. Desactivado por defecto. Si lo activas, al guardar una nota se reproduce un tono breve y, en móviles compatibles, una vibración suave.</div>
+            </div>
             <div style="display:flex;gap:10px;margin-top:16px;align-items:center">
               <button class="btn-secondary" onclick="resetUserTheme()" style="display:flex;align-items:center;gap:6px">
                 ↺ Resetear tema original
@@ -544,6 +593,7 @@ export function showView(view, btn) {
         sec.style.display = (i === 1) ? '' : 'none';
       });
       renderThemeGrid();
+      syncNotesSaveSoundCheckbox();
       updateChatNavBadge();
       return;
     }
@@ -559,7 +609,12 @@ export function showView(view, btn) {
   setCurrentView(view);
 
   // Render specific view content
-  if (view === 'notes') renderNotes();
+  if (view === 'notes') {
+    renderNotes();
+    syncNotesSearchScopeHint();
+    // Carrusel de fechas: debe pintarse siempre que la vista notas esté en el DOM (evita hueco vacío hasta pulsar ◀/▶).
+    renderDateNav();
+  }
   if (view === 'postit') renderPostitBoard();
   if (view === 'public-notes') renderPublicNotes();
   if (view === 'my-groups') {
@@ -571,7 +626,11 @@ export function showView(view, btn) {
   if (view === 'shortcuts') { renderShortcuts(); onShortcutIconModeChange(); }
   if (view === 'whiteboard') renderWhiteboard();
   if (view === 'chat') renderChat();
-  if (view === 'settings') { renderSettingsEditor(); renderThemeGrid(); }
+  if (view === 'settings') {
+    renderSettingsEditor();
+    renderThemeGrid();
+    syncNotesSaveSoundCheckbox();
+  }
   updateChatNavBadge();
 }
 
@@ -620,7 +679,10 @@ export function renderDateNav() {
     const label = isToday ? 'Hoy' : d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
     const chip = document.createElement('button');
     chip.className = 'date-chip' + (isToday?' today':'') + (isActive?' active':'');
-    chip.title = hasUnreadMention ? 'Mención sin leer en este día' : '';
+    const tipParts = [];
+    if (isToday && !isActive) tipParts.push('Hoy (no seleccionado): pulsa para ver las notas de este día');
+    if (hasUnreadMention) tipParts.push('Mención sin leer en este día');
+    chip.title = tipParts.length ? tipParts.join(' · ') : `Notas del ${ds}`;
 
     // Force text color for active day (even with conflicting atomic rules)
     if (isActive) {
@@ -643,7 +705,20 @@ export function renderDateNav() {
     chip.innerHTML = label +
       (hasNotes ? '<span class="has-notes-dot"></span>' : '') +
       (hasUnreadMention ? '<span class="mention-notif-dot" aria-label="Mención sin leer"></span>' : '');
-    chip.onclick = () => { setCurrentDate(ds); renderDateNav(); renderNotes(); };
+    chip.onclick = () => {
+      setCurrentDate(ds);
+      renderDateNav();
+      const area = document.getElementById('notes-area');
+      if (area && currentView === 'notes' && currentNoteView !== 'calendar' && currentNoteView !== 'weekly' && currentNoteView !== 'mentions') {
+        area.innerHTML = `<div class="notes-day-skeleton" aria-busy="true"><div class="notes-day-skeleton-bar"></div><div class="notes-day-skeleton-bar notes-day-skeleton-bar--short"></div><div class="notes-day-skeleton-bar"></div></div>`;
+        requestAnimationFrame(() => renderNotes());
+      } else {
+        renderNotes();
+      }
+      if (currentView === 'notes') {
+        announceNotes(isToday ? 'Mostrando notas de hoy' : `Mostrando notas de ${label}`);
+      }
+    };
     chips.appendChild(chip);
   }
 }
@@ -655,7 +730,16 @@ export function renderDateNav() {
 export function navigateWeek(dir) {
   setWeekOffset(weekOffset + dir);
   renderDateNav();
-  renderNotes();
+  const area = document.getElementById('notes-area');
+  if (area && currentView === 'notes' && currentNoteView !== 'calendar' && currentNoteView !== 'weekly' && currentNoteView !== 'mentions') {
+    area.innerHTML = `<div class="notes-day-skeleton" aria-busy="true"><div class="notes-day-skeleton-bar"></div><div class="notes-day-skeleton-bar notes-day-skeleton-bar--short"></div><div class="notes-day-skeleton-bar"></div></div>`;
+    requestAnimationFrame(() => renderNotes());
+  } else {
+    renderNotes();
+  }
+  if (currentView === 'notes') {
+    announceNotes(dir < 0 ? 'Carrusel: semana anterior' : 'Carrusel: semana siguiente');
+  }
 }
 
 // ===== SHIFT FILTERS =====
@@ -679,18 +763,134 @@ export function toggleShiftFilter(shift, btn) {
 
 // ===== SEARCH =====
 
+let _notesSearchDebounceTimer = null;
+const NOTES_SEARCH_DEBOUNCE_MS = 220;
+
 /**
  * Handle search query
  * @param {string} q - Search query
  */
 export function handleSearch(q) {
-  setSearchQuery(q.toLowerCase().trim());
+  const norm = String(q || '').toLowerCase().trim();
+  setSearchQuery(norm);
+  syncNotesSearchScopeHint();
+  const busy = document.getElementById('notes-search-busy');
+  if (busy) {
+    if (norm.length > 0) {
+      busy.textContent = 'Buscando…';
+      busy.classList.remove('hidden');
+    } else {
+      busy.textContent = '';
+      busy.classList.add('hidden');
+    }
+  }
+  if (_notesSearchDebounceTimer) clearTimeout(_notesSearchDebounceTimer);
+  _notesSearchDebounceTimer = setTimeout(() => {
+    _notesSearchDebounceTimer = null;
+    if (busy) {
+      busy.textContent = '';
+      busy.classList.add('hidden');
+    }
+    renderNotes();
+  }, NOTES_SEARCH_DEBOUNCE_MS);
+}
+
+/** Vacía el buscador de notas y vuelve a pintar la lista. */
+export function clearNotesSearch() {
+  if (_notesSearchDebounceTimer) {
+    clearTimeout(_notesSearchDebounceTimer);
+    _notesSearchDebounceTimer = null;
+  }
+  setSearchQuery('');
+  const inp = document.getElementById('search-input');
+  if (inp) inp.value = '';
+  const busy = document.getElementById('notes-search-busy');
+  if (busy) {
+    busy.textContent = '';
+    busy.classList.add('hidden');
+  }
+  syncNotesSearchScopeHint();
   renderNotes();
+}
+
+/** Quita búsqueda, etiqueta activa, filtro por autor e historial completo; no cambia turnos del sidebar. */
+export function clearAllNotesFilters() {
+  if (_notesSearchDebounceTimer) {
+    clearTimeout(_notesSearchDebounceTimer);
+    _notesSearchDebounceTimer = null;
+  }
+  setSearchQuery('');
+  const inp = document.getElementById('search-input');
+  if (inp) inp.value = '';
+  const busy = document.getElementById('notes-search-busy');
+  if (busy) {
+    busy.textContent = '';
+    busy.classList.add('hidden');
+  }
+  setActiveNoteTagFilter(null);
+  setNotesAuthorFilterId(null);
+  setSearchNotesAllDates(false);
+  const hist = document.getElementById('notes-search-history');
+  if (hist) hist.checked = false;
+  syncNotesSearchScopeHint();
+  renderNotes();
+}
+
+/** Vuelve a la vista lista restaurando all/mine/mentions/reminders/weekly previa al calendario. */
+export function exitNotesCalendarToList() {
+  let v = 'all';
+  try {
+    const s = sessionStorage.getItem('diario_notes_view_before_cal');
+    if (s && ['all', 'mine', 'mentions', 'reminders', 'weekly'].includes(s)) v = s;
+  } catch {
+    /* ignore */
+  }
+  const btn =
+    v === 'mine'
+      ? document.getElementById('nav-mine')
+      : v === 'mentions'
+        ? document.getElementById('nav-mentions')
+        : v === 'reminders'
+          ? document.getElementById('nav-reminders')
+          : v === 'weekly'
+            ? document.getElementById('nav-weekly')
+            : document.getElementById('nav-all');
+  setNoteView(v, btn || document.getElementById('nav-all'));
+}
+
+/** Oculta de forma persistente el banner de onboarding de la vista notas. */
+export function dismissNotesOnboarding() {
+  try {
+    localStorage.setItem('diario_notes_onboarding_dismissed_v1', '1');
+  } catch {
+    /* ignore */
+  }
+  document.getElementById('notes-onboarding-banner')?.classList.add('hidden');
+  bumpNotesMetric('notes_onboarding_dismiss');
 }
 
 export function onNotesSearchHistoryChange(el) {
   setSearchNotesAllDates(!!(el && el.checked));
+  syncNotesSearchScopeHint();
   renderNotes();
+}
+
+/** Texto de ayuda bajo el buscador: qué rango de fechas cubre la búsqueda. */
+export function syncNotesSearchScopeHint() {
+  const hint = document.getElementById('notes-search-scope-hint');
+  if (!hint) return;
+  const q = (searchQuery || '').trim();
+  let t = '';
+  if (searchNotesAllDates) {
+    t = q
+      ? 'ℹ️ Historial completo: se busca en título y cuerpo de las notas en todas las fechas visibles.'
+      : 'ℹ️ Historial completo activo: al escribir se buscará en título y cuerpo en todas las fechas.';
+  } else {
+    t = q
+      ? 'ℹ️ Solo día del carrusel (título y cuerpo). Activa historial completo para ampliar.'
+      : 'ℹ️ Búsqueda en título y cuerpo solo en el día del carrusel (o activa historial completo).';
+  }
+  hint.textContent = t;
 }
 
 // ===== NOTE VIEW SWITCHING =====
@@ -703,19 +903,17 @@ export function onNotesSearchHistoryChange(el) {
 export function setNoteView(view, btn) {
   setCurrentNoteView(view);
   showView('notes', btn);
-  const titles = {
-    all:'Todas las Notas',
-    mine:'Mis Notas', 
-    mentions:'Menciones a mí',
-    reminders:'Recordatorios',
-    weekly:'Resumen Semanal',
-    calendar:'Calendario'
-  };
-  document.getElementById('view-title').textContent = titles[view] || 'Notas';
   renderNotes();
 }
 
 export function setNoteViewCalendar() {
+  try {
+    if (currentNoteView !== 'calendar') {
+      sessionStorage.setItem('diario_notes_view_before_cal', currentNoteView);
+    }
+  } catch {
+    /* ignore */
+  }
   setCurrentNoteView('calendar');
   const container = document.getElementById('notes-area');
   if (container) {
@@ -723,7 +921,6 @@ export function setNoteViewCalendar() {
       m.renderNotesCalendarView();
     }).catch(err => console.error('Error:', err));
   }
-  document.getElementById('view-title').textContent = 'Calendario';
 }
 
 // ===== UTILITY FUNCTIONS =====

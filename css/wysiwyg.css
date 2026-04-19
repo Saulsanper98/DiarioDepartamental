@@ -92,6 +92,22 @@ html.tema-aurora .ncal-today {
   background: rgba(120,88,246,0.12) !important;
 }
 
+/* Hoy ≠ seleccionado: hoy tinte cálido; selección anillo violeta */
+html.tema-aurora .ncal-cell.ncal-today:not(.ncal-selected) {
+  background: rgba(255, 190, 120, 0.1) !important;
+  border-color: rgba(255, 180, 100, 0.45) !important;
+}
+
+html.tema-aurora .ncal-cell.ncal-selected:not(.ncal-today) {
+  background: rgba(167, 139, 250, 0.12) !important;
+  box-shadow: inset 0 0 0 2px rgba(167, 139, 250, 0.75) !important;
+}
+
+html.tema-aurora .ncal-cell.ncal-today.ncal-selected {
+  background: rgba(167, 139, 250, 0.18) !important;
+  box-shadow: inset 0 0 0 2px rgba(255, 220, 160, 0.55), 0 0 0 1px rgba(167, 139, 250, 0.9) !important;
+}
+
 html.tema-aurora .ncal-detail {
   background: rgba(255,255,255,0.03) !important;
   border-color: rgba(255,255,255,0.06) !important;
@@ -115,6 +131,44 @@ html.tema-aurora .notes-view-btn.active {
   background: var(--accent) !important;
   border-color: var(--accent) !important;
   color: #fff !important;
+}
+
+/*
+  Notas / modal nota (tema Aurora): refuerzos visuales.
+  Tokens de referencia: --accent, --surface2, --border, --text-muted (definidos en el tema base).
+*/
+html.tema-aurora .notes-topbar {
+  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+html.tema-aurora .notes-stats-bar {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+html.tema-aurora .note-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease !important;
+}
+
+html.tema-aurora .note-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35) !important;
+}
+
+html.tema-aurora .note-modal-tab.is-active {
+  border-color: rgba(167, 139, 250, 0.45) !important;
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.28) inset !important;
+}
+
+html.tema-aurora .ncal-cell.ncal-selected {
+  outline-color: rgba(167, 139, 250, 0.95) !important;
+}
+
+html.tema-aurora .ncal-nav-btn,
+html.tema-aurora .ncal-today-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.65) !important;
 }
 
 html.tema-aurora .wb-overlay-canvas {
@@ -1289,10 +1343,20 @@ html.tema-aurora #note-modal .btn-cancel {
 
 html.tema-aurora #note-modal .btn-primary,
 html.tema-aurora #note-modal .btn-save {
-  background: linear-gradient(135deg, rgba(120,100,255,0.8), rgba(80,60,200,0.8)) !important;
-  border: 1px solid rgba(120,100,255,0.5) !important;
-  box-shadow: 0 3px 12px rgba(120,100,255,0.4) !important;
-  color: white !important;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, rgba(167, 139, 250, 0.92) 100%, transparent),
+    color-mix(in srgb, rgba(99, 80, 180, 0.88) 100%, transparent)
+  ) !important;
+  border: 1px solid color-mix(in srgb, rgba(167, 139, 250, 0.45) 100%, transparent) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28) !important;
+  color: rgba(255, 255, 255, 0.96) !important;
+}
+
+html.tema-aurora #note-modal .btn-primary:hover,
+html.tema-aurora #note-modal .btn-save:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32) !important;
 }
 
 html.tema-aurora #note-modal select,
@@ -1998,10 +2062,19 @@ html.tema-aurora .projects-panel-header h3 {
   color: rgba(255,255,255,0.9) !important;
 }
 
+/* Fondo del panel detalle: por defecto transparente (otros contextos).
+   En Proyectos & Tareas el panel es opaco/blur; el scroll del listado va en .project-detail-scroll. */
 html.tema-aurora .project-detail-panel {
-  background: rgba(255,255,255,0.03) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.tema-aurora #view-projects #project-detail.project-detail-panel {
+  /* Sin backdrop-filter: el blur del panel + scroll/hero generaba una banda oscura fija en el borde (Chromium). */
+  background: color-mix(in srgb, var(--surface, #0f0e0c) 99%, #000 1%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html.tema-aurora .project-item {
@@ -2063,10 +2136,11 @@ html.tema-aurora .task-name.done {
   color: rgba(255,255,255,0.3) !important;
 }
 
-/* Cabecera sección Tareas: .tasks-section > .tasks-section-header (h4 + .btn-primary); borde = separador inferior */
+/* Cabecera sección Tareas: columna (título arriba, toolbar abajo) para no solapar al scroll / wrap */
 html.tema-aurora #project-detail .tasks-section-header {
   display: flex !important;
-  align-items: center !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
   gap: 10px !important;
   padding-bottom: 12px !important;
   margin-bottom: 0 !important;
@@ -2077,7 +2151,7 @@ html.tema-aurora #project-detail .tasks-section-header {
 
 html.tema-aurora #project-detail .tasks-section-header h4 {
   margin: 0 !important;
-  align-self: center !important;
+  align-self: stretch !important;
 }
 
 html.tema-aurora #project-detail .tasks-section-header .btn-primary {

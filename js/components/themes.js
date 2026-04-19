@@ -6,6 +6,14 @@ import { showToast } from './modalControl.js';
 
 // ===== THEME DEFINITIONS =====
 
+/** Alinea tokens legacy usados por .btn-secondary y similares (--border-color, --text-primary). */
+function syncThemedAliasVariables(root, vars) {
+  const border = vars['--border'];
+  const text = vars['--text'];
+  if (border) root.style.setProperty('--border-color', border);
+  if (text) root.style.setProperty('--text-primary', text);
+}
+
 export const USER_THEMES = [
   {
     id: 'default', name: 'Oscuro', emoji: '🌑',
@@ -70,6 +78,10 @@ export const USER_THEMES = [
       '--text-muted': 'rgba(255,255,255,0.35)',
       '--accent': '#7864ff',
       '--accent2': '#4de8a0',
+      /* rgba(var(--*)) en chips/listas (p. ej. .mention-chip) — sin esto el fondo/borde quedan inválidos al no heredar tema claro */
+      '--text-rgb': '255, 255, 255',
+      '--accent-rgb': '120, 100, 255',
+      '--accent-glow': 'rgba(120, 100, 255, 0.22)',
     },
   },
   {
@@ -180,11 +192,12 @@ export function createAuroraOrbs() {
   wrap.className = 'aurora-orbs';
   wrap.setAttribute('aria-hidden', 'true');
   wrap.style.cssText =
-    'position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;isolation:isolate;';
+    'position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;isolation:isolate;contain:strict;';
   const orbs = [
-    { top: '-80px', left: '-60px', size: '380px', color: 'rgba(120,80,255,0.35)' },
-    { bottom: '-50px', right: '80px', size: '300px', color: 'rgba(0,200,150,0.25)' },
-    { top: '200px', right: '20px', size: '250px', color: 'rgba(255,150,50,0.15)' },
+    { top: '-80px', left: '-60px', size: '420px', color: 'rgba(140,100,255,0.42)' },
+    { bottom: '-60px', right: '40px', size: '340px', color: 'rgba(40,220,170,0.32)' },
+    { top: '180px', right: '-20px', size: '280px', color: 'rgba(255,160,80,0.22)' },
+    { top: '45%', left: '30%', size: '200px', color: 'rgba(120,100,255,0.12)' },
   ];
   orbs.forEach(orb => {
     const el = document.createElement('div');
@@ -209,6 +222,7 @@ export function applyUserTheme(themeId) {
   root.classList.add(`tema-${theme.id}`);
 
   Object.entries(theme.vars).forEach(([k,v]) => root.style.setProperty(k, v));
+  syncThemedAliasVariables(root, theme.vars);
   saveUserTheme(themeId);
   // SAVE ALSO IN GLOBAL KEY FOR LOGIN
   localStorage.setItem('globalSelectedTheme', themeId);
@@ -268,6 +282,7 @@ export function applyStoredTheme() {
   root.classList.add(`tema-${theme.id}`);
 
   Object.entries(theme.vars).forEach(([k,v]) => root.style.setProperty(k, v));
+  syncThemedAliasVariables(root, theme.vars);
 
   // Apply post-it colors based on luminosity
   const bg = theme.vars['--bg'] || '#0f0e0c';
@@ -290,6 +305,12 @@ export function applyStoredTheme() {
     root.style.setProperty('--modal-surface', 'color-mix(in srgb, var(--surface) 78%, transparent 22%)');
     root.style.setProperty('--modal-input-bg', 'color-mix(in srgb, var(--surface2) 85%, transparent 15%)');
     root.style.setProperty('--modal-input-border', 'color-mix(in srgb, var(--border) 35%, transparent)');
+  }
+
+  if (theme.id === 'aurora') {
+    createAuroraOrbs();
+  } else {
+    clearAuroraOrbNodes();
   }
 }
 
@@ -403,7 +424,9 @@ export function readCustomThemeFromEditor() {
  */
 export function previewCustomTheme() {
   const { vars } = readCustomThemeFromEditor();
-  Object.entries(vars).forEach(([k,v]) => document.documentElement.style.setProperty(k, v));
+  const root = document.documentElement;
+  Object.entries(vars).forEach(([k,v]) => root.style.setProperty(k, v));
+  syncThemedAliasVariables(root, vars);
   showToast('Vista previa del tema personalizado', 'info');
 }
 
@@ -419,7 +442,9 @@ export function saveCustomTheme() {
   const customTheme = { id: 'custom', name, emoji, vars };
   if (existingIdx !== -1) USER_THEMES[existingIdx] = customTheme;
   else USER_THEMES.push(customTheme);
-  Object.entries(vars).forEach(([k,v]) => document.documentElement.style.setProperty(k, v));
+  const root = document.documentElement;
+  Object.entries(vars).forEach(([k,v]) => root.style.setProperty(k, v));
+  syncThemedAliasVariables(root, vars);
   saveUserTheme('custom');
   renderThemeGrid();
   showToast(`Tema "${name}" guardado y aplicado`, 'success');
@@ -551,6 +576,7 @@ export function applyUserThemeLogin(themeId) {
   root.classList.add(`tema-${theme.id}`);
 
   Object.entries(theme.vars).forEach(([k,v]) => root.style.setProperty(k, v));
+  syncThemedAliasVariables(root, theme.vars);
   localStorage.setItem('globalSelectedTheme', themeId);
 
   // Update active button
