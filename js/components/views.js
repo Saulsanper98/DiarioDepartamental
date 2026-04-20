@@ -6,7 +6,7 @@ import { renderThemeGrid } from './themes.js';
 import { showToast, escapeChatHtml, openModal, closeModal, showConfirmModal } from './modalControl.js';
 import { renderNotes, renderPublicNotes, userCanSeeNote, syncNotesSaveSoundCheckbox, announceNotes } from './notes.js';
 import { loadReadMentions, saveReadMentions } from './mentionsRead.js';
-import { renderProjects, userIsActiveWorkGroupMember } from './projects.js';
+import { renderProjects, userIsActiveWorkGroupMember, exitProjectPresentationMode } from './projects.js';
 import { renderPostitBoard } from './postit.js';
 import { renderDocs } from './docs.js';
 import { renderChat, updateChatNavBadge } from './chat.js';
@@ -184,34 +184,42 @@ function getViewHTML(view) {
       `;
     case 'projects':
       return `
-        <div class="topbar">
-          <h2>🎯 Proyectos & Tareas</h2>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <button type="button" class="btn-secondary" onclick="openMyWorkTasksView()">📋 Mis tareas</button>
-            <button class="btn-action" onclick="openNewProjectModal()">🎯 Nuevo Proyecto</button>
+        <div class="topbar projects-topbar">
+          <h2 class="projects-topbar-title"><span class="projects-topbar-title__ic" aria-hidden="true"></span> Proyectos &amp; Tareas</h2>
+          <div class="projects-topbar-actions">
+            <button type="button" class="btn-secondary projects-mobile-tree-btn" onclick="toggleProjectsListDrawer(true)" aria-controls="projects-list-panel" aria-expanded="false"><span class="projects-topbar-btn-ic projects-topbar-btn-ic--menu" aria-hidden="true"></span> Proyectos</button>
+            <button type="button" class="btn-secondary" onclick="openMyWorkTasksView()"><span class="projects-topbar-btn-ic projects-topbar-btn-ic--tasks" aria-hidden="true"></span> Mis tareas</button>
+            <button class="btn-action" onclick="openNewProjectModal()"><span class="projects-topbar-btn-ic projects-topbar-btn-ic--new" aria-hidden="true"></span> Nuevo proyecto</button>
           </div>
         </div>
-        <div class="project-user-filter-wrap">
-        <div class="project-user-filter" id="project-user-filter">
-          <span class="puf-label">Filtrar por:</span>
-          <!-- pills injected by JS -->
-        </div>
-        </div>
         <div id="projects-onboarding-banner" class="projects-onboarding-banner hidden" role="region" aria-label="Consejos de proyectos">
-          <span class="projects-onboarding-banner__text" title="Filtrar por compañero en el árbol; / buscar; ? atajos; N nueva tarea con proyecto abierto"><strong>Consejo:</strong> Filtrar por · <kbd>/</kbd> buscar · <kbd>?</kbd> atajos · <kbd>N</kbd> nueva tarea</span>
+          <span class="projects-onboarding-banner__text" title="Buscar en el árbol; atajos; nueva tarea con proyecto abierto"><strong>Consejo:</strong> <kbd>/</kbd> buscar proyecto · <kbd>?</kbd> atajos · <kbd>N</kbd> nueva tarea</span>
           <div class="projects-onboarding-banner__actions">
             <button type="button" class="btn-secondary projects-onboarding-banner__btn" onclick="openProjectsShortcutsModal()">Atajos…</button>
             <button type="button" class="btn-secondary projects-onboarding-banner__btn" onclick="dismissProjectsOnboarding()">Entendido</button>
           </div>
         </div>
-        <div class="projects-layout">
-          <div class="projects-list-panel">
+        <div class="projects-layout" id="projects-layout-root">
+          <div class="projects-list-panel" id="projects-list-panel">
+            <button type="button" class="projects-edge-toggle projects-edge-toggle--collapse" onclick="toggleProjectsTreeCollapsed()" aria-controls="projects-list-panel" aria-expanded="true" title="Ocultar panel de proyectos (más espacio para el detalle)">
+              <span class="projects-edge-toggle__grip" aria-hidden="true"></span>
+              <span class="projects-edge-toggle__chev" aria-hidden="true"></span>
+            </button>
             <div class="projects-panel-header">
               <h3>Proyectos</h3>
               <span id="projects-count" style="font-size:11px;color:var(--text-muted)">0</span>
             </div>
+            <div class="projects-tree-search-wrap">
+              <label class="sr-only" for="projects-tree-search">Buscar en el árbol de proyectos</label>
+              <input type="search" id="projects-tree-search" class="form-input projects-tree-search-input" placeholder="Buscar proyecto…" autocomplete="off" oninput="filterProjectsTreeSearch(this.value)" />
+            </div>
+            <button type="button" class="projects-drawer-close btn-secondary" onclick="toggleProjectsListDrawer(false)" aria-label="Cerrar lista de proyectos">✕</button>
             <div class="projects-items" id="projects-list"></div>
           </div>
+          <button type="button" class="projects-edge-toggle projects-edge-toggle--expand" onclick="toggleProjectsTreeCollapsed()" aria-controls="projects-list-panel" aria-expanded="false" title="Mostrar panel de proyectos">
+            <span class="projects-edge-toggle__grip" aria-hidden="true"></span>
+            <span class="projects-edge-toggle__chev" aria-hidden="true"></span>
+          </button>
           <div class="project-detail-panel" id="project-detail">
             <div class="empty-state"><div class="empty-icon">🎯</div><div>Selecciona un proyecto para ver sus detalles</div></div>
           </div>
@@ -559,6 +567,9 @@ function countPublicNotesSharedWithWorkGroup(wgId) {
  * @param {HTMLElement} btn - Navigation button element
  */
 export function showView(view, btn) {
+  if (view !== 'projects') {
+    exitProjectPresentationMode();
+  }
   // Hide all views
   VIEWS.forEach(v => {
     const el = document.getElementById('view-' + v);
@@ -621,7 +632,15 @@ export function showView(view, btn) {
     renderMyGroupsView();
     refreshPendingInvitesFromAPI().then(() => updateWorkGroupInviteNavBadge());
   }
-  if (view === 'projects') { setProjectUserFilter(null); renderProjects(); }
+  if (view === 'projects') {
+    if (!window.__fromProjectsDeepLink) {
+      setProjectUserFilter(null);
+    }
+    renderProjects();
+    if (typeof window.initProjectsDeepLinkFromHash === 'function') {
+      window.initProjectsDeepLinkFromHash();
+    }
+  }
   if (view === 'docs') renderDocs();
   if (view === 'shortcuts') { renderShortcuts(); onShortcutIconModeChange(); }
   if (view === 'whiteboard') renderWhiteboard();

@@ -3,6 +3,75 @@
 // ===== MODAL MANAGEMENT =====
 
 const kModalOverlayDismiss = Symbol.for('st.modalOverlayDismiss');
+const kModalFocusTrap = Symbol.for('st.modalFocusTrap');
+
+const MODAL_FOCUS_TRAP_IDS = new Set(['project-modal', 'task-modal', 'task-viewer-modal']);
+
+function getModalFocusableRoots(overlayEl) {
+  const panel = overlayEl.querySelector('.modal');
+  return panel || overlayEl;
+}
+
+function listFocusableInModal(root) {
+  if (!root) return [];
+  const sel =
+    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  return [...root.querySelectorAll(sel)].filter(el => {
+    if (!(el instanceof HTMLElement)) return false;
+    if (el.disabled) return false;
+    const style = getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  });
+}
+
+function teardownModalFocusTrap(overlayEl) {
+  if (!overlayEl) return;
+  const fn = overlayEl[kModalFocusTrap];
+  if (typeof fn === 'function') {
+    overlayEl.removeEventListener('keydown', fn);
+    overlayEl[kModalFocusTrap] = null;
+  }
+  const prev = overlayEl._modalFocusTrapPrev;
+  overlayEl._modalFocusTrapPrev = null;
+  if (prev && typeof prev.focus === 'function') {
+    try {
+      window.setTimeout(() => {
+        if (document.body.contains(prev)) prev.focus();
+      }, 0);
+    } catch (_) { /* noop */ }
+  }
+}
+
+function setupModalFocusTrap(id, overlayEl) {
+  teardownModalFocusTrap(overlayEl);
+  const root = getModalFocusableRoots(overlayEl);
+  overlayEl._modalFocusTrapPrev = document.activeElement;
+  const onKey = e => {
+    if (e.key !== 'Tab') return;
+    const nodes = listFocusableInModal(root);
+    if (nodes.length === 0) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    const cur = document.activeElement;
+    if (e.shiftKey) {
+      if (cur === first || !root.contains(cur)) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else if (cur === last || !root.contains(cur)) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+  overlayEl[kModalFocusTrap] = onKey;
+  overlayEl.addEventListener('keydown', onKey);
+  window.requestAnimationFrame(() => {
+    const nodes = listFocusableInModal(root);
+    if (nodes[0]) nodes[0].focus();
+  });
+}
 
 function detachModalOverlayDismiss(overlayEl) {
   if (!overlayEl) return;
@@ -35,7 +104,11 @@ export function closeModal(id) {
   const modal = document.getElementById(id);
   if (modal) {
     detachModalOverlayDismiss(modal);
+    if (MODAL_FOCUS_TRAP_IDS.has(id)) teardownModalFocusTrap(modal);
     modal.classList.remove('open');
+  }
+  if (id === 'project-modal' && modal) {
+    modal.classList.remove('project-modal--create-step-1', 'project-modal--create-step-2', 'project-modal--edit');
   }
   if (id === 'note-modal' && typeof window._onNoteModalClose === 'function') {
     try {
@@ -69,6 +142,8 @@ export function openModal(id) {
     root.classList.add('tema-claro');
   }
   modal.classList.add('open');
+
+  if (MODAL_FOCUS_TRAP_IDS.has(id)) setupModalFocusTrap(id, modal);
 
   if (!shouldAttachOverlayDismiss(id, modal)) return;
 
@@ -152,14 +227,24 @@ export function executeConfirm() {
  * @param {string} message - Toast message
  * @param {string} type - Toast type ('success', 'error', 'info', 'warning')
  * @param {number} duration - Duration in milliseconds
+ * @param {{ undoLabel?: string, onUndo?: () => void }|null} [options] - Botón Deshacer opcional
  */
-export function showToast(message, type = 'info', duration = 3000) {
+export function showToast(message, type = 'info', duration = 3000, options = null) {
+  const esc = str => {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  };
   const icons = {
     success: '✅',
     error: '❌',
     warning: '⚠️',
     info: 'ℹ️',
   };
+
+  const undoFn = options && typeof options.onUndo === 'function' ? options.onUndo : null;
+  const undoLabel = (options && options.undoLabel) || 'Deshacer';
+  const effectiveDuration = undoFn ? Math.max(duration, 8000) : duration;
 
   const existing = document.getElementById('toast-container');
   if (!existing) {
@@ -173,20 +258,39 @@ export function showToast(message, type = 'info', duration = 3000) {
   toast.className = `toast toast-${type}`;
   toast.innerHTML = `
     <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
-    <span class="toast-message">${message}</span>
-    <button class="toast-close" onclick="this.closest('.toast').remove()">✕</button>
+    <span class="toast-message">${esc(String(message))}</span>
+    ${undoFn ? `<button type="button" class="toast-undo">${esc(undoLabel)}</button>` : ''}
+    <button type="button" class="toast-close" aria-label="Cerrar">✕</button>
   `;
-  
+
+  const undoBtn = toast.querySelector('.toast-undo');
+  if (undoBtn && undoFn) {
+    undoBtn.addEventListener('click', () => {
+      try {
+        undoFn();
+      } catch (e) {
+        console.error(e);
+      }
+      toast.classList.remove('toast-visible');
+      setTimeout(() => toast.remove(), 300);
+    });
+  }
+  const closeBtn = toast.querySelector('.toast-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      toast.classList.remove('toast-visible');
+      setTimeout(() => toast.remove(), 300);
+    });
+  }
+
   document.getElementById('toast-container').appendChild(toast);
-  
-  // Animacion entrada
+
   requestAnimationFrame(() => toast.classList.add('toast-visible'));
-  
-  // Auto eliminar
+
   setTimeout(() => {
     toast.classList.remove('toast-visible');
     setTimeout(() => toast.remove(), 300);
-  }, duration);
+  }, effectiveDuration);
 }
 
 /**

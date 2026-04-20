@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="css/wysiwyg.css">
 <link rel="stylesheet" href="css/notes-refinements.css">
 <link rel="stylesheet" href="css/projects-refinements.css">
+<link rel="stylesheet" href="css/project-modals.css">
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
 <style>
 .login-spinner {
@@ -405,7 +406,9 @@
         <p><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> — Vista Lista / Kanban / Calendario (proyecto abierto)</p>
         <p><kbd>↑</kbd> / <kbd>↓</kbd> — Proyecto anterior o siguiente en el árbol izquierdo</p>
         <p><kbd>⇕</kbd> Densidad — Alternar filas de lista compactas o cómodas</p>
-        <p style="margin-top:12px;color:var(--text-muted)">En el árbol: <strong>Filtrar por</strong> reduce qué tareas se cuentan por usuario. El buscador filtra por nombre, descripción y comentarios de la tarea.</p>
+        <p><kbd>↑</kbd> / <kbd>↓</kbd> — Con foco en una fila de la lista de tareas, moverse entre tareas (vista lista)</p>
+        <p>Enlace directo: <code>#/projects/ID_PROYECTO</code> o <code>#/projects/ID_PROYECTO/ID_TAREA</code> en la URL del navegador.</p>
+        <p style="margin-top:12px;color:var(--text-muted)">En el árbol, el campo <strong>Buscar proyecto</strong> filtra por nombre. El buscador de tareas filtra por nombre, descripción y comentarios.</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -722,41 +725,72 @@
 </div>
 
 <!-- Project Modal -->
-<div class="modal-overlay" id="project-modal">
+<div class="modal-overlay" id="project-modal" role="dialog" aria-modal="true" aria-labelledby="project-modal-title">
   <div class="modal">
-    <div class="modal-header">
-      <h3 id="project-modal-title">Nuevo Proyecto</h3>
-      <button class="modal-close" onclick="closeModal('project-modal')">✕</button>
+    <div class="modal-header project-modal-header-row">
+      <div class="project-modal-header-left">
+        <h3 id="project-modal-title">Nuevo Proyecto</h3>
+        <span id="project-modal-step-eyebrow" class="project-modal-step-eyebrow is-hidden">Paso 1 de 2</span>
+      </div>
+      <button type="button" class="modal-close" onclick="closeModal('project-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
+      <ol id="project-modal-wizard-hint" class="project-modal-wizard-hint project-modal-wizard-hint--list">
+        <li data-step="1">Ubicación, plantilla y nombre del proyecto.</li>
+        <li data-step="2">Descripción, colaboración y apariencia.</li>
+      </ol>
+      <div class="project-modal-wizard-steps" aria-hidden="true">
+        <span class="project-modal-wizard-step project-modal-wizard-step--1">1</span>
+        <span class="project-modal-wizard-steps__track" aria-hidden="true"><span class="project-modal-wizard-steps__track-fill"></span></span>
+        <span class="project-modal-wizard-step project-modal-wizard-step--2"><span class="project-modal-wizard-step__n">2</span><span class="project-modal-wizard-step__folder" aria-hidden="true"></span></span>
+      </div>
+      <div id="project-modal-step-1">
+      <div class="proj-modal-section">
+        <h4 class="proj-modal-section-title">Datos básicos</h4>
       <div class="form-group">
         <label class="form-label">Ubicación en el árbol — proyecto padre</label>
         <select class="form-select" id="project-parent-select"></select>
-        <p style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.45">Raíz = sin padre. Al editar, no puedes elegir el propio proyecto ni sus descendientes (evita ciclos). El grupo del proyecto se alinea al del padre si cambias de rama.</p>
+        <p class="form-hint">Raíz = sin padre. Al editar, no puedes elegir el propio proyecto ni sus descendientes (evita ciclos). El grupo del proyecto se alinea al del padre si cambias de rama.</p>
       </div>
       <div class="form-group" id="project-template-group">
         <label class="form-label">Plantilla de tareas (solo proyectos nuevos)</label>
+        <div class="proj-modal-subpanel">
         <select class="form-select" id="project-template-select"></select>
-        <p style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.45">Al crear el proyecto se generan las tareas de la plantilla. Puedes editarlas o borrarlas después.</p>
-        <p style="font-size:10px;margin-top:8px;line-height:1.45">
-          <button type="button" class="btn-secondary" style="font-size:10px;padding:4px 10px" onclick="openManageProjectTemplatesModal()">Gestionar mis plantillas</button>
-        </p>
+        <p class="form-hint">Al crear el proyecto se generan las tareas de la plantilla. Puedes editarlas o borrarlas después.</p>
+        <button type="button" class="btn-secondary project-modal-manage-tpl-btn" onclick="openManageProjectTemplatesModal()">Gestionar mis plantillas</button>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Nombre del Proyecto</label>
-        <input type="text" class="form-input" id="project-name-input" placeholder="Nombre del proyecto...">
+        <input type="text" class="form-input" id="project-name-input" placeholder="Nombre del proyecto..." oninput="syncProjectModalStickyName()">
       </div>
-      <div class="form-group">
+      </div>
+      </div>
+      <div id="project-modal-step-2">
+      <div id="project-modal-sticky-draft" class="project-modal-sticky-draft">
+        <span class="project-modal-sticky-draft__pre">Estás creando</span>
+        <strong id="project-modal-sticky-draft-name" class="project-modal-sticky-draft__name">—</strong>
+      </div>
+      <div class="proj-modal-section">
+        <h4 class="proj-modal-section-title">Descripción y colaboración</h4>
+      <div class="form-group project-modal-desc-split-wrap">
         <label class="form-label">Descripción (Markdown, imágenes)</label>
+        <div class="project-modal-desc-split">
+          <div class="project-modal-desc-split__editor">
         <div class="content-input-group">
           <textarea class="form-textarea" id="project-desc-input" placeholder="Detalle del proyecto…" style="min-height:100px" oninput="updateMarkdownPreview('project-desc-input','project-desc-preview',editingProjectImages)"></textarea>
-          <button type="button" class="btn-insert-image" onclick="insertImageProject()" title="Insertar imagen">🖼️</button>
+          <button type="button" class="btn-insert-image" onclick="insertImageProject()" title="Insertar imagen" aria-label="Insertar imagen">🖼</button>
         </div>
-        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          </div>
+          <div class="project-modal-desc-split__preview">
+        <div class="preview-controls">
           <button type="button" class="btn-secondary" id="project-preview-toggle" onclick="togglePreview('project-desc-preview','project-preview-toggle')">Ocultar preview</button>
         </div>
         <div class="markdown-preview" id="project-desc-preview"></div>
+          </div>
+        </div>
       </div>
+      <div class="proj-modal-collab-card">
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Colaboración — grupo destino</label>
@@ -770,10 +804,11 @@
           </select>
         </div>
       </div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Color</label>
-          <input type="color" class="form-input" id="project-color-input" value="#e8c547" style="height:42px;cursor:pointer">
+          <input type="color" class="form-input" id="project-color-input" value="#e8c547" style="height:42px;cursor:pointer" title="Color del proyecto">
         </div>
         <div class="form-group">
           <label class="form-label">Estado</label>
@@ -784,10 +819,24 @@
           </select>
         </div>
       </div>
+      <p class="form-hint project-modal-color-legend">El color y el estado se reflejan en el árbol de proyectos y en las tarjetas de tareas.</p>
+      </div>
+      </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('project-modal')">Cancelar</button>
-      <button class="btn-save" onclick="saveProject()">Guardar Proyecto</button>
+    <div class="modal-footer project-modal-footer project-modal-footer--wizard" id="project-modal-wizard-footer">
+      <button type="button" class="btn-cancel" onclick="closeModal('project-modal')">Cancelar</button>
+      <p id="project-modal-footer-feedback-wizard" class="modal-footer-feedback" aria-live="polite"></p>
+      <div class="modal-footer-actions">
+        <button type="button" class="btn-secondary project-modal-next-btn" onclick="projectModalWizardNext()">Siguiente →</button>
+      </div>
+    </div>
+    <div class="modal-footer project-modal-footer project-modal-footer--main" id="project-modal-normal-footer">
+      <button type="button" class="btn-cancel" onclick="closeModal('project-modal')">Cancelar</button>
+      <p id="project-modal-footer-feedback-main" class="modal-footer-feedback" aria-live="polite"></p>
+      <div class="modal-footer-actions">
+        <button type="button" class="btn-secondary project-modal-back-btn" onclick="projectModalWizardPrev()">← Atrás</button>
+        <button type="button" id="project-save-btn" class="btn-save" onclick="saveProject()">Guardar Proyecto</button>
+      </div>
     </div>
   </div>
 </div>
@@ -878,28 +927,36 @@
 </div>
 
 <!-- Task Modal -->
-<div class="modal-overlay" id="task-modal">
+<div class="modal-overlay" id="task-modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
   <div class="modal">
-    <div class="modal-header">
-      <h3 id="task-modal-title">Nueva Tarea</h3>
-      <button class="modal-close" onclick="closeModal('task-modal')">✕</button>
+    <div class="modal-header task-modal-header-row">
+      <div class="task-modal-header-left">
+        <h3 id="task-modal-title">Nueva Tarea</h3>
+        <p class="task-modal-kbd-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> guarda si el foco está en un campo de texto.</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeModal('task-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
+      <div class="proj-modal-section">
+        <h4 class="proj-modal-section-title">Información principal</h4>
       <div class="form-group">
         <label class="form-label">Nombre de la Tarea</label>
-        <input type="text" class="form-input" id="task-name-input" placeholder="Título breve de la tarea...">
+        <input type="text" class="form-input task-modal-title-input" id="task-name-input" placeholder="Título breve de la tarea...">
       </div>
       <div class="form-group">
         <label class="form-label">Detalle (Markdown, imágenes)</label>
         <div class="content-input-group">
           <textarea class="form-textarea" id="task-desc-input" placeholder="Descripción detallada, enlaces, listas…" style="min-height:90px" oninput="updateMarkdownPreview('task-desc-input','task-desc-preview',editingTaskImages)"></textarea>
-          <button type="button" class="btn-insert-image" onclick="insertImageTask()" title="Insertar imagen">🖼️</button>
+          <button type="button" class="btn-insert-image" onclick="insertImageTask()" title="Insertar imagen" aria-label="Insertar imagen">🖼</button>
         </div>
-        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+        <div class="preview-controls">
           <button type="button" class="btn-secondary" id="task-preview-toggle" onclick="togglePreview('task-desc-preview','task-preview-toggle')">Ocultar preview</button>
         </div>
         <div class="markdown-preview" id="task-desc-preview"></div>
       </div>
+      </div>
+      <div class="proj-modal-section">
+        <h4 class="proj-modal-section-title">Asignación y permisos</h4>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Colaboración — grupo destino</label>
@@ -927,6 +984,9 @@
           </select>
         </div>
       </div>
+      </div>
+      <div class="proj-modal-section">
+        <h4 class="proj-modal-section-title">Estado y planificación</h4>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Estado</label>
@@ -937,7 +997,7 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Fecha límite</label>
+          <label class="form-label">Fecha límite</label>
           <input type="date" id="task-due-date" class="form-input">
         </div>
       </div>
@@ -945,79 +1005,76 @@
         <div class="form-group">
           <label class="form-label">Horas estimadas</label>
           <input type="number" class="form-input" id="task-estimated-hours"
-            placeholder="0" min="0" step="0.5" style="width:100%">
+            placeholder="0" min="0" step="0.5">
         </div>
         <div class="form-group">
           <label class="form-label">Horas reales</label>
           <input type="number" class="form-input" id="task-real-hours"
-            placeholder="0" min="0" step="0.5" style="width:100%">
+            placeholder="0" min="0" step="0.5">
         </div>
       </div>
+      </div>
+      <div class="proj-modal-section">
+        <h4 class="proj-modal-section-title">Dependencias <span id="task-deps-section-count" class="proj-modal-section-count" aria-live="polite"></span></h4>
       <div class="form-group" id="task-deps-group">
         <label class="form-label">Bloqueada por (dependencias)</label>
-        <div id="task-deps-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px"></div>
+        <div id="task-deps-list" class="task-deps-chip-list"></div>
         <select class="form-select" id="task-deps-select" onchange="addTaskDep()">
           <option value="">+ Añadir dependencia...</option>
         </select>
       </div>
+      </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('task-modal')">Cancelar</button>
-      <button class="btn-save" onclick="saveTask()">Añadir Tarea</button>
+      <button type="button" class="btn-cancel" onclick="closeModal('task-modal')">Cancelar</button>
+      <p id="task-modal-footer-feedback" class="modal-footer-feedback" aria-live="polite"></p>
+      <div class="modal-footer-actions">
+        <button type="button" id="task-save-btn" class="btn-save" onclick="saveTask()">Añadir tarea</button>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="task-viewer-modal">
-  <div class="modal task-viewer-modal-inner" style="max-width:580px;width:100%">
-    <div class="modal-header" style="align-items:flex-start;gap:12px">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <div id="task-viewer-status-dot" style="width:9px;height:9px;border-radius:50%;flex-shrink:0"></div>
-          <h3 id="task-viewer-title" style="margin:0;font-size:16px;line-height:1.3;word-break:break-word"></h3>
+<div class="modal-overlay" id="task-viewer-modal" role="dialog" aria-modal="true" aria-labelledby="task-viewer-title">
+  <div class="modal task-viewer-modal-inner">
+    <div class="modal-header task-viewer-modal-header">
+      <div class="task-viewer-head-main">
+        <div class="task-viewer-title-row">
+          <div id="task-viewer-status-dot"></div>
+          <h3 id="task-viewer-title"></h3>
         </div>
-        <div id="task-viewer-badges" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <div id="task-viewer-badges"></div>
       </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <button class="btn-secondary" onclick="openEditFromViewer()" style="font-size:11px;padding:5px 14px">✏️ Editar</button>
-        <button class="modal-close" onclick="closeModal('task-viewer-modal')">✕</button>
+      <div class="task-viewer-actions">
+        <button type="button" class="btn-secondary task-viewer-copy-link-btn" onclick="copyTaskViewerDeepLink()" title="Copiar enlace a esta tarea">Enlace</button>
+        <button type="button" class="btn-secondary task-viewer-edit-btn" onclick="openEditFromViewer()">Editar</button>
+        <button type="button" class="modal-close" onclick="closeTaskViewerModal()" aria-label="Cerrar">✕</button>
       </div>
     </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;padding-top:8px">
-
-      <!-- Descripción -->
-      <div id="task-viewer-desc-wrap" style="display:none">
-        <div id="task-viewer-desc" class="markdown-preview"
-          style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
-          border-radius:10px;padding:14px 16px;margin:0;font-size:13px;line-height:1.7;
-          color:rgba(255,255,255,0.75)"></div>
-      </div>
-
-      <!-- Metadatos (asignado, fecha) -->
-      <div id="task-viewer-meta" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
-
-      <!-- Proyecto -->
-      <div id="task-viewer-project-block"
-        style="display:flex;align-items:center;gap:10px;padding:10px 14px;
-        background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px">
-        <div id="task-viewer-project-dot" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
-        <div>
-          <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.25);
-            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px">Proyecto</div>
-          <div id="task-viewer-project-name" style="font-size:13px;color:rgba(255,255,255,0.8);font-weight:500"></div>
+    <div class="modal-body task-viewer-modal-body">
+      <p class="task-viewer-sheet-intro" id="task-viewer-sheet-intro">Vista de solo lectura: contexto, plazos, proyecto y actividad reciente en comentarios.</p>
+      <div class="task-viewer-sheet" id="task-viewer-sheet">
+        <div id="task-viewer-desc-wrap" class="task-viewer-desc-wrap" style="display:none">
+          <div class="task-viewer-block-label">Descripción</div>
+          <div id="task-viewer-desc" class="markdown-preview"></div>
+        </div>
+        <div class="task-viewer-block-label task-viewer-block-label--meta" id="task-viewer-meta-label">Datos de la tarea</div>
+        <div id="task-viewer-meta"></div>
+        <div id="task-viewer-project-block">
+          <div id="task-viewer-project-dot"></div>
+          <div>
+            <div class="task-viewer-project-label">Proyecto</div>
+            <div id="task-viewer-project-name"></div>
+          </div>
+        </div>
+        <div id="task-viewer-comments-wrap" class="task-viewer-comments-outer" style="display:none">
+          <div class="task-viewer-comments-rule" aria-hidden="true"></div>
+          <div class="task-viewer-comments-heading" id="task-viewer-comments-heading">Comentarios recientes</div>
+          <div id="task-viewer-comments"></div>
+          <button type="button" class="btn-secondary btn-full-width task-viewer-comments-all-btn" id="task-viewer-comments-all"
+            onclick="openTaskCommentsFromViewer()">Ver todos los comentarios →</button>
         </div>
       </div>
-
-      <!-- Comentarios -->
-      <div id="task-viewer-comments-wrap" style="display:none">
-        <div style="height:1px;background:rgba(255,255,255,0.06);margin-bottom:14px"></div>
-        <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.25);
-          text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Comentarios recientes</div>
-        <div id="task-viewer-comments" style="display:flex;flex-direction:column;gap:4px"></div>
-        <button class="btn-secondary btn-full-width" style="margin-top:10px;font-size:11px"
-          onclick="openTaskCommentsFromViewer()">Ver todos los comentarios →</button>
-      </div>
-
     </div>
   </div>
 </div>

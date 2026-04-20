@@ -884,6 +884,15 @@
   .shift-pill { flex:1; padding:7px 4px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface2); cursor:pointer; font-family:'DM Mono',monospace; font-size:10px; text-align:center; transition:all 0.2s; color:var(--text-dim); }
   .shift-pill.morning{border-color:var(--morning)}.shift-pill.afternoon{border-color:var(--afternoon)}.shift-pill.night{border-color:var(--night)}
   .shift-pill.active.morning{background:var(--morning);color:var(--accent-text-on-bg)}.shift-pill.active.afternoon{background:var(--afternoon);color:var(--accent-text-on-bg)}.shift-pill.active.night{background:var(--night);color:var(--accent-text-on-bg)}
+  html.tema-aurora .shift-pill:not(.active) {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.72);
+  }
+  html.tema-aurora .shift-pill:not(.active):hover {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
 
   /* MAIN */
   .main { flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--bg); }

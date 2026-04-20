@@ -61,6 +61,29 @@ html.tema-aurora .toast-close:hover {
   color: rgba(255,255,255,0.7) !important;
 }
 
+html.tema-aurora .toast .toast-undo {
+  margin-left: 6px !important;
+  padding: 5px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(120, 100, 255, 0.45) !important;
+  background: rgba(120, 100, 255, 0.14) !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  font-family: 'Syne', sans-serif !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease !important;
+}
+
+html.tema-aurora .toast .toast-undo:hover {
+  background: rgba(120, 100, 255, 0.24) !important;
+  border-color: rgba(120, 100, 255, 0.65) !important;
+  transform: translateY(-1px);
+}
+
 html.tema-aurora .nav-badge {
   background: rgba(224,90,90,0.9) !important;
   box-shadow: 0 0 8px rgba(224,90,90,0.4) !important;
@@ -1904,7 +1927,10 @@ html.tema-aurora #project-modal #project-status-input {
 html.tema-aurora #task-modal #task-collab-target-select,
 html.tema-aurora #task-modal #task-collab-permission-select,
 html.tema-aurora #task-modal #task-assignee-input,
-html.tema-aurora #task-modal #task-priority-input {
+html.tema-aurora #task-modal #task-priority-input,
+html.tema-aurora #task-modal #task-status-input,
+html.tema-aurora #task-modal #task-deps-select,
+html.tema-aurora #project-modal #project-template-select {
   display: none !important;
 }
 
@@ -6638,13 +6664,20 @@ html.tema-aurora .kanban-card {
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.05) inset,
+    0 4px 16px rgba(99, 102, 241, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.12) !important;
 }
 
 html.tema-aurora .kanban-card:hover {
   background: rgba(120,100,255,0.1) !important;
   border-color: rgba(120,100,255,0.25) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.07) inset,
+    0 6px 22px rgba(167, 139, 250, 0.16),
+    0 4px 12px rgba(0, 0, 0, 0.14) !important;
 }
 
 html.tema-aurora .kanban-card-name {
@@ -6929,12 +6962,13 @@ html.tema-aurora .task-blocked .task-check {
 
 html.tema-aurora .project-deps-warning {
   margin-top: 12px !important;
-  padding: 10px 14px !important;
+  padding: 12px 16px !important;
   font-size: 12px !important;
   line-height: 1.45 !important;
-  color: rgba(255, 200, 120, 0.92) !important;
-  background: rgba(251, 191, 36, 0.08) !important;
-  border: 1px solid rgba(251, 191, 36, 0.22) !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  border: 1px solid rgba(239, 68, 68, 0.28) !important;
+  border-left: 4px solid rgba(248, 113, 113, 0.95) !important;
   border-radius: 10px !important;
 }
 
@@ -6947,7 +6981,7 @@ html.tema-aurora .my-work-header {
 html.tema-aurora .my-work-tasks-list {
   display: flex !important;
   flex-direction: column !important;
-  gap: 8px !important;
+  gap: 10px !important;
 }
 
 html.tema-aurora .my-work-task-row {

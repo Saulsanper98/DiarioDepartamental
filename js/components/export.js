@@ -436,6 +436,92 @@ export function exportProjectAsText(projectId) {
   showToast('Resumen del proyecto descargado (.txt)', 'success');
 }
 
+function csvEscapeCell(s) {
+  const v = String(s ?? '');
+  if (/[",\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
+  return v;
+}
+
+/** Copia al portapapeles un resumen breve en Markdown (título, stats, lista de tareas). */
+export async function copyProjectSummaryMarkdown(projectId) {
+  const p = projects.find(pr => sameId(pr.id, projectId));
+  if (!p) {
+    showToast('Proyecto no encontrado', 'error');
+    return;
+  }
+  const st = buildProjectExportStats(p);
+  const base =
+    typeof location !== 'undefined'
+      ? `${location.origin}${location.pathname}${location.search}`
+      : '';
+  let md = `# ${p.name}\n\n`;
+  md += `- Estado: ${p.status}\n`;
+  md += `- Tareas: ${st.total} (${st.done} hechas, ${st.overdue} vencidas sin completar)\n`;
+  md += `- Enlace: ${base}#/projects/${encodeURIComponent(String(p.id))}\n\n`;
+  md += `## Tareas\n\n`;
+  collectProjectExportTasks(p).forEach(t => {
+    const box = t.done ? '[x]' : '[ ]';
+    md += `${box} **${String(t.name || '').replace(/\*/g, '')}** (${taskExportStatus(t)})\n`;
+  });
+  try {
+    await navigator.clipboard.writeText(md);
+    showToast('Resumen copiado al portapapeles (Markdown)', 'success');
+  } catch (_) {
+    showToast('No se pudo copiar (permiso del navegador o contexto no seguro)', 'error');
+  }
+}
+
+/** Descarga las tareas del proyecto en CSV. */
+export function exportProjectTasksCSV(projectId) {
+  const p = projects.find(pr => sameId(pr.id, projectId));
+  if (!p) {
+    showToast('Proyecto no encontrado', 'error');
+    return;
+  }
+  const rows = [['nombre', 'estado', 'prioridad', 'vence', 'asignado', 'hecha']];
+  collectProjectExportTasks(p).forEach(t => {
+    const assignee = USERS.find(u => sameId(u.id, t.assigneeId));
+    rows.push([
+      t.name,
+      taskExportStatus(t),
+      t.priority || 'normal',
+      t.dueDate || '',
+      assignee?.name || '',
+      t.done ? 'sí' : 'no',
+    ]);
+  });
+  const csv = rows.map(r => r.map(csvEscapeCell).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `proyecto_${safeFilename(p.name)}_tareas.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('CSV de tareas descargado', 'success');
+}
+
+/** Descarga las tareas del proyecto en JSON. */
+export function exportProjectTasksJSON(projectId) {
+  const p = projects.find(pr => sameId(pr.id, projectId));
+  if (!p) {
+    showToast('Proyecto no encontrado', 'error');
+    return;
+  }
+  const data = {
+    projectName: p.name,
+    projectId: p.id,
+    exportedAt: new Date().toISOString(),
+    tasks: collectProjectExportTasks(p),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `proyecto_${safeFilename(p.name)}_tareas.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('JSON de tareas descargado', 'success');
+}
+
 /** Abre una ventana con informe imprimible (Imprimir → Guardar como PDF). */
 export function openProjectPrintReport(projectId) {
   const p = projects.find(pr => sameId(pr.id, projectId));
