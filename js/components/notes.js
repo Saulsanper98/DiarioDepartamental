@@ -3288,8 +3288,17 @@ export function executeSlashCommand(cmd) {
       const editor = document.getElementById('note-body-editor');
       placeCaretAtEnd(editor);
     }
-    insertImageIntoTextarea(textarea.id);
+    openSlashImageModalAt(textarea.id, previewId, imageMap, commandStart);
     closeSlashMenu();
+    return;
+  }
+
+  if (cmd === 'tabla' && !cmd.startsWith('tabla:')) {
+    textarea.value = text.substring(0, commandStart) + text.substring(cursorPos);
+    textarea.selectionStart = textarea.selectionEnd = commandStart;
+    textarea.focus();
+    closeSlashMenu();
+    openTableEditor(textarea.id, previewId, imageMap);
     return;
   }
 
@@ -3400,6 +3409,11 @@ export function insertImageIntoTextarea(textAreaId) {
         editingTaskImages[key] = dataUrl;
         imageMap = editingTaskImages;
         previewId = 'task-desc-preview';
+      } else if (textAreaId === 'wg-edit-desc' || textAreaId === 'wg-edit-objectives') {
+        window._editingWorkGroupImages = window._editingWorkGroupImages || {};
+        window._editingWorkGroupImages[key] = dataUrl;
+        imageMap = window._editingWorkGroupImages;
+        previewId = textAreaId === 'wg-edit-desc' ? 'wg-edit-desc-preview' : 'wg-edit-objectives-preview';
       }
       updateMarkdownPreview(textAreaId, previewId, imageMap);
       if (textAreaId === 'note-body-input') syncNoteTextareaToEditor();
@@ -3414,6 +3428,187 @@ export function insertImagePostit() { insertImageIntoTextarea('postit-body-input
 export function insertImageDoc() { insertImageIntoTextarea('doc-content-input'); }
 export function insertImageProject() { insertImageIntoTextarea('project-desc-input'); }
 export function insertImageTask() { insertImageIntoTextarea('task-desc-input'); }
+export function insertImageWgDesc() { insertImageIntoTextarea('wg-edit-desc'); }
+export function insertImageWgObjectives() { insertImageIntoTextarea('wg-edit-objectives'); }
+
+// ===== SLASH IMAGE MODAL =====
+let _slashImageTarget = null;
+
+function insertMarkdownSnippetAt(textAreaId, previewId, imageMap, insertAt, snippet) {
+  const textarea = document.getElementById(textAreaId);
+  if (!textarea) return;
+  const pos = insertAt != null ? insertAt : textarea.selectionStart;
+  const before = textarea.value.substring(0, pos);
+  const after = textarea.value.substring(pos);
+  textarea.value = before + snippet + after;
+  textarea.selectionStart = textarea.selectionEnd = pos + snippet.length;
+  textarea.focus();
+  updateMarkdownPreview(textAreaId, previewId, imageMap || {});
+}
+
+export function closeSlashImageModal() {
+  closeModal('slash-image-modal');
+  _slashImageTarget = null;
+}
+
+export function openSlashImageModalAt(textAreaId, previewId, imageMap, insertAt) {
+  _slashImageTarget = { textAreaId, previewId, imageMap, insertAt };
+  const urlInp = document.getElementById('slash-image-url-input');
+  const altInp = document.getElementById('slash-image-alt-input');
+  if (urlInp) urlInp.value = '';
+  if (altInp) altInp.value = 'Imagen';
+  openModal('slash-image-modal');
+}
+
+export function slashImageApplyUrl() {
+  if (!_slashImageTarget) return;
+  const url = document.getElementById('slash-image-url-input')?.value?.trim();
+  const alt = document.getElementById('slash-image-alt-input')?.value?.trim() || 'Imagen';
+  if (!url) { showToast('Indica una URL de imagen', 'error'); return; }
+  const { textAreaId, previewId, imageMap, insertAt } = _slashImageTarget;
+  insertMarkdownSnippetAt(textAreaId, previewId, imageMap, insertAt, `![${alt}](${url})`);
+  closeSlashImageModal();
+}
+
+export function slashImagePickFile() {
+  if (!_slashImageTarget) return;
+  const { textAreaId, previewId, imageMap, insertAt } = _slashImageTarget;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const dataUrl = ev.target.result;
+      const altText = document.getElementById('slash-image-alt-input')?.value?.trim() || 'Imagen';
+      const key = makeImageKey();
+      registerTempImage(key, dataUrl);
+      if (textAreaId === 'note-body-input') editingNoteImages[key] = dataUrl;
+      else if (textAreaId === 'postit-body-input') editingPostitImages[key] = dataUrl;
+      else if (textAreaId === 'doc-content-input') editingDocImages[key] = dataUrl;
+      else if (textAreaId === 'project-desc-input') editingProjectImages[key] = dataUrl;
+      else if (textAreaId === 'task-desc-input') editingTaskImages[key] = dataUrl;
+      else if (textAreaId === 'wg-edit-desc' || textAreaId === 'wg-edit-objectives') {
+        window._editingWorkGroupImages = window._editingWorkGroupImages || {};
+        window._editingWorkGroupImages[key] = dataUrl;
+      }
+      insertMarkdownSnippetAt(textAreaId, previewId, imageMap, insertAt, `![${altText}](${key})`);
+      closeSlashImageModal();
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+// ===== TABLE EDITOR =====
+let _teData = [];
+let _teTarget = null;
+
+function openTableEditor(textAreaId, previewId, imageMap) {
+  _teTarget = { textAreaId, previewId, imageMap };
+  _teData = [
+    ['Col 1', 'Col 2', 'Col 3'],
+    ['', '', ''],
+    ['', '', ''],
+  ];
+  teRender();
+  const tableModal = document.getElementById('table-editor-modal');
+  if (tableModal) tableModal.classList.add('raise');
+  openModal('table-editor-modal');
+}
+
+export function closeTableEditor() {
+  const tableModal = document.getElementById('table-editor-modal');
+  if (tableModal) tableModal.classList.remove('raise');
+  closeModal('table-editor-modal');
+}
+
+function teSyncFromDOM() {
+  const table = document.getElementById('te-table');
+  if (!table) return;
+  const rows = table.querySelectorAll('tr');
+  _teData = Array.from(rows).map(tr =>
+    Array.from(tr.querySelectorAll('.te-cell')).map(inp => inp.value)
+  );
+}
+
+function teRender() {
+  const table = document.getElementById('te-table');
+  if (!table) return;
+  const rows = _teData.length;
+  const cols = _teData[0]?.length || 0;
+  const sizeLabel = document.getElementById('te-size-label');
+  if (sizeLabel) sizeLabel.textContent = `${cols} col × ${rows} fil`;
+  let html = '<thead><tr>';
+  for (let c = 0; c < cols; c++) {
+    html += `<th>
+      <div class="te-col-actions">
+        <button class="te-icon-btn" onclick="teInsertCol(${c})" title="Insertar col antes">◀+</button>
+        <button class="te-icon-btn del" onclick="teDeleteCol(${c})" title="Eliminar col">✕</button>
+        <button class="te-icon-btn" onclick="teInsertCol(${c + 1})" title="Insertar col después">+▶</button>
+      </div>
+      <input class="te-cell" placeholder="Encabezado ${c + 1}" value="${escapeHtml(_teData[0][c])}" data-r="0" data-c="${c}">
+    </th>`;
+  }
+  html += '</tr></thead><tbody>';
+  for (let r = 1; r < rows; r++) {
+    html += '<tr>';
+    for (let c = 0; c < cols; c++) {
+      html += `<td><input class="te-cell" placeholder="" value="${escapeHtml(_teData[r][c])}" data-r="${r}" data-c="${c}"></td>`;
+    }
+    html += `<td style="background:var(--surface3);border-color:var(--border);width:26px;padding:2px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <button class="te-icon-btn" onclick="teInsertRow(${r})" title="Insertar fila antes" style="font-size:10px">▲+</button>
+        <button class="te-icon-btn del" onclick="teDeleteRow(${r})" title="Eliminar fila" style="font-size:10px">✕</button>
+        <button class="te-icon-btn" onclick="teInsertRow(${r + 1})" title="Insertar fila después" style="font-size:10px">+▼</button>
+      </div>
+    </td>`;
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+export function teAddCol() { teSyncFromDOM(); _teData = _teData.map(row => [...row, '']); teRender(); }
+export function teAddRow() { teSyncFromDOM(); _teData.push(new Array(_teData[0].length).fill('')); teRender(); }
+export function teRemoveCol() { teSyncFromDOM(); if (_teData[0].length <= 1) return; _teData = _teData.map(row => row.slice(0, -1)); teRender(); }
+export function teRemoveRow() { teSyncFromDOM(); if (_teData.length <= 2) return; _teData.pop(); teRender(); }
+export function teInsertCol(atIndex) { teSyncFromDOM(); _teData = _teData.map(row => { const r = [...row]; r.splice(atIndex, 0, ''); return r; }); teRender(); }
+export function teDeleteCol(atIndex) { teSyncFromDOM(); if (_teData[0].length <= 1) return; _teData = _teData.map(row => { const r = [...row]; r.splice(atIndex, 1); return r; }); teRender(); }
+export function teInsertRow(atIndex) { teSyncFromDOM(); const newRow = new Array(_teData[0].length).fill(''); _teData.splice(atIndex, 0, newRow); teRender(); }
+export function teDeleteRow(atIndex) { teSyncFromDOM(); if (_teData.length <= 2) return; _teData.splice(atIndex, 1); teRender(); }
+
+export function confirmTableEditor() {
+  teSyncFromDOM();
+  const headers = _teData[0];
+  const separator = headers.map(() => '------');
+  const dataRows = _teData.slice(1);
+  const mdLines = [
+    '| ' + headers.join(' | ') + ' |',
+    '| ' + separator.join(' | ') + ' |',
+    ...dataRows.map(row => '| ' + row.join(' | ') + ' |'),
+  ];
+  const mdTable = '\n' + mdLines.join('\n') + '\n';
+  if (!_teTarget) return;
+  const { textAreaId, previewId, imageMap } = _teTarget;
+  const textarea = document.getElementById(textAreaId);
+  if (!textarea) return;
+  const pos = textarea.selectionStart;
+  const before = textarea.value.substring(0, pos);
+  const after = textarea.value.substring(pos);
+  const lastNL = before.lastIndexOf('\n');
+  const lineStart = lastNL + 1;
+  const currentLine = before.substring(lineStart);
+  const cleanBefore = currentLine.startsWith('/') ? before.substring(0, lineStart) : before;
+  textarea.value = cleanBefore + mdTable + after;
+  textarea.focus();
+  updateMarkdownPreview(textAreaId, previewId, imageMap);
+  closeTableEditor();
+  closeSlashMenu();
+  showToast('Tabla insertada', 'success');
+}
 
 export function getAllVisibleNoteTags() {
   if (!currentUser) return [];

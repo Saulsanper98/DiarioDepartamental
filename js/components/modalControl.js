@@ -49,6 +49,15 @@ function setupModalFocusTrap(id, overlayEl) {
   const root = getModalFocusableRoots(overlayEl);
   overlayEl._modalFocusTrapPrev = document.activeElement;
   const onKey = e => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (id === 'task-viewer-modal' && typeof window.closeTaskViewerModal === 'function') {
+        window.closeTaskViewerModal();
+      } else {
+        closeModal(id);
+      }
+      return;
+    }
     if (e.key !== 'Tab') return;
     const nodes = listFocusableInModal(root);
     if (nodes.length === 0) return;
@@ -227,7 +236,7 @@ export function executeConfirm() {
  * @param {string} message - Toast message
  * @param {string} type - Toast type ('success', 'error', 'info', 'warning')
  * @param {number} duration - Duration in milliseconds
- * @param {{ undoLabel?: string, onUndo?: () => void }|null} [options] - Botón Deshacer opcional
+ * @param {{ undoLabel?: string, onUndo?: () => void, retryFn?: () => void, retryLabel?: string }|null} [options]
  */
 export function showToast(message, type = 'info', duration = 3000, options = null) {
   const esc = str => {
@@ -244,7 +253,10 @@ export function showToast(message, type = 'info', duration = 3000, options = nul
 
   const undoFn = options && typeof options.onUndo === 'function' ? options.onUndo : null;
   const undoLabel = (options && options.undoLabel) || 'Deshacer';
-  const effectiveDuration = undoFn ? Math.max(duration, 8000) : duration;
+  const retryFn = options && typeof options.retryFn === 'function' ? options.retryFn : null;
+  const retryLabel = (options && options.retryLabel) || 'Reintentar';
+  const hasAction = undoFn || retryFn;
+  const effectiveDuration = hasAction ? Math.max(duration, 8000) : duration;
 
   const existing = document.getElementById('toast-container');
   if (!existing) {
@@ -260,6 +272,7 @@ export function showToast(message, type = 'info', duration = 3000, options = nul
     <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
     <span class="toast-message">${esc(String(message))}</span>
     ${undoFn ? `<button type="button" class="toast-undo">${esc(undoLabel)}</button>` : ''}
+    ${retryFn ? `<button type="button" class="toast-retry">${esc(retryLabel)}</button>` : ''}
     <button type="button" class="toast-close" aria-label="Cerrar">✕</button>
   `;
 
@@ -273,6 +286,19 @@ export function showToast(message, type = 'info', duration = 3000, options = nul
       }
       toast.classList.remove('toast-visible');
       setTimeout(() => toast.remove(), 300);
+    });
+  }
+
+  const retryBtn = toast.querySelector('.toast-retry');
+  if (retryBtn && retryFn) {
+    retryBtn.addEventListener('click', () => {
+      toast.classList.remove('toast-visible');
+      setTimeout(() => toast.remove(), 300);
+      try {
+        retryFn();
+      } catch (e) {
+        console.error(e);
+      }
     });
   }
   const closeBtn = toast.querySelector('.toast-close');

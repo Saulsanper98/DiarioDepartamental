@@ -47,7 +47,7 @@ function getViewHTML(view) {
           <div class="notes-search-wrap">
             <div class="search-bar">
               <span class="search-icon">🔍</span>
-              <input type="text" placeholder="Buscar notas…" id="search-input" oninput="handleSearch(this.value)">
+              <input type="text" placeholder="Buscar notas…" id="search-input" oninput="handleSearch(this.value)" title="Buscar notas (/) — pulsa / cuando no estés en un campo de texto">
             </div>
             <label class="notes-search-history-toggle" title="Con el buscador relleno, incluye todas las fechas">
               <input type="checkbox" id="notes-search-history" class="notes-search-history-input" onchange="onNotesSearchHistoryChange(this)">
@@ -227,47 +227,94 @@ function getViewHTML(view) {
       `;
     case 'docs':
       return `
-        <div class="topbar">
-          <h2>📚 Documentación & Manuales</h2>
-          <div class="search-bar" style="width:300px">
-            <span class="search-icon">🔍</span>
-            <input type="text" placeholder="Buscar en docs..." id="docs-search-input" oninput="filterDocsBySearch(this.value)">
+        <div class="topbar docs-topbar">
+          <div class="docs-topbar-main">
+            <div class="docs-topbar-heading">
+              <h2 class="docs-topbar-title">📚 Documentación & Manuales</h2>
+            </div>
+            <div class="docs-topbar-actions">
+              <div class="search-bar docs-search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" placeholder="Buscar en docs..." id="docs-search-input" oninput="filterDocsBySearch(this.value)" aria-label="Buscar documentos">
+                <button type="button" class="docs-search-clear-btn" onclick="resetDocsFiltersAndSearch()" title="Limpiar búsqueda y filtros" aria-label="Limpiar búsqueda y filtros">✕</button>
+              </div>
+              <button class="btn-action" onclick="openNewDocModal()"><span aria-hidden="true">📝</span><span class="docs-action-label">Nuevo Doc</span></button>
+              <button class="btn-action" onclick="openCreateFolderModal()"><span aria-hidden="true">📁</span><span class="docs-action-label">Nueva Carpeta</span></button>
+              <div class="docs-overflow-wrap">
+                <button type="button" class="btn-secondary docs-overflow-btn" id="docs-topbar-more-btn" onclick="toggleDocsTopbarMenu()" aria-expanded="false" aria-controls="docs-topbar-more-menu">⋯ Más</button>
+                <div class="docs-overflow-menu hidden" id="docs-topbar-more-menu" role="menu" aria-label="Acciones adicionales de documentación">
+                  <div class="docs-overflow-menu__title">Acciones</div>
+                  <button type="button" role="menuitem" class="docs-overflow-item" onclick="openInsertFileModal();closeDocsMenus()">📎 Insertar archivo</button>
+                  <button type="button" role="menuitem" class="docs-overflow-item" onclick="openDocTemplatesModal();closeDocsMenus()">📋 Plantillas</button>
+                  <button type="button" role="menuitem" class="docs-overflow-item hidden" id="docs-more-download-btn" onclick="downloadCurrentDocsFolderFromMenu()">⬇️ Descargar carpeta</button>
+                  <div class="docs-overflow-menu__divider"></div>
+                  <button type="button" role="menuitem" class="docs-overflow-item" onclick="toggleDocsMultiSelect();closeDocsMenus()">☑ Selección múltiple</button>
+                </div>
+              </div>
+            </div>
           </div>
-          <button class="btn-secondary" onclick="openDocTemplatesModal()" title="Plantillas de documento">📋 Plantillas</button>
-          <button class="btn-action" onclick="openCreateFolderModal()">📁 Nueva Carpeta</button>
-          <button class="btn-action" onclick="openNewDocModal()">📝 Nuevo Doc</button>
-          <button class="btn-action" onclick="openInsertFileModal()" title="Adjuntar archivo a documento">📎 Insertar Archivo</button>
+          <span id="docs-live-region" class="sr-only" aria-live="polite"></span>
+          <span class="sr-only"><span id="docs-summary-folders">0</span><span id="docs-summary-docs">0</span><span id="docs-summary-files">0</span></span>
         </div>
-        <div class="docs-toolbar" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
-          <div style="display:flex; gap:8px; align-items:center; padding:0 24px; font-size:11px; color:var(--text-muted)">
-            <label style="display:flex; align-items:center; gap:6px; cursor:pointer">
-              <input type="checkbox" id="docs-filter-notes" checked onchange="applyDocsFilters()"> 📝 Notas
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; cursor:pointer">
-              <input type="checkbox" id="docs-filter-urls" checked onchange="applyDocsFilters()"> 🔗 URLs
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; cursor:pointer">
-              <input type="checkbox" id="docs-filter-files" checked onchange="applyDocsFilters()"> 📎 Archivos
-            </label>
+        <div class="docs-toolbar">
+          <div class="docs-toolbar-left docs-toolbar-left--minimal"></div>
+          <div class="docs-toolbar-right">
+            <div class="docs-view-group">
+            <button type="button" class="docs-view-toggle-btn active" data-mode="grid" onclick="setDocsViewMode('grid')" title="Vista grid" aria-label="Cambiar a vista cuadrícula">⊞</button>
+            <button type="button" class="docs-view-toggle-btn" data-mode="list" onclick="setDocsViewMode('list')" title="Vista lista" aria-label="Cambiar a vista lista">☰</button>
+            </div>
+            <div class="docs-overflow-wrap docs-overflow-wrap--toolbar">
+              <button type="button" class="docs-toolbar-tools-btn" id="docs-tools-btn" onclick="toggleDocsToolsMenu()" aria-expanded="false" aria-controls="docs-tools-menu">⚙ Ajustes</button>
+              <div class="docs-overflow-menu docs-overflow-menu--tools hidden" id="docs-tools-menu" role="menu" aria-label="Ajustes de vista de documentación">
+                <div class="docs-overflow-menu__title">Vista y orden</div>
+                <div class="docs-tools-section">
+                  <span class="docs-sort-label">Filtros</span>
+                  <label class="docs-overflow-check">
+                    <input type="checkbox" id="docs-filter-notes" checked onchange="applyDocsFilters()"> 📝 Notas
+                  </label>
+                  <label class="docs-overflow-check">
+                    <input type="checkbox" id="docs-filter-urls" checked onchange="applyDocsFilters()"> 🔗 URLs
+                  </label>
+                  <label class="docs-overflow-check">
+                    <input type="checkbox" id="docs-filter-files" checked onchange="applyDocsFilters()"> 📎 Archivos
+                  </label>
+                </div>
+                <div class="docs-tools-section">
+                  <span class="docs-sort-label">Orden</span>
+                  <div class="docs-sort-group">
+                    <button type="button" class="docs-sort-btn active" data-sort="recent" onclick="setDocsSortOrder('recent');closeDocsMenus()" title="Más recientes" aria-label="Ordenar por recientes">🕐</button>
+                    <button type="button" class="docs-sort-btn" data-sort="name" onclick="setDocsSortOrder('name');closeDocsMenus()" title="Nombre A-Z" aria-label="Ordenar por nombre">🔤</button>
+                    <button type="button" class="docs-sort-btn" data-sort="type" onclick="setDocsSortOrder('type');closeDocsMenus()" title="Por tipo" aria-label="Ordenar por tipo">🗂</button>
+                    <button type="button" class="docs-sort-btn" data-sort="updated" onclick="setDocsSortOrder('updated');closeDocsMenus()" title="Última edición" aria-label="Ordenar por última edición">⟳</button>
+                    <button type="button" class="docs-sort-btn" data-sort="opened" onclick="setDocsSortOrder('opened');closeDocsMenus()" title="Abiertos recientemente" aria-label="Ordenar por abiertos recientemente">★</button>
+                  </div>
+                </div>
+                <div class="docs-tools-section">
+                  <span class="docs-sort-label">Densidad</span>
+                  <div class="docs-density-group">
+                    <button type="button" class="docs-density-btn active" data-density="cozy" onclick="setDocsDensityMode('cozy');closeDocsMenus()" title="Densidad cómoda" aria-label="Usar densidad cómoda">▤</button>
+                    <button type="button" class="docs-density-btn" data-density="compact" onclick="setDocsDensityMode('compact');closeDocsMenus()" title="Densidad compacta" aria-label="Usar densidad compacta">≣</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div style="display:flex;gap:4px;margin-left:auto;padding-right:24px">
-            <button type="button" class="docs-view-toggle-btn active" data-mode="grid" onclick="setDocsViewMode('grid')" title="Vista grid">⊞</button>
-            <button type="button" class="docs-view-toggle-btn" data-mode="list" onclick="setDocsViewMode('list')" title="Vista lista">☰</button>
-          </div>
-          <div style="display:flex;gap:4px;padding-right:8px;align-items:center">
-            <span style="font-size:10px;color:var(--text-muted);font-family:'Syne',sans-serif;text-transform:uppercase;letter-spacing:0.08em">Orden</span>
-            <button type="button" class="docs-sort-btn active" data-sort="recent" onclick="setDocsSortOrder('recent')" title="Más recientes">🕐</button>
-            <button type="button" class="docs-sort-btn" data-sort="name" onclick="setDocsSortOrder('name')" title="Nombre A-Z">🔤</button>
-            <button type="button" class="docs-sort-btn" data-sort="type" onclick="setDocsSortOrder('type')" title="Por tipo">🗂</button>
+          <div class="docs-toolbar-summary"></div>
+          <div class="docs-network-banner hidden" id="docs-network-banner" aria-live="polite"></div>
+          <div class="docs-batch-actions hidden" id="docs-batch-actions">
+            <button type="button" class="btn-secondary" onclick="clearDocsSelection()" aria-label="Limpiar elementos seleccionados">Limpiar selección</button>
+            <button type="button" class="btn-secondary hidden" id="docs-batch-retry-btn" onclick="deleteSelectedDocs()" aria-label="Reintentar eliminación">Reintentar fallidos</button>
+            <button type="button" class="btn-secondary btn-secondary-danger" onclick="deleteSelectedDocs()" aria-label="Eliminar elementos seleccionados">Eliminar seleccionados</button>
           </div>
         </div>
-        <div class="docs-layout">
-          <div class="docs-sidebar">
-            <div class="docs-panel-header"><h3>Carpetas</h3></div>
+        <div class="docs-layout" role="region" aria-label="Zona principal de documentación">
+          <div class="docs-sidebar" role="navigation" aria-label="Árbol de carpetas">
+            <div class="docs-panel-header"><h3>Carpetas</h3><button type="button" class="docs-sidebar-toggle-btn" id="docs-sidebar-toggle-btn" onclick="toggleDocsSidebarCollapse()" aria-label="Ocultar panel de carpetas" aria-pressed="false" title="Ocultar panel de carpetas">⇤</button></div>
             <div class="docs-categories" id="docs-categories"></div>
           </div>
-          <div class="docs-content" id="docs-content"></div>
-          <div class="doc-full-view" id="doc-full-view"></div>
+          <button type="button" class="docs-sidebar-restore-btn hidden" id="docs-sidebar-restore-btn" onclick="toggleDocsSidebarCollapse()" aria-label="Mostrar panel de carpetas" title="Mostrar panel de carpetas">⇥</button>
+          <div class="docs-content" id="docs-content" role="region" aria-label="Resultados de documentos"></div>
+          <div class="doc-full-view" id="doc-full-view" role="region" aria-label="Detalle del documento"></div>
         </div>
       `;
     case 'shortcuts':
@@ -566,10 +613,19 @@ function countPublicNotesSharedWithWorkGroup(wgId) {
  * @param {string} view - View name
  * @param {HTMLElement} btn - Navigation button element
  */
+const _viewScrollPositions = {};
+
 export function showView(view, btn) {
   if (view !== 'projects') {
     exitProjectPresentationMode();
   }
+
+  // Save scroll position of the current visible view before hiding it
+  const main = document.getElementById('main-content');
+  if (main && currentView && currentView !== view) {
+    _viewScrollPositions[currentView] = main.scrollTop;
+  }
+
   // Hide all views
   VIEWS.forEach(v => {
     const el = document.getElementById('view-' + v);
@@ -651,6 +707,13 @@ export function showView(view, btn) {
     syncNotesSaveSoundCheckbox();
   }
   updateChatNavBadge();
+
+  // Restore scroll position for this view (after render so layout is ready)
+  if (main && _viewScrollPositions[view] != null) {
+    requestAnimationFrame(() => { main.scrollTop = _viewScrollPositions[view]; });
+  } else if (main) {
+    requestAnimationFrame(() => { main.scrollTop = 0; });
+  }
 }
 
 /**

@@ -8,6 +8,9 @@ import {
   apiReceiveHandover,
 } from './api.js';
 
+const DEBUG = false;
+const log = (...args) => { if (DEBUG) console.log(...args); };
+
 const STORAGE_KEY = 'diario_handovers';
 
 export async function loadHandoversFromAPI() {
@@ -235,7 +238,7 @@ export function removeHandoverItem(section, idx) {
 }
 
 export async function deliverHandover() {
-  console.log('deliverHandover llamado');
+  log('deliverHandover llamado');
   const selectedUser = currentUser;
   if (!selectedUser || !selectedUser.id) {
     showToast('No se pudo determinar el técnico seleccionado.', 'error');
@@ -254,7 +257,7 @@ export async function deliverHandover() {
 
   const avisos = document.getElementById('ho-avisos')?.value.trim() || '';
 
-  console.log('Llamando a apiCreateHandover...');
+  log('Llamando a apiCreateHandover...');
   try {
     const saved = await apiCreateHandover({
       date: toDateStr(new Date()),
@@ -270,7 +273,7 @@ export async function deliverHandover() {
         avisos: avisos,
       }
     });
-    console.log('Traspaso guardado en API:', saved);
+    log('Traspaso guardado en API:', saved);
     const list = loadHandovers();
     list.unshift({ ...saved, id: saved._id || saved.id });
     saveHandovers(list);

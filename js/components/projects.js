@@ -1101,9 +1101,14 @@ export function setProjectUserFilter(userId) {
 }
 
 /** Árbol izquierdo: filtro por nombre (incluye coincidencias en subárbol). */
+let _projectTreeSearchTimer = null;
 export function filterProjectsTreeSearch(raw) {
   _projectTreeSearchQuery = String(raw || '');
-  renderProjects();
+  if (_projectTreeSearchTimer) clearTimeout(_projectTreeSearchTimer);
+  _projectTreeSearchTimer = setTimeout(() => {
+    _projectTreeSearchTimer = null;
+    renderProjects();
+  }, 200);
 }
 
 export function toggleProjectsListDrawer(open) {
@@ -1866,6 +1871,7 @@ function bindProjectsViewShortcutsOnce() {
   _projectsShortcutsBound = true;
   document.addEventListener('keydown', e => {
     if (currentView !== 'projects') return;
+    if (document.querySelector('.modal-overlay.open')) return;
     const tag = (e.target && e.target.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1911,6 +1917,10 @@ function bindProjectsViewShortcutsOnce() {
     }
     if (e.key === '/') {
       e.preventDefault();
+      if (!currentProjectId) {
+        showToast('Selecciona un proyecto para buscar tareas', 'info');
+        return;
+      }
       document.getElementById('task-search-input')?.focus();
     } else if (e.key === '?') {
       e.preventDefault();
@@ -2103,6 +2113,7 @@ function buildKanbanCardHtml(p, t) {
 }
 
 function renderTasksKanban(p) {
+  const pid = toOnclickStringArg(p.id);
   const columns = [
     { id: 'pending',     label: 'Pendiente',    filter: t => !t.done && t.status !== 'progress' },
     { id: 'progress',    label: 'En progreso',  filter: t => !t.done && t.status === 'progress' },
@@ -2132,7 +2143,7 @@ function renderTasksKanban(p) {
   return `<div class="kanban-board-wrap${swim ? ' kanban-board-wrap--swimlane' : ''}" aria-label="Tablero Kanban">
     <div class="kanban-board">
     ${columns.map(col => {
-      const tasks = getSortedTasks(p).filter(col.filter);
+      const tasks = sortedAll.filter(col.filter);
       const wipHint =
         tasks.length >= PROJECT_KANBAN_WIP_SOFT
           ? `<span class="kanban-wip-hint" title="Columna con muchas tareas; conviene repriorizar o repartir">⚠</span>`
@@ -3803,7 +3814,7 @@ export async function saveTask() {
     Object.assign(t, {
       name, desc, images, assigneeId, priority, dueDate,
       done: statusVal === 'done',
-      status: statusVal === 'progress' ? 'progress' : (statusVal === 'done' ? 'done' : undefined),
+      status: statusVal === 'progress' ? 'progress' : (statusVal === 'done' ? 'done' : 'pending'),
       estimatedHours, realHours,
       blockedBy: [..._editingTaskDeps],
       shares: [...rest, ...addSh],
@@ -3821,7 +3832,7 @@ export async function saveTask() {
     const newTaskId = Date.now();
     p.tasks.push({
       id: newTaskId, name, desc, done: statusVal === 'done',
-      status: statusVal === 'progress' ? 'progress' : undefined,
+      status: statusVal === 'progress' ? 'progress' : (statusVal === 'done' ? 'done' : 'pending'),
       assigneeId, priority, dueDate, estimatedHours, realHours, images,
       blockedBy: [..._editingTaskDeps],
       shares: addSh,
@@ -3866,7 +3877,6 @@ export async function quickToggleTask(projectId, taskId, el) {
 
   const wasDone = t.done;
   const prevStatus = t.status;
-  const logLenBefore = Array.isArray(proj.activityLog) ? proj.activityLog.length : 0;
   t.done = !t.done;
   if (t.done) {
     t.status = 'done';
@@ -3889,7 +3899,7 @@ export async function quickToggleTask(projectId, taskId, el) {
     console.error('Error guardando tarea en API:', err);
     t.done = wasDone;
     t.status = prevStatus;
-    if (Array.isArray(proj.activityLog) && proj.activityLog.length > logLenBefore) {
+    if (t.done !== wasDone && Array.isArray(proj.activityLog) && proj.activityLog.length) {
       proj.activityLog.shift();
     }
     showToast('No se pudo guardar el cambio; se revirtió', 'error');
@@ -3928,23 +3938,6 @@ export async function quickToggleTask(projectId, taskId, el) {
     progressFill.style.width = `${pct}%`;
   }
   selectProject(projectId);
-}
-
-export function toggleTask(projectId, taskId) {
-  const p = projects.find(pr => sameId(pr.id, projectId));
-  if (!p) return;
-  const t = p.tasks.find(x => sameId(x.id, taskId));
-  if (!t) return;
-  const wasDone = t.done;
-  t.done = !t.done;
-  if (t.done && !wasDone) {
-    pushProjectActivity(p, { type: 'task_completed', taskName: t.name, taskId: t.id });
-  } else if (!t.done && wasDone) {
-    pushProjectActivity(p, { type: 'task_reopened', taskName: t.name, taskId: t.id });
-  }
-  saveProjectData();
-  selectProject(projectId);
-  renderProjects();
 }
 
 export function onCalTaskRowDragStart(ev, pid, tid, dueStr) {

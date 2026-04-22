@@ -451,6 +451,7 @@ export function selectPostitPriority(el) {
 }
 
 export async function savePostit() {
+  const saveBtn = document.getElementById('postit-save-btn');
   const title = document.getElementById('postit-title-input').value.trim();
   if (!title) { showToast('El título es requerido', 'error'); return; }
   const body = document.getElementById('postit-body-input').value.trim();
@@ -473,6 +474,8 @@ export async function savePostit() {
   // Recoger adjuntos
   const attachments = window._postitAttachments || [];
 
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando…'; }
+  try {
   if (editingPostitId) {
     const idx = postitCards.findIndex(c => sameId(c.id, editingPostitId) && c.group === currentUser.group);
     if (idx === -1) {
@@ -533,6 +536,9 @@ export async function savePostit() {
   closeModal('postit-modal');
   renderPostitBoard();
   showToast(editingPostitId ? 'Tarjeta actualizada' : 'Tarjeta creada', 'success');
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Guardar'; }
+  }
 }
 
 export async function movePostitCard(e, id, dir) {

@@ -3787,6 +3787,29 @@ html.tema-aurora #view-projects .my-work-task-row {
   transform: translateY(-1px);
 }
 
+.toast-retry {
+  margin-left: 8px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--danger, #e05252) 40%, var(--border));
+  background: color-mix(in srgb, var(--danger, #e05252) 12%, var(--surface2));
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.toast-retry:hover {
+  background: color-mix(in srgb, var(--danger, #e05252) 22%, var(--surface2));
+  border-color: color-mix(in srgb, var(--danger, #e05252) 60%, var(--border));
+  transform: translateY(-1px);
+}
+
 .projects-sync-strip.is-saving {
   color: color-mix(in srgb, var(--accent2) 70%, var(--text));
   font-weight: 700;
@@ -4177,11 +4200,13 @@ html.tema-aurora .project-view-empty__title {
     animation: none !important;
   }
 
-  .toast-undo:hover {
+  .toast-undo:hover,
+  .toast-retry:hover {
     transform: none !important;
   }
 
-  html.tema-aurora .toast .toast-undo:hover {
+  html.tema-aurora .toast .toast-undo:hover,
+  html.tema-aurora .toast .toast-retry:hover {
     transform: none !important;
   }
 

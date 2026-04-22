@@ -1,5 +1,8 @@
 // ===== MAIN APPLICATION MODULE =====
 
+const DEBUG = false;
+const log = (...args) => { if (DEBUG) console.log(...args); };
+
 import { initMSAL, getCurrentUser, getAuthHeaders } from './auth.js';
 import { setNotes, setProjects, setDocs, setUSERS, setWorkGroups, setWgInvites, setComments, setCurrentUser, currentUser, wgInvites, makeImageKey, registerTempImage, collectImageMap, editingNoteImages, setEditingNoteImages, editingPostitImages, setEditingPostitImages, editingDocImages, setEditingDocImages, editingProjectImages, setEditingProjectImages, editingTaskImages, setEditingTaskImages } from './components/data.js';
 import {
@@ -85,6 +88,22 @@ import {
   insertImageDoc,
   insertImageProject,
   insertImageTask,
+  insertImageWgDesc,
+  insertImageWgObjectives,
+  closeSlashImageModal,
+  openSlashImageModalAt,
+  slashImageApplyUrl,
+  slashImagePickFile,
+  closeTableEditor,
+  confirmTableEditor,
+  teAddCol,
+  teAddRow,
+  teRemoveCol,
+  teRemoveRow,
+  teInsertCol,
+  teDeleteCol,
+  teInsertRow,
+  teDeleteRow,
   selectShiftOpt,
   selectPriority,
   selectVisibility,
@@ -151,6 +170,8 @@ import {
   renderDocs,
   filterDocsBySearch,
   applyDocsFilters,
+  focusDocsSearch,
+  resetDocsFiltersAndSearch,
   openNewDocModal,
   openCreateFolderModal,
   openInsertFileModal,
@@ -165,13 +186,22 @@ import {
   confirmInsertFile,
   clearInsertFile,
   toggleDocFolderCollapse,
-  openProjectCommentsModal,
   closeDocModalWithCleanup,
   saveDocOrFolder,
   toggleIconPopover,
   selectIcon,
   setDocsViewMode,
   setDocsSortOrder,
+  setDocsDensityMode,
+  toggleDocsTopbarMenu,
+  toggleDocsToolsMenu,
+  closeDocsMenus,
+  downloadCurrentDocsFolderFromMenu,
+  toggleDocsSidebarCollapse,
+  toggleDocsMultiSelect,
+  clearDocsSelection,
+  deleteSelectedDocs,
+  toggleDocSelection,
   viewDoc,
   openDocTemplatesModal,
   applyDocTemplate,
@@ -321,6 +351,7 @@ import {
   toggleMention,
   openPostitCommentsFromModal,
   openNoteCommentsModal,
+  openProjectCommentsModal,
   openTaskCommentsModal,
   handleCommentInput,
   submitComment,
@@ -753,9 +784,9 @@ function enterApp(dbUser) {
     email: msAuth?.email || '',
     msId: msAuth?.id || '',
   };
-  console.log('enterApp appUser.id:', appUser.id, 'dbUser._id:', dbUser._id);
+  log('enterApp appUser.id:', appUser.id, 'dbUser._id:', dbUser._id);
   const usuario = appUser;
-  console.log('setCurrentUser llamado con id:', usuario?.id, 'name:', usuario?.name);
+  log('setCurrentUser llamado con id:', usuario?.id, 'name:', usuario?.name);
   setCurrentUser(appUser);
   window._msUser = appUser;
   window._currentDbUser = dbUser;
@@ -884,40 +915,60 @@ function retryLogin() {
   bootApp();
 }
 
+let _apiPollFailCount = 0;
+let _apiPollTimerId = null;
+
 async function checkApiStatus() {
   const indicator = document.getElementById('api-status-indicator');
   if (!indicator) return;
+
+  // Pause polling when tab is not visible
+  if (document.hidden) return;
+
   try {
     const headers = await getAuthHeaders();
     const res = await fetch('http://localhost:3001/api/users/me', { headers });
     if (res.ok) {
       indicator.className = 'api-status online';
       indicator.title = 'Servidor conectado';
+      _apiPollFailCount = 0;
     } else {
       indicator.className = 'api-status offline';
       indicator.title = 'Error de servidor';
+      _apiPollFailCount++;
     }
   } catch {
     indicator.className = 'api-status offline';
     indicator.title = 'Servidor desconectado';
+    _apiPollFailCount++;
   }
+}
+
+function scheduleApiPoll() {
+  if (_apiPollTimerId) clearTimeout(_apiPollTimerId);
+  // Exponential backoff: 30s base, doubles each failure up to 5 min max
+  const delay = Math.min(30000 * Math.pow(2, _apiPollFailCount), 300000);
+  _apiPollTimerId = setTimeout(async () => {
+    await checkApiStatus();
+    scheduleApiPoll();
+  }, delay);
 }
 
 async function initApp(appUser) {
   const usuario = appUser;
-  console.log('setCurrentUser llamado con id:', usuario?.id, 'name:', usuario?.name);
+  log('setCurrentUser llamado con id:', usuario?.id, 'name:', usuario?.name);
   setCurrentUser(appUser);
-  console.log('currentUser después de set:', currentUser?.id, currentUser?.name);
+  log('currentUser después de set:', currentUser?.id, currentUser?.name);
 
   // Cargar datos en paralelo
   await Promise.all([
-    import('./components/notes.js').then(m => m.loadNotesFromAPI()),
-    import('./components/projects.js').then(m => m.loadProjectsFromAPI()),
-    import('./components/postit.js').then(m => m.loadPostitFromAPI()),
-    import('./components/docs.js').then(m => m.loadDocsFromAPI()),
-    import('./components/comments.js').then(m => m.loadCommentsFromAPI()),
-    import('./components/views.js').then(m => m.refreshPendingInvitesFromAPI?.()),
-    import('./handover.js').then(m => m.loadHandoversFromAPI()),
+    import('./components/notes.js').then(m => m.loadNotesFromAPI()).catch(err => console.error('Error cargando notas:', err)),
+    import('./components/projects.js').then(m => m.loadProjectsFromAPI()).catch(err => console.error('Error cargando proyectos:', err)),
+    import('./components/postit.js').then(m => m.loadPostitFromAPI()).catch(err => console.error('Error cargando post-its:', err)),
+    import('./components/docs.js').then(m => m.loadDocsFromAPI()).catch(err => console.error('Error cargando documentos:', err)),
+    import('./components/comments.js').then(m => m.loadCommentsFromAPI()).catch(err => console.error('Error cargando comentarios:', err)),
+    import('./components/views.js').then(m => m.refreshPendingInvitesFromAPI?.()).catch(err => console.error('Error cargando invitaciones:', err)),
+    import('./handover.js').then(m => m.loadHandoversFromAPI()).catch(err => console.error('Error cargando traspasos:', err)),
     fetch('http://localhost:3001/api/users/department', {
       headers: await getAuthHeaders(),
     }).then(r => r.json()).then(deptUsers => {
@@ -949,8 +1000,10 @@ async function initApp(appUser) {
       window.updateBadges();
     }
   }, 500);
-  setTimeout(() => checkApiStatus(), 2000);
-  setInterval(() => checkApiStatus(), 30000);
+  setTimeout(async () => { await checkApiStatus(); scheduleApiPoll(); }, 2000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { checkApiStatus(); }
+  });
 }
 
 function selectUser(id) {
@@ -1130,6 +1183,22 @@ async function initializeApp() {
       insertImageDoc,
       insertImageProject,
       insertImageTask,
+      insertImageWgDesc,
+      insertImageWgObjectives,
+      closeSlashImageModal,
+      openSlashImageModalAt,
+      slashImageApplyUrl,
+      slashImagePickFile,
+      closeTableEditor,
+      confirmTableEditor,
+      teAddCol,
+      teAddRow,
+      teRemoveCol,
+      teRemoveRow,
+      teInsertCol,
+      teDeleteCol,
+      teInsertRow,
+      teDeleteRow,
       renderNotes,
       makeImageKey,
       registerTempImage,
@@ -1173,6 +1242,8 @@ async function initializeApp() {
       renderDocs,
       filterDocsBySearch,
       applyDocsFilters,
+      focusDocsSearch,
+      resetDocsFiltersAndSearch,
       openNewDocModal,
       openCreateFolderModal,
       openInsertFileModal,
@@ -1340,6 +1411,16 @@ async function initializeApp() {
       selectIcon,
       setDocsViewMode,
       setDocsSortOrder,
+      setDocsDensityMode,
+      toggleDocsTopbarMenu,
+      toggleDocsToolsMenu,
+      closeDocsMenus,
+      downloadCurrentDocsFolderFromMenu,
+      toggleDocsSidebarCollapse,
+      toggleDocsMultiSelect,
+      clearDocsSelection,
+      deleteSelectedDocs,
+      toggleDocSelection,
       viewDoc,
       openDocTemplatesModal,
       applyDocTemplate,
@@ -1416,9 +1497,14 @@ async function initializeApp() {
     setupEventListeners();
     checkPendingHandover();
 
-    console.log('Application initialized successfully');
+    log('Application initialized successfully');
   } catch (error) {
     console.error('Error initializing application:', error);
+    const loginErr = document.getElementById('login-error');
+    if (loginErr) {
+      loginErr.textContent = 'Error al inicializar la aplicación. Recarga la página.';
+      loginErr.classList.remove('hidden');
+    }
   }
 }
 

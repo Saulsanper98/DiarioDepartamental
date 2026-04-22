@@ -39,7 +39,7 @@
 
   <div class="login-box">
     <div class="login-header">
-      <span class="logo-mark">D</span>
+      <img class="company-logo company-logo--login" src="assets/logo.svg" alt="TGC Transporte de Gran Canaria">
       <h1>Diario Departamental</h1>
       <p>Inicia sesión con tu cuenta corporativa</p>
     </div>
@@ -82,7 +82,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="brand" style="display:flex !important; align-items:center !important; overflow:visible !important; gap:8px !important;">
-          <span class="brand-mark">D</span>
+          <img class="company-logo company-logo--sidebar" src="assets/logo.svg" alt="TGC">
           <span class="brand-text">Diario<br>Departamental</span>
           <span class="brand-group" id="brand-group-badge" style="white-space:nowrap !important; overflow:visible !important; display:inline-flex !important; align-items:center !important; flex-shrink:0 !important; width:auto !important; max-width:none !important;">—</span>
         </div>
@@ -143,7 +143,7 @@
         <button class="nav-btn" onclick="openHandoverHistory()">
           <span class="nav-icon">🕐</span> Historial traspasos
         </button>
-        <button class="nav-btn" onclick="openNewNoteModal()">
+        <button class="nav-btn" onclick="openNewNoteModal()" title="Nueva nota (N)">
           <span class="nav-icon">✏️</span> Nueva Nota
         </button>
         <button class="nav-btn" onclick="openReportModal()">
@@ -197,7 +197,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Enlazar recurso al mensaje</h3>
-      <button class="modal-close" onclick="closeModal('chat-link-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('chat-link-modal')" aria-label="Cerrar" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body" style="gap:12px">
       <div class="form-group">
@@ -224,7 +224,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>📩 Nuevo chat</h3>
-      <button class="modal-close" onclick="closeModal('new-chat-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('new-chat-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div style="position:relative;margin-bottom:10px">
@@ -249,7 +249,7 @@
         <button type="button" class="notes-shortcuts-help-btn" onclick="openNotesShortcutsHelpModal()" title="Atajos de teclado">?</button>
         <span class="note-modal-shortcuts-badge" title="Atajos: Ctrl+S guardar · Esc cerrar">Ctrl+S · Esc</span>
       </div>
-      <button type="button" class="modal-close" onclick="requestCloseNoteModal()" aria-label="Cerrar">✕</button>
+      <button type="button" class="modal-close" onclick="requestCloseNoteModal()" aria-label="Cerrar" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body note-modal-body">
       <div class="note-modal-tabs" role="tablist" aria-label="Secciones del formulario de nota">
@@ -274,7 +274,7 @@
               oninput="handleNoteEditorInput()"
             ></div>
             <textarea class="form-textarea" id="note-body-input" placeholder="Escribe el contenido...&#10;Usa @nombre para mencionar compañeros" style="display:none" oninput="updateMarkdownPreview('note-body-input','note-content-preview',editingNoteImages)"></textarea>
-            <button type="button" class="btn-insert-image note-insert-fab" onclick="insertImage()" title="Insertar imagen">🖼</button>
+            <button type="button" class="btn-insert-image note-insert-fab" onclick="insertImage()" title="Insertar imagen" aria-label="Insertar imagen">🖼</button>
           </div>
           <div class="note-preview-controls preview-controls">
             <button type="button" class="btn-note-preview-toggle" id="note-preview-toggle" onclick="togglePreview('note-content-preview','note-preview-toggle')">Ocultar preview</button>
@@ -383,7 +383,7 @@
         <button type="button" class="btn-note-template-footer" onclick="saveNoteAsTemplate()">📋 Guardar como plantilla</button>
         <div class="note-modal-footer-actions">
           <button type="button" class="btn-cancel" onclick="requestCloseNoteModal()">Cancelar</button>
-          <button type="button" class="btn-save" id="note-modal-save-btn" onclick="saveNote()">Guardar Nota</button>
+          <button type="button" class="btn-save" id="note-modal-save-btn" onclick="saveNote()" title="Guardar nota (Ctrl+S)">Guardar Nota</button>
         </div>
       </div>
     </div>
@@ -395,7 +395,7 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="projects-shortcuts-title">
     <div class="modal-header">
       <h3 id="projects-shortcuts-title">Atajos — Proyectos &amp; Tareas</h3>
-      <button type="button" class="modal-close" onclick="closeModal('projects-shortcuts-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('projects-shortcuts-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div class="notes-shortcuts-list">
@@ -406,7 +406,6 @@
         <p><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> — Vista Lista / Kanban / Calendario (proyecto abierto)</p>
         <p><kbd>↑</kbd> / <kbd>↓</kbd> — Proyecto anterior o siguiente en el árbol izquierdo</p>
         <p><kbd>⇕</kbd> Densidad — Alternar filas de lista compactas o cómodas</p>
-        <p><kbd>↑</kbd> / <kbd>↓</kbd> — Con foco en una fila de la lista de tareas, moverse entre tareas (vista lista)</p>
         <p>Enlace directo: <code>#/projects/ID_PROYECTO</code> o <code>#/projects/ID_PROYECTO/ID_TAREA</code> en la URL del navegador.</p>
         <p style="margin-top:12px;color:var(--text-muted)">En el árbol, el campo <strong>Buscar proyecto</strong> filtra por nombre. El buscador de tareas filtra por nombre, descripción y comentarios.</p>
       </div>
@@ -422,7 +421,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Atajos — Notas</h3>
-      <button type="button" class="modal-close" onclick="closeModal('notes-shortcuts-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('notes-shortcuts-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div class="notes-shortcuts-list">
@@ -448,7 +447,7 @@
         <span class="modal-note-templates-badge" aria-hidden="true">📋</span>
         <h3>Plantillas de nota</h3>
       </div>
-      <button type="button" class="modal-close" onclick="closeModal('note-templates-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('note-templates-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body modal-note-templates-body">
       <p class="modal-note-templates-lead">Guarda títulos y textos que repitas en los turnos. Las <strong>imágenes no</strong> se guardan en la plantilla.</p>
@@ -461,14 +460,14 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="doc-templates-modal">
-  <div class="modal modal-note-templates">
+<div class="modal-overlay docs-modal-overlay" id="doc-templates-modal">
+  <div class="modal docs-modal docs-modal--templates modal-note-templates">
     <div class="modal-header modal-note-templates-header">
       <div class="modal-note-templates-title-wrap">
         <span class="modal-note-templates-badge" aria-hidden="true">📋</span>
         <h3>Plantillas de documento</h3>
       </div>
-      <button type="button" class="modal-close" onclick="closeModal('doc-templates-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('doc-templates-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body modal-note-templates-body">
       <p class="modal-note-templates-lead">Guarda títulos y contenidos que reutilices. Las <strong>imágenes no</strong> se guardan en la plantilla.</p>
@@ -481,13 +480,13 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="doc-versions-modal">
-  <div class="modal" style="max-width:560px;width:95vw">
+<div class="modal-overlay docs-modal-overlay" id="doc-versions-modal">
+  <div class="modal docs-modal docs-modal--versions">
     <div class="modal-header">
       <h3 id="doc-versions-title">Historial de versiones</h3>
-      <button type="button" class="modal-close" onclick="closeModal('doc-versions-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('doc-versions-modal')" aria-label="Cerrar">✕</button>
     </div>
-    <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+    <div class="modal-body docs-modal-versions-body">
       <div id="doc-versions-list"></div>
     </div>
     <div class="modal-footer">
@@ -501,7 +500,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Detalle de Nota</h3>
-      <button class="modal-close" onclick="closeModal('detail-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('detail-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="note-detail-body" id="detail-body"></div>
   </div>
@@ -512,7 +511,7 @@
   <div class="modal wide">
     <div class="modal-header">
       <h3 id="comments-thread-title">Comentarios</h3>
-      <button class="modal-close" onclick="closeModal('comments-thread-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('comments-thread-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body" style="padding-top:12px">
       <div id="comments-thread-body"></div>
@@ -528,7 +527,7 @@
   <div class="modal" style="max-width:980px;width:95vw">
     <div class="modal-header">
       <h3 id="shortcut-preview-title">Vista previa</h3>
-      <button class="modal-close" onclick="closeModal('shortcut-preview-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('shortcut-preview-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div id="shortcut-preview-body" style="min-height:300px"></div>
@@ -544,7 +543,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>✏️ Editar Acceso Directo</h3>
-      <button class="modal-close" onclick="closeModal('edit-shortcut-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('edit-shortcut-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -591,7 +590,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="postit-modal-title">Nueva Tarjeta</h3>
-      <button class="modal-close" onclick="closeModal('postit-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('postit-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
 
@@ -605,7 +604,7 @@
           <label class="form-label">Descripción</label>
           <div class="content-input-group">
             <textarea class="form-textarea" id="postit-body-input" placeholder="Descripción..." style="min-height:80px" oninput="updateMarkdownPreview('postit-body-input','postit-content-preview',editingPostitImages)"></textarea>
-            <button class="btn-insert-image" onclick="insertImagePostit()" title="Insertar imagen">🖼️</button>
+            <button class="btn-insert-image" onclick="insertImagePostit()" title="Insertar imagen" aria-label="Insertar imagen">🖼️</button>
           </div>
           <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
             <button class="btn-secondary" id="postit-preview-toggle" onclick="togglePreview('postit-content-preview','postit-preview-toggle')">Ocultar preview</button>
@@ -719,7 +718,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal('postit-modal')">Cancelar</button>
-      <button class="btn-save" onclick="savePostit()">Guardar</button>
+      <button class="btn-save" id="postit-save-btn" onclick="savePostit()">Guardar</button>
     </div>
   </div>
 </div>
@@ -846,7 +845,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Guardar como plantilla</h3>
-      <button class="modal-close" onclick="closeModal('save-project-template-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('save-project-template-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <p id="template-save-task-count" style="font-size:12px;color:var(--text-muted);margin:0 0 12px;line-height:1.45"></p>
@@ -867,7 +866,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Mis plantillas de proyecto</h3>
-      <button class="modal-close" onclick="closeModal('manage-project-templates-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('manage-project-templates-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <p style="font-size:11px;color:var(--text-muted);margin:0 0 12px;line-height:1.45">Se guardan en este navegador (localStorage). Al crear un proyecto nuevo aparecen en el desplegable bajo «Mis plantillas».</p>
@@ -884,7 +883,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Aplicar plantilla al proyecto</h3>
-      <button class="modal-close" onclick="closeModal('apply-template-to-project-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('apply-template-to-project-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <p class="apply-template-help" style="font-size:12px;margin:0 0 14px;line-height:1.45">Se añaden tareas al final de la lista. No se borran tareas que ya tengas.</p>
@@ -911,7 +910,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Renombrar plantilla</h3>
-      <button class="modal-close" onclick="closeModal('rename-project-template-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('rename-project-template-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -934,7 +933,7 @@
         <h3 id="task-modal-title">Nueva Tarea</h3>
         <p class="task-modal-kbd-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> guarda si el foco está en un campo de texto.</p>
       </div>
-      <button type="button" class="modal-close" onclick="closeModal('task-modal')" aria-label="Cerrar">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('task-modal')" aria-label="Cerrar" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div class="proj-modal-section">
@@ -1035,7 +1034,7 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="task-viewer-modal" role="dialog" aria-modal="true" aria-labelledby="task-viewer-title">
+<div class="modal-overlay" id="task-viewer-modal" role="dialog" aria-modal="true" aria-labelledby="task-viewer-title" data-no-dismiss>
   <div class="modal task-viewer-modal-inner">
     <div class="modal-header task-viewer-modal-header">
       <div class="task-viewer-head-main">
@@ -1080,11 +1079,11 @@
 </div>
 
 <!-- Doc Modal -->
-<div class="modal-overlay" id="doc-modal">
-  <div class="modal wide">
+<div class="modal-overlay docs-modal-overlay" id="doc-modal" role="dialog" aria-modal="true" aria-labelledby="doc-modal-title">
+  <div class="modal wide docs-modal docs-modal--editor">
     <div class="modal-header">
       <h3 id="doc-modal-title">Nuevo Documento</h3>
-      <button class="modal-close" onclick="closeDocModalWithCleanup()">✕</button>
+      <button class="modal-close" onclick="closeDocModalWithCleanup()" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -1097,20 +1096,30 @@
           <option value="null">📁 Raíz (Sin carpeta padre)</option>
         </select>
       </div>
+      <div class="form-group" id="doc-category-group">
+        <label class="form-label">Categoría</label>
+        <select class="form-select" id="doc-category-input">
+          <option value="manual">📖 Manual</option>
+          <option value="procedimiento">📋 Procedimiento</option>
+          <option value="guia">🗺 Guía</option>
+          <option value="politica">📜 Política</option>
+          <option value="otro">📄 Otro</option>
+        </select>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Icono</label>
-          <button type="button" class="form-input" id="doc-icon-btn" onclick="toggleIconPopover(event, 'doc')" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;cursor:pointer;font-size:20px;min-width:50px;text-align:center">📄</button>
+          <button type="button" class="form-input doc-icon-picker-btn" id="doc-icon-btn" onclick="toggleIconPopover(event, 'doc')">📄</button>
           <input type="hidden" id="doc-icon-input" value="📄">
         </div>
       </div>
       <div class="form-group">
         <label class="form-label">Contenido (Markdown básico soportado)</label>
         <div class="content-input-group">
-          <textarea class="form-textarea" id="doc-content-input" placeholder="## Sección 1&#10;&#10;Contenido del documento..." style="min-height:200px;font-family:'DM Mono',monospace" oninput="updateMarkdownPreview('doc-content-input','doc-content-preview',editingDocImages)"></textarea>
-          <button class="btn-insert-image" onclick="insertImageDoc()" title="Insertar imagen">🖼️</button>
+          <textarea class="form-textarea doc-content-input" id="doc-content-input" placeholder="## Sección 1&#10;&#10;Contenido del documento..." oninput="updateMarkdownPreview('doc-content-input','doc-content-preview',editingDocImages)"></textarea>
+          <button class="btn-insert-image" onclick="insertImageDoc()" title="Insertar imagen" aria-label="Insertar imagen">🖼️</button>
         </div>
-        <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+        <div class="preview-controls doc-preview-controls">
           <button class="btn-secondary" id="doc-preview-toggle" onclick="togglePreview('doc-content-preview','doc-preview-toggle')">Ocultar preview</button>
         </div>
         <div class="markdown-preview" id="doc-content-preview"></div>
@@ -1121,20 +1130,21 @@
       <button class="btn-cancel" onclick="closeDocModalWithCleanup()">Cancelar</button>
       <button class="btn-save" onclick="saveDocOrFolder()">Guardar</button>
     </div>
+    <p id="doc-modal-feedback" class="modal-footer-feedback" aria-live="polite"></p>
   </div>
 </div>
 
 <!-- Insert File Modal -->
-<div class="modal-overlay" id="insert-file-modal">
-  <div class="modal">
+<div class="modal-overlay docs-modal-overlay" id="insert-file-modal" role="dialog" aria-modal="true" aria-labelledby="insert-file-modal-title">
+  <div class="modal docs-modal docs-modal--upload">
     <div class="modal-header">
-      <h3>📎 Insertar Archivo</h3>
-      <button class="modal-close" onclick="closeModal('insert-file-modal')">✕</button>
+      <h3 id="insert-file-modal-title">📎 Insertar Archivo</h3>
+      <button class="modal-close" onclick="closeModal('insert-file-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">Icono</label>
-        <button type="button" class="form-input" id="insert-file-icon-btn" onclick="toggleIconPopover(event, 'insert-file')" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;cursor:pointer;font-size:20px;min-width:50px;text-align:center">📎</button>
+        <button type="button" class="form-input doc-icon-picker-btn" id="insert-file-icon-btn" onclick="toggleIconPopover(event, 'insert-file')">📎</button>
         <input type="hidden" id="insert-file-icon-input" value="📎">
       </div>
       <div class="form-group">
@@ -1149,8 +1159,8 @@
       </div>
       <div class="form-group">
         <label class="form-label">Archivo a Cargar</label>
-        <div style="display:flex;gap:8px;">
-          <button type="button" class="btn-secondary" onclick="document.getElementById('insert-file-input').click()" style="flex:1">📁 Explorar PC</button>
+        <div class="insert-file-picker-row">
+          <button type="button" class="btn-secondary insert-file-picker-btn" onclick="document.getElementById('insert-file-input').click()">📁 Explorar PC</button>
           <input type="file" id="insert-file-input" style="display:none">
         </div>
       </div>
@@ -1164,6 +1174,7 @@
       <button class="btn-cancel" onclick="closeModal('insert-file-modal')">Cancelar</button>
       <button class="btn-save" onclick="confirmInsertFile()">Guardar Archivo</button>
     </div>
+    <p id="insert-file-modal-feedback" class="modal-footer-feedback" aria-live="polite"></p>
   </div>
 </div>
 
@@ -1172,7 +1183,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="add-user-modal-title">Añadir Usuario</h3>
-      <button class="modal-close" onclick="closeModal('add-user-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('add-user-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -1211,7 +1222,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Editar Grupo</h3>
-      <button class="modal-close" onclick="closeModal('group-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('group-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -1232,7 +1243,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="edit-user-modal-title">Editar Usuario</h3>
-      <button class="modal-close" onclick="closeModal('edit-user-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('edit-user-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -1270,7 +1281,7 @@
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
       <h3>👥 Nuevo Grupo de Trabajo</h3>
-      <button class="modal-close" onclick="closeModal('workgroup-new-modal')">✕</button>
+      <button class="modal-close" onclick="closeModal('workgroup-new-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body" style="gap:14px">
       <div class="form-group">
@@ -1301,7 +1312,7 @@
   <div class="modal" style="max-width:520px">
     <div class="modal-header">
       <h3>📩 Invitaciones a grupos</h3>
-      <button type="button" class="modal-close" onclick="closeModal('workgroup-invites-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('workgroup-invites-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <div id="wg-invites-list-body"></div>
@@ -1317,7 +1328,7 @@
   <div class="modal" style="max-width:520px">
     <div class="modal-header">
       <h3 id="wg-info-title">Grupo</h3>
-      <button type="button" class="modal-close" onclick="closeModal('wg-info-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('wg-info-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body" style="gap:16px">
       <div class="wg-info-block">
@@ -1341,7 +1352,7 @@
   <div class="modal" style="max-width:560px">
     <div class="modal-header">
       <h3>Editar grupo</h3>
-      <button type="button" class="modal-close" onclick="closeModal('workgroup-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('workgroup-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body" style="gap:14px">
       <div>
@@ -1352,7 +1363,7 @@
         <label class="form-label">Descripción (Markdown, / para comandos)</label>
         <div class="content-input-group">
           <textarea class="form-textarea" id="wg-edit-desc" rows="3" placeholder="Contexto del equipo, convenciones… Escribe / para tablas, listas, imágenes…" style="resize:vertical;min-height:72px" oninput="updateMarkdownPreview('wg-edit-desc','wg-edit-desc-preview',editingWorkGroupImages)"></textarea>
-          <button type="button" class="btn-insert-image" onclick="insertImageWgDesc()" title="Insertar imagen">🖼️</button>
+          <button type="button" class="btn-insert-image" onclick="insertImageWgDesc()" title="Insertar imagen" aria-label="Insertar imagen">🖼️</button>
         </div>
         <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
           <button type="button" class="btn-secondary" id="wg-edit-desc-preview-toggle" onclick="togglePreview('wg-edit-desc-preview','wg-edit-desc-preview-toggle')">Ocultar preview</button>
@@ -1363,7 +1374,7 @@
         <label class="form-label">Objetivos (Markdown, / para comandos)</label>
         <div class="content-input-group">
           <textarea class="form-textarea" id="wg-edit-objectives" rows="3" placeholder="Metas medibles, hitos, KPIs… Escribe / para formato rápido" style="resize:vertical;min-height:72px" oninput="updateMarkdownPreview('wg-edit-objectives','wg-edit-objectives-preview',editingWorkGroupImages)"></textarea>
-          <button type="button" class="btn-insert-image" onclick="insertImageWgObjectives()" title="Insertar imagen">🖼️</button>
+          <button type="button" class="btn-insert-image" onclick="insertImageWgObjectives()" title="Insertar imagen" aria-label="Insertar imagen">🖼️</button>
         </div>
         <div class="preview-controls" style="margin-top:8px;display:flex;gap:6px;align-items:center;">
           <button type="button" class="btn-secondary" id="wg-edit-obj-preview-toggle" onclick="togglePreview('wg-edit-objectives-preview','wg-edit-obj-preview-toggle')">Ocultar preview</button>
@@ -1395,7 +1406,7 @@
   <div class="modal" style="max-width:420px">
     <div class="modal-header">
       <h3>Insertar imagen</h3>
-      <button type="button" class="modal-close" onclick="closeSlashImageModal()">✕</button>
+      <button type="button" class="modal-close" onclick="closeSlashImageModal()" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body" style="gap:12px">
       <p style="font-size:12px;color:var(--text-muted);margin:0">Elige un archivo en tu equipo o inserta la URL de una imagen (https…).</p>
@@ -1421,7 +1432,7 @@
   <div class="modal wide">
     <div class="modal-header">
       <h3>📊 Editor de Tabla</h3>
-      <button class="modal-close" onclick="closeTableEditor()">✕</button>
+      <button class="modal-close" onclick="closeTableEditor()" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body" style="gap:14px">
       <div class="te-toolbar">
@@ -1448,7 +1459,7 @@
   <div class="modal" style="max-width:580px;width:95vw">
     <div class="modal-header">
       <h3>📨 Traspaso de turno</h3>
-      <button type="button" class="modal-close" onclick="closeModal('handover-receive-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('handover-receive-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body" style="max-height:65vh;overflow-y:auto">
       <div id="handover-receive-body"></div>
@@ -1464,7 +1475,7 @@
   <div class="modal" style="max-width:580px;width:95vw">
     <div class="modal-header">
       <h3>🕐 Historial de traspasos</h3>
-      <button type="button" class="modal-close" onclick="closeModal('handover-history-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('handover-history-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body" style="max-height:65vh;overflow-y:auto">
       <div id="handover-history-body"></div>
@@ -1479,7 +1490,7 @@
   <div class="modal" style="max-width:420px;width:95vw">
     <div class="modal-header">
       <h3>📊 Generar Informe</h3>
-      <button type="button" class="modal-close" onclick="closeModal('report-modal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('report-modal')" aria-label="Cerrar">✕</button>
     </div>
     <div class="modal-body">
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">
